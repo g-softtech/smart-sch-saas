@@ -13,19 +13,33 @@
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/jwt": "^10.2.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/swagger": "^7.4.2",
+    "@saas/core-platform": "workspace:*",
+    "argon2": "^0.45.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.1",
-    "@saas/core-platform": "workspace:*"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
+    "@nestjs/testing": "^10.4.22",
+    "@types/dotenv": "^8.2.3",
     "@types/express": "^4.17.17",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.3.1",
-    "typescript": "^5.4.0",
-    "eslint": "^8.42.0",
+    "@types/supertest": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0"
+    "@typescript-eslint/parser": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "eslint": "^8.42.0",
+    "jest": "^30.5.1",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.12",
+    "tsx": "^4.23.13",
+    "typescript": "^5.4.0"
   }
 }

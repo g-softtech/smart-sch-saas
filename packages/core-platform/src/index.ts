@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma, User, Tenant, Role, Permission, RolePermission, UserTenantMembership, AuditLog, OutboxQueue, DomainEventLog, IdempotencyRecord, IdentityState } from '@prisma/client';
+export * from '@prisma/client';
 import { AsyncLocalStorage } from 'async_hooks';
 
 export const tenantContext = new AsyncLocalStorage<{ tenantId: string }>();
