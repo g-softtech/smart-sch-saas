@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// DATA CLASSIFICATION CATEGORIES
+// 1. GLOBAL: Cross-tenant configuration and root identities.
+// 2. TENANT_SCOPED: Strictly owned by a single tenant. Enforced mechanically.
+// 3. SYSTEM_ONLY: Background jobs, audit trails of the system itself.
+// ----------------------------------------------------------------------------
+
+// ================= GLOBAL MODELS =================
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users     UserTenantMembership[]
+  schools   School[] // TENANT_SCOPED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  memberships UserTenantMembership[]
+}
+
+model UserTenantMembership {
+  id       String @id @default(uuid())
+  userId   String
+  tenantId String
+  role     String
+
+  user   User   @relation(fields: [userId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([userId, tenantId])
+}
+
+// ================= TENANT_SCOPED MODELS =================
+model School {
+  id       String @id @default(uuid())
+  tenantId String
+  name     String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+}
+
+// ================= SYSTEM_ONLY MODELS =================
+model PlatformAuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  actorId   String
+  metadata  Json
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,21 @@
+{
+  "name": "smart-sch-saas",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --recursive run build",
+    "test": "pnpm --recursive run test",
+    "lint": "pnpm --recursive run lint",
+    "format": "pnpm --recursive run format",
+    "start:prod": "pnpm --filter api-gateway start:prod"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
