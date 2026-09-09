@@ -7,7 +7,8 @@
     "test": "pnpm --recursive run test",
     "lint": "pnpm --recursive run lint",
     "format": "pnpm --recursive run format",
-    "start:prod": "pnpm --filter api-gateway start:prod"
+    "start:prod": "pnpm --filter api-gateway start:prod",
+    "start:web": "pnpm --filter web-app start"
   },
   "devDependencies": {
     "typescript": "^5.4.0",

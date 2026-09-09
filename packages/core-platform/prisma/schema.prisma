@@ -15,37 +15,136 @@ datasource db {
 // ----------------------------------------------------------------------------
 
 // ================= GLOBAL MODELS =================
+enum GlobalRole {
+  SUPER_ADMIN
+  USER
+}
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum IdentityState {
+  PROVISIONED
+  PENDING_ACTIVATION
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+  OFFBOARDED
+}
+
+enum OutboxStatus {
+  PENDING
+  FAILED
+  COMPLETED
+  QUARANTINED
+}
+
 model Tenant {
-  id        String   @id @default(uuid())
+  id        String       @id @default(uuid())
   name      String
-  createdAt DateTime @default(now())
+  slug      String       @unique
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   users     UserTenantMembership[]
+  roles     Role[]
+  auditLogs AuditLog[]
   schools   School[] // TENANT_SCOPED
+
+  @@map("plt_tenants")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
+  id                String     @id @default(uuid())
+  email             String     @unique
+  passwordHash      String?
+  globalRole        GlobalRole @default(USER)
+  emailVerified     DateTime?
+  preferredTenantId String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
 
   memberships UserTenantMembership[]
-}
+  auditLogs   AuditLog[]
 
-model UserTenantMembership {
-  id       String @id @default(uuid())
-  userId   String
-  tenantId String
-  role     String
-
-  user   User   @relation(fields: [userId], references: [id])
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-
-  @@unique([userId, tenantId])
+  @@map("idm_users")
 }
 
 // ================= TENANT_SCOPED MODELS =================
+model UserTenantMembership {
+  id       String @id @default(uuid())
+  tenantId String
+  userId   String
+  roleId   String
+
+  state     IdentityState @default(PROVISIONED)
+  isRevoked Boolean       @default(false)
+  revokedAt DateTime?
+  revokedBy String?
+  version   Int           @default(1)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("idm_tenant_memberships")
+}
+
+model Role {
+  id       String  @id @default(uuid())
+  tenantId String
+  name     String
+  isSystem Boolean @default(false)
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  memberships UserTenantMembership[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("idm_roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  name        String  @unique // e.g., "users:read", "fees:write"
+  description String?
+
+  rolePermissions RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("idm_permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("idm_role_permissions")
+}
+
 model School {
   id       String @id @default(uuid())
   tenantId String
@@ -55,10 +154,78 @@ model School {
 }
 
 // ================= SYSTEM_ONLY MODELS =================
+model AuditLog {
+  id       String  @id @default(uuid())
+  tenantId String?
+  userId   String?
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action        String // e.g., "FEE_PAID", "USER_CREATED"
+  entity        String // e.g., "Invoice", "User"
+  entityId      String
+  metadata      Json?
+  correlationId String?
+  retentionDate DateTime?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, entity, entityId])
+  @@map("idm_audit_logs")
+}
+
 model PlatformAuditLog {
   id        String   @id @default(uuid())
   action    String
   actorId   String
   metadata  Json
   createdAt DateTime @default(now())
+}
+
+model OutboxQueue {
+  id            String       @id @default(uuid())
+  eventId       String       @unique
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime?
+  errorMessage  String?
+  aggregateId   String
+  tenantId      String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([aggregateId])
+  @@index([tenantId])
+}
+
+model DomainEventLog {
+  eventId       String   @id
+  eventType     String
+  aggregateId   String
+  aggregateType String
+  version       Int      @default(1)
+  occurredAt    DateTime @default(now())
+  correlationId String
+  causationId   String?
+  tenantId      String
+  payload       Json
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([aggregateId])
+}
+
+model IdempotencyRecord {
+  id        String   @id
+  eventId   String
+  consumer  String
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
 }
