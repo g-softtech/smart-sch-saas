@@ -60,4 +60,29 @@ node --test packages/core-platform/dist/index.test.js
 ```
 
 ## Git Checkpoint Hash
-- *(To be updated after commit)*
+- **Batch 1:** `2054e324409b521f8acd6ffa4aa84e9f53109eec`
+- **Batch 2:** `245ef7b8fc52b633d543e6436466f39dcdc44d8c`
+
+---
+
+# Codebase Recovery - Batch 2 Deployment Checkpoint
+
+## Deployment Verification
+The Batch 2 Identity/Security implementation builds and boots successfully in the production Render environment.
+
+- **GitHub Push Result:** Branch `main` successfully synced (0 ahead, 0 behind).
+- **Commit:** `245ef7b8`
+- **Render Deployment Result:** Service deployed successfully and marked "Live" 🎉.
+- **Node Version:** Node `26.8.2` was observed natively on Render (Note: Our local `package.json` specifies `>=20.0.0`; ensure local verification versions align appropriately with Render's runtime to avoid reproducibility concerns).
+- **Production Build:** `pnpm install --frozen-lockfile && pnpm run build` completed successfully.
+- **Nest Startup:** API Gateway successfully initialized and resolved `dist/main.js`.
+- **Identity Routes:** Registered successfully (`/api/v1/auth/register`, `/api/v1/auth/login`).
+
+## Exact Render Configuration
+- **Root Directory:** *(empty)*
+- **Build Command:** `pnpm install --frozen-lockfile && pnpm run build`
+- **Start Command:** `pnpm --filter api-gateway start:prod`
+
+## Security Testing Limitations & Deferred Work
+- **Mocked Persistence:** The 7 Batch 2 security test validations are strictly HTTP/controller-level tests using mocked persistence (`jest.mock`).
+- **Deferred Work:** Real PostgreSQL-backed tenant isolation and database-backed tenant verification remain deferred. They will be proven later when proper Testcontainers/integration infrastructure is introduced.
