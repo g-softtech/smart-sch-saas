@@ -86,3 +86,32 @@ The Batch 2 Identity/Security implementation builds and boots successfully in th
 ## Security Testing Limitations & Deferred Work
 - **Mocked Persistence:** The 7 Batch 2 security test validations are strictly HTTP/controller-level tests using mocked persistence (`jest.mock`).
 - **Deferred Work:** Real PostgreSQL-backed tenant isolation and database-backed tenant verification remain deferred. They will be proven later when proper Testcontainers/integration infrastructure is introduced.
+
+---
+
+# Codebase Recovery - Batch 3A (Academics Domain)
+
+## 1. Objective
+Establish the clean foundational Academics domain design without assuming unverified legacy behavior, adhering strictly to the `PlatformKernel` tenant isolation boundary and keeping the schema minimal.
+
+## 2. Legacy Verification
+> Legacy Academics behavior could not be verified because the old repository was unavailable. Batch 3A therefore establishes a clean foundational Academics design. Legacy reconciliation can occur later if the old repository becomes available.
+
+## 3. Schema implementation
+Added the 8 Academics models to `packages/core-platform/prisma/schema.prisma` and updated inverse relations on `Tenant` and `School`.
+All models (`Campus`, `AcademicYear`, `Term`, `Department`, `Class`, `Arm`, `SubjectGroup`, `Subject`) are strictly `TENANT_SCOPED`.
+
+## 4. Application Architecture
+Implemented `AcademicsModule` at `apps/api-gateway/src/modules/academics/` using the precise controller-service-repository split.
+- `academics.repository.ts`: Wraps `kernel.db` access to ensure operations inherit the `AsyncLocalStorage` context.
+- `academics.service.ts`: Enforces crucial parent consistency domain invariants (e.g. `Class.schoolId === Campus.schoolId`).
+- `academics.controller.ts`: Secured by `JwtAuthGuard`.
+
+## 5. Testing
+Implemented Unit tests for `AcademicsService` using `jest`.
+- 15/15 tests successfully verified domain invariants, including mismatched tenant boundaries.
+- **Limitation**: The tests are `in-memory/mocked` tests. Real PostgreSQL-backed DB tests are explicitly deferred.
+
+## 6. Build & Integration
+- Prisma validate & generate completed successfully.
+- `pnpm --recursive run build` succeeded across `web-app`, `core-platform`, and `api-gateway`.

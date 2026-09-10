@@ -55,6 +55,16 @@ model Tenant {
   auditLogs AuditLog[]
   schools   School[] // TENANT_SCOPED
 
+  // Academics (Batch 3A)
+  campuses      Campus[]
+  academicYears AcademicYear[]
+  terms         Term[]
+  departments   Department[]
+  classes       Class[]
+  arms          Arm[]
+  subjectGroups SubjectGroup[]
+  subjects      Subject[]
+
   @@map("plt_tenants")
 }
 
@@ -151,6 +161,14 @@ model School {
   name     String
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  // Academics (Batch 3A)
+  campuses      Campus[]
+  academicYears AcademicYear[]
+  departments   Department[]
+  classes       Class[]
+  subjectGroups SubjectGroup[]
+  subjects      Subject[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -228,4 +246,150 @@ model IdempotencyRecord {
   createdAt DateTime @default(now())
 
   @@index([eventId])
+}
+
+// ================= ACADEMICS MODELS (Batch 3A) =================
+
+model Campus {
+  id       String @id @default(uuid())
+  tenantId String
+  schoolId String
+  name     String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  arms   Arm[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, name])
+  @@index([tenantId])
+  @@map("acd_campuses")
+}
+
+model AcademicYear {
+  id       String @id @default(uuid())
+  tenantId String
+  schoolId String
+  name     String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  terms  Term[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, name])
+  @@index([tenantId])
+  @@map("acd_academic_years")
+}
+
+model Term {
+  id             String @id @default(uuid())
+  tenantId       String
+  academicYearId String
+  name           String
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, academicYearId, name])
+  @@index([tenantId])
+  @@map("acd_terms")
+}
+
+model Department {
+  id       String @id @default(uuid())
+  tenantId String
+  schoolId String
+  name     String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, name])
+  @@index([tenantId])
+  @@map("acd_departments")
+}
+
+model Class {
+  id       String @id @default(uuid())
+  tenantId String
+  schoolId String
+  name     String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  arms   Arm[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, name])
+  @@index([tenantId])
+  @@map("acd_classes")
+}
+
+model Arm {
+  id       String @id @default(uuid())
+  tenantId String
+  classId  String
+  campusId String
+  name     String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  class  Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  campus Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, classId, campusId, name])
+  @@index([tenantId])
+  @@map("acd_arms")
+}
+
+model SubjectGroup {
+  id       String @id @default(uuid())
+  tenantId String
+  schoolId String
+  name     String
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjects Subject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, name])
+  @@index([tenantId])
+  @@map("acd_subject_groups")
+}
+
+model Subject {
+  id             String  @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  name           String
+  subjectGroupId String?
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectGroup SubjectGroup? @relation(fields: [subjectGroupId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, name])
+  @@index([tenantId])
+  @@map("acd_subjects")
 }
