@@ -115,3 +115,7 @@ Implemented Unit tests for `AcademicsService` using `jest`.
 ## 6. Build & Integration
 - Prisma validate & generate completed successfully.
 - `pnpm --recursive run build` succeeded across `web-app`, `core-platform`, and `api-gateway`.
+
+## 7. Checkpoint
+- **Commit Hash:** `c5df798a`
+- **Next Phase:** Batch 3B (Students) is strictly the next sequential phase. Do not begin Students until authorized.
