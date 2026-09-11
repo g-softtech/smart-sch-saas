@@ -31,7 +31,12 @@ class PlatformKernel {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           // TENANT_SCOPED Enforcement Layer
-          const tenantScopedModels = ['School', 'Role', 'Permission', 'RolePermission', 'UserTenantMembership'];
+          const tenantScopedModels = [
+            // Identity (Batch 1)
+            'School', 'Role', 'Permission', 'RolePermission', 'UserTenantMembership',
+            // Students (Batch 3B)
+            'Student', 'Guardian', 'StudentGuardian', 'Enrollment',
+          ];
           
           if (tenantScopedModels.includes(model)) {
             const store = tenantContext.getStore();

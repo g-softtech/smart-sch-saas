@@ -65,6 +65,10 @@ model Tenant {
   subjectGroups SubjectGroup[]
   subjects      Subject[]
 
+  // Students (Batch 3B)
+  students  Student[]
+  guardians Guardian[]
+
   @@map("plt_tenants")
 }
 
@@ -169,6 +173,9 @@ model School {
   classes       Class[]
   subjectGroups SubjectGroup[]
   subjects      Subject[]
+
+  // Students (Batch 3B)
+  students Student[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -278,6 +285,9 @@ model AcademicYear {
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   terms  Term[]
 
+  // Students (Batch 3B)
+  enrollments Enrollment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -330,6 +340,9 @@ model Class {
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   arms   Arm[]
 
+  // Students (Batch 3B)
+  enrollments Enrollment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -348,6 +361,9 @@ model Arm {
   tenant Tenant @relation(fields: [tenantId], references: [id])
   class  Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
   campus Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
+
+  // Students (Batch 3B)
+  enrollments Enrollment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -392,4 +408,150 @@ model Subject {
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
   @@map("acd_subjects")
+}
+
+// ================= STUDENTS MODELS (Batch 3B) =================
+
+enum StudentStatus {
+  ACTIVE
+  SUSPENDED
+  GRADUATED
+  WITHDRAWN
+  TRANSFERRED // Transfer OUT of the institution; internal class changes do not affect this
+}
+
+enum GenderEnum {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum GuardianRelationship {
+  FATHER
+  MOTHER
+  GUARDIAN
+  OTHER
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  TRANSFERRED // Closed when student moves to another class/arm; old row retained as history
+  WITHDRAWN
+  COMPLETED
+}
+
+// Atomic sequence counter — system-level only.
+// Incremented via raw SQL INSERT ... ON CONFLICT ... DO UPDATE.
+// NOT listed in tenantScopedModels; tenantId/schoolId are passed explicitly in SQL.
+model StudentNumberSequence {
+  tenantId   String
+  schoolId   String
+  lastNumber Int    @default(0)
+
+  @@unique([tenantId, schoolId])
+  @@map("stud_student_number_sequences")
+}
+
+model Student {
+  id            String        @id @default(uuid())
+  tenantId      String
+  schoolId      String
+  studentNumber String
+  firstName     String
+  lastName      String
+  middleName    String?
+  dateOfBirth   DateTime?
+  gender        GenderEnum
+  nationality   String?
+  status        StudentStatus @default(ACTIVE)
+  admissionDate DateTime
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  guardians   StudentGuardian[]
+  enrollments Enrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, studentNumber])
+  @@index([tenantId])
+  @@index([tenantId, schoolId, status])
+  @@map("stud_students")
+}
+
+model Guardian {
+  id         String  @id @default(uuid())
+  tenantId   String
+  firstName  String
+  lastName   String
+  phone      String?
+  email      String?
+  address    String?
+  occupation String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  students StudentGuardian[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("stud_guardians")
+}
+
+model StudentGuardian {
+  id                 String               @id @default(uuid())
+  tenantId           String
+  studentId          String
+  guardianId         String
+  relationship       GuardianRelationship
+  isPrimary          Boolean              @default(false)
+  isEmergencyContact Boolean              @default(false)
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, guardianId])
+  @@index([tenantId])
+  @@map("stud_student_guardians")
+}
+
+// ACTIVE uniqueness per (tenantId, studentId, academicYearId) is enforced by a
+// PostgreSQL partial unique index added in the migration SQL — NOT a Prisma @@unique.
+// This allows multiple historical enrollment rows for the same student/year while
+// preventing two ACTIVE rows simultaneously.
+// Migration SQL:
+//   CREATE UNIQUE INDEX "stud_enrollments_one_active_per_year"
+//     ON "stud_enrollments" ("tenantId", "studentId", "academicYearId")
+//     WHERE status = 'ACTIVE';
+model Enrollment {
+  id             String           @id @default(uuid())
+  tenantId       String
+  studentId      String
+  schoolId       String // Denormalised for query performance; always equals student.schoolId
+  academicYearId String
+  classId        String
+  armId          String?
+  status         EnrollmentStatus @default(ACTIVE)
+  enrolledAt     DateTime         @default(now())
+  notes          String?
+
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Restrict)
+  arm          Arm?         @relation(fields: [armId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, schoolId])
+  @@index([tenantId, academicYearId, classId])
+  @@index([tenantId, studentId])
+  @@map("stud_enrollments")
 }
