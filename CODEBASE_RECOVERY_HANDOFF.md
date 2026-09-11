@@ -116,6 +116,16 @@ Implemented Unit tests for `AcademicsService` using `jest`.
 - Prisma validate & generate completed successfully.
 - `pnpm --recursive run build` succeeded across `web-app`, `core-platform`, and `api-gateway`.
 
-## 7. Checkpoint
-- **Commit Hash:** `c5df798a`
-- **Next Phase:** Batch 3B (Students) is strictly the next sequential phase. Do not begin Students until authorized.
+## 7. Database Baseline & Production Validation
+- **Deployment:** The `20260910233054_init` migration is successfully deployed to Neon.
+- **Production State:** Contains `_prisma_migrations` plus the expected 20 application tables. No Students, Admissions, or legacy tables exist.
+- **Design Note:** Academics is a new foundational design because legacy Academics behavior could not be recovered/verified.
+- **E2E Tests:** Identity production E2E suite passed seamlessly (7/7 passed) against the live DB.
+- **Smoke Tests:** Academics security smoke tests proved that tenant isolation is enforced: missing auth = 401; nonexistent tenant membership = 403 after a live Neon membership lookup.
+- **Data Integrity:** No production data was changed. Deep Academics write/DTO production testing was intentionally not performed because the production database is empty and seeding production solely for testing was explicitly rejected.
+- **Functional Validation:** Academics unit/invariant tests currently remain the functional validation basis.
+
+## 8. Final Checkpoint
+- **Commit Hash:** `d93bf262`
+- **Working Tree:** The working tree is clean.
+- **Next Phase:** Batch 3B (Students) is explicitly NOT started. Do not begin Students until authorized.
