@@ -69,6 +69,12 @@ model Tenant {
   students  Student[]
   guardians Guardian[]
 
+  // Admissions (Batch 3C)
+  publishedForms        PublishedAdmissionForm[]
+  applicants            Applicant[]
+  admissionApplications AdmissionApplication[]
+  admissionReviews      AdmissionReview[]
+
   @@map("plt_tenants")
 }
 
@@ -85,6 +91,9 @@ model User {
 
   memberships UserTenantMembership[]
   auditLogs   AuditLog[]
+
+  // Admissions (Batch 3C)
+  admissionReviews AdmissionReview[]
 
   @@map("idm_users")
 }
@@ -176,6 +185,11 @@ model School {
 
   // Students (Batch 3B)
   students Student[]
+
+  // Admissions (Batch 3C)
+  publishedForms        PublishedAdmissionForm[]
+  applicants            Applicant[]
+  admissionApplications AdmissionApplication[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -288,6 +302,9 @@ model AcademicYear {
   // Students (Batch 3B)
   enrollments Enrollment[]
 
+  // Admissions (Batch 3C)
+  publishedForms PublishedAdmissionForm[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -342,6 +359,9 @@ model Class {
 
   // Students (Batch 3B)
   enrollments Enrollment[]
+
+  // Admissions (Batch 3C)
+  publishedForms PublishedAdmissionForm[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -471,6 +491,7 @@ model Student {
 
   guardians   StudentGuardian[]
   enrollments Enrollment[]
+  admissionApplication AdmissionApplication?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -554,4 +575,108 @@ model Enrollment {
   @@index([tenantId, academicYearId, classId])
   @@index([tenantId, studentId])
   @@map("stud_enrollments")
+}
+
+// ================= ADMISSIONS MODELS (Batch 3C) =================
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  WAITLISTED
+  ENROLLED
+}
+
+enum AdmissionReviewDecision {
+  STAGE_PASS
+  STAGE_FAIL
+  WAITLIST
+}
+
+model PublishedAdmissionForm {
+  id             String   @id @default(uuid())
+  publicToken    String   @unique // Cryptographically secure opaque token
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  targetClassId  String   
+  title          String
+  fieldsSchema   Json     
+  workflowStages Json     
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school       School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear           @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  targetClass  Class                  @relation(fields: [targetClassId], references: [id], onDelete: Restrict)
+  applications AdmissionApplication[]
+
+  @@index([tenantId])
+  @@index([schoolId])
+  @@map("adm_published_forms")
+}
+
+model Applicant {
+  id          String     @id @default(uuid())
+  tenantId    String
+  schoolId    String
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime?
+  gender      GenderEnum?
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school       School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  applications AdmissionApplication[]
+
+  @@index([tenantId])
+  @@index([schoolId])
+  @@map("adm_applicants")
+}
+
+model AdmissionApplication {
+  id              String            @id @default(uuid())
+  trackingToken   String            @unique // Cryptographically secure credential
+  tenantId        String
+  schoolId        String
+  applicantId     String
+  publishedFormId String
+  status          ApplicationStatus @default(SUBMITTED)
+  currentStageKey String?
+  formData        Json
+  studentId       String?           @unique // Linked idempotently upon ENROLLED
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school        School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  applicant     Applicant              @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  publishedForm PublishedAdmissionForm @relation(fields: [publishedFormId], references: [id], onDelete: Restrict)
+  student       Student?               @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  reviews       AdmissionReview[]
+
+  @@index([tenantId])
+  @@index([schoolId])
+  @@map("adm_applications")
+}
+
+model AdmissionReview {
+  id            String                  @id @default(uuid())
+  tenantId      String
+  applicationId String
+  reviewerId    String
+  stageKey      String
+  decision      AdmissionReviewDecision
+  comments      String?
+  createdAt     DateTime                @default(now())
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  application AdmissionApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  reviewer    User                 @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([applicationId])
+  @@map("adm_reviews")
 }

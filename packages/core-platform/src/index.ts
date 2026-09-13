@@ -33,6 +33,8 @@ function buildScopedExtension(base: PrismaClient) {
             'School', 'Role', 'Permission', 'RolePermission', 'UserTenantMembership',
             // Students (Batch 3B)
             'Student', 'Guardian', 'StudentGuardian', 'Enrollment',
+            // Admissions (Batch 3C)
+            'PublishedAdmissionForm', 'Applicant', 'AdmissionApplication', 'AdmissionReview',
           ];
           
           if (tenantScopedModels.includes(model)) {

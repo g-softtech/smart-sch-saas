@@ -3,9 +3,10 @@ import { TenantMiddleware } from '@saas/core-platform/dist/tenant/tenant.middlew
 import { IdentityModule } from './modules/identity/identity.module';
 import { AcademicsModule } from './modules/academics/academics.module';
 import { StudentsModule } from './modules/students/students.module';
+import { AdmissionsModule } from './modules/admissions/admissions.module';
 
 @Module({
-  imports: [IdentityModule, AcademicsModule, StudentsModule],
+  imports: [IdentityModule, AcademicsModule, StudentsModule, AdmissionsModule],
   controllers: [],
   providers: [],
 })
