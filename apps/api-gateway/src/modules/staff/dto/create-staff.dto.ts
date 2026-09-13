@@ -37,4 +37,8 @@ export class CreateStaffDto {
   @IsString()
   @IsOptional()
   departmentId?: string;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
 }

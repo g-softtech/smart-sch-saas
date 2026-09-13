@@ -25,6 +25,16 @@ export class StaffService {
       }
     }
 
+    // 2. User Workspace Validation (Prevent cross-tenant user linking)
+    if (dto.userId) {
+      const membership = await kernel.db.userTenantMembership.findFirst({
+        where: { userId: dto.userId, tenantId },
+      });
+      if (!membership) {
+        throw new BadRequestException('User does not belong to this workspace.');
+      }
+    }
+
     try {
       return await this.staffRepo.createStaffWithAtomicNumber(tenantId, schoolId, {
         ...dto,

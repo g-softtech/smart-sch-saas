@@ -5,6 +5,7 @@ import { AcademicsModule } from './modules/academics/academics.module';
 import { StudentsModule } from './modules/students/students.module';
 import { AdmissionsModule } from './modules/admissions/admissions.module';
 import { StaffModule } from './modules/staff/staff.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { StaffModule } from './modules/staff/staff.module';
     AdmissionsModule,
     StaffModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule implements NestModule {

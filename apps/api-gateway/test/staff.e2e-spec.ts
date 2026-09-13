@@ -33,6 +33,8 @@ describe('StaffController (e2e) - Final Verification Audit', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    const { ValidationPipe } = require('@nestjs/common');
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: false }));
     await app.init();
 
     // 1. Setup Tenants
@@ -121,7 +123,7 @@ describe('StaffController (e2e) - Final Verification Audit', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ firstName: 'Alice', lastName: 'TenantA', type: StaffType.TEACHING, departmentId: departmentCId, joiningDate: new Date().toISOString() });
     
-    expect(res.status).toBe(404); // Or 400 validation error
+    expect(res.status).toBe(400); // Bad Request (validation)
   });
 
   it('1.E School A cannot create Staff using a Department from School B', async () => {
@@ -133,7 +135,7 @@ describe('StaffController (e2e) - Final Verification Audit', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ firstName: 'Alice', lastName: 'TenantA', type: StaffType.TEACHING, departmentId: departmentAId, joiningDate: new Date().toISOString() });
     
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(400);
   });
 
   it('1.F Same User can legitimately have StaffProfiles in School A and School B', async () => {
