@@ -4,9 +4,16 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { AcademicsModule } from './modules/academics/academics.module';
 import { StudentsModule } from './modules/students/students.module';
 import { AdmissionsModule } from './modules/admissions/admissions.module';
+import { StaffModule } from './modules/staff/staff.module';
 
 @Module({
-  imports: [IdentityModule, AcademicsModule, StudentsModule, AdmissionsModule],
+  imports: [
+    IdentityModule,
+    AcademicsModule,
+    StudentsModule,
+    AdmissionsModule,
+    StaffModule,
+  ],
   controllers: [],
   providers: [],
 })

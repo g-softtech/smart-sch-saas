@@ -75,6 +75,10 @@ model Tenant {
   admissionApplications AdmissionApplication[]
   admissionReviews      AdmissionReview[]
 
+  // Staff (Batch 4)
+  staffProfiles    StaffProfile[]
+  staffCredentials StaffCredential[]
+
   @@map("plt_tenants")
 }
 
@@ -94,6 +98,9 @@ model User {
 
   // Admissions (Batch 3C)
   admissionReviews AdmissionReview[]
+
+  // Staff (Batch 4)
+  staffProfiles StaffProfile[]
 
   @@map("idm_users")
 }
@@ -190,6 +197,10 @@ model School {
   publishedForms        PublishedAdmissionForm[]
   applicants            Applicant[]
   admissionApplications AdmissionApplication[]
+
+  // Staff (Batch 4)
+  staffProfiles    StaffProfile[]
+  staffCredentials StaffCredential[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -338,6 +349,9 @@ model Department {
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  // Staff (Batch 4)
+  staffProfiles StaffProfile[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -679,4 +693,89 @@ model AdmissionReview {
   @@index([tenantId])
   @@index([applicationId])
   @@map("adm_reviews")
+}
+
+// ================= STAFF & HR MODELS (Batch 4) =================
+
+enum StaffStatus {
+  ACTIVE
+  SUSPENDED
+  RESIGNED
+  RETIRED
+  TERMINATED
+}
+
+enum StaffType {
+  TEACHING
+  NON_TEACHING
+  ADMINISTRATION
+  SUPPORT
+}
+
+enum CredentialType {
+  QR
+  RFID
+  BIOMETRIC
+}
+
+model StaffNumberSequence {
+  tenantId   String
+  schoolId   String
+  lastNumber Int    @default(0)
+
+  @@unique([tenantId, schoolId])
+  @@map("stf_staff_number_sequences")
+}
+
+model StaffProfile {
+  id            String      @id @default(uuid())
+  tenantId      String
+  schoolId      String
+  userId        String?     // Nullable link to idm_users
+  departmentId  String?
+  staffNumber   String
+  firstName     String
+  lastName      String
+  middleName    String?
+  dateOfBirth   DateTime?
+  gender        GenderEnum?
+  joiningDate   DateTime
+  designation   String?
+  type          StaffType
+  status        StaffStatus @default(ACTIVE)
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school     School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  user       User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  department Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  credentials StaffCredential[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, schoolId, staffNumber])
+  @@index([tenantId])
+  @@index([tenantId, schoolId, status])
+  @@map("stf_staff_profiles")
+}
+
+model StaffCredential {
+  id              String         @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  staffId         String
+  credentialType  CredentialType
+  credentialHash  String         // HMAC-SHA-256 digest
+  isActive        Boolean        @default(true)
+  issuedAt        DateTime       @default(now())
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  staff  StaffProfile @relation(fields: [staffId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, credentialHash])
+  @@index([tenantId, schoolId])
+  @@map("stf_credentials")
 }
