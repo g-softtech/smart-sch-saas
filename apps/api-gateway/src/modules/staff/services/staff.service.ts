@@ -25,11 +25,18 @@ export class StaffService {
       }
     }
 
-    return this.staffRepo.createStaffWithAtomicNumber(tenantId, schoolId, {
-      ...dto,
-      joiningDate: new Date(dto.joiningDate),
-      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
-    });
+    try {
+      return await this.staffRepo.createStaffWithAtomicNumber(tenantId, schoolId, {
+        ...dto,
+        joiningDate: new Date(dto.joiningDate),
+        dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+      });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('A user cannot have multiple active/suspended staff profiles in the same school.');
+      }
+      throw error;
+    }
   }
 
   async getStaff(tenantId: string, schoolId: string, staffId: string) {
@@ -91,7 +98,8 @@ export class StaffService {
 
       // 3. Generate raw token and HMAC digest
       const rawToken = crypto.randomBytes(32).toString('hex');
-      const secret = process.env.CREDENTIAL_SECRET || 'fallback-secret-for-tests';
+      const secret = process.env.CREDENTIAL_SECRET;
+      if (!secret) throw new Error('CREDENTIAL_SECRET is not configured');
       const credentialHash = crypto
         .createHmac('sha256', secret)
         .update(rawToken)
@@ -113,5 +121,56 @@ export class StaffService {
         rawToken, // The client must save this. It will never be returned again.
       };
     });
+  }
+
+  async verifyCredential(tenantId: string, schoolId: string, rawToken: string) {
+    const secret = process.env.CREDENTIAL_SECRET;
+    if (!secret) {
+      throw new Error('CREDENTIAL_SECRET is not configured');
+    }
+
+    const credentialHash = crypto
+      .createHmac('sha256', secret)
+      .update(rawToken)
+      .digest('hex');
+
+    const credential = await kernel.db.staffCredential.findUnique({
+      where: {
+        tenantId_credentialHash: {
+          tenantId,
+          credentialHash,
+        },
+      },
+      include: {
+        staff: true,
+      },
+    });
+
+    if (!credential) {
+      throw new NotFoundException('Invalid credential');
+    }
+
+    if (credential.schoolId !== schoolId) {
+      throw new NotFoundException('Invalid credential');
+    }
+
+    if (!credential.isActive) {
+      throw new BadRequestException('Credential is inactive or revoked');
+    }
+
+    if (credential.expiresAt && credential.expiresAt < new Date()) {
+      throw new BadRequestException('Credential has expired');
+    }
+
+    if (credential.staff.status !== StaffStatus.ACTIVE && credential.staff.status !== StaffStatus.SUSPENDED) {
+      throw new BadRequestException('Staff profile is not active');
+    }
+
+    return {
+      valid: true,
+      staffId: credential.staffId,
+      staffNumber: credential.staff.staffNumber,
+      credentialType: credential.credentialType,
+    };
   }
 }

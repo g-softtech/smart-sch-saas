@@ -24,22 +24,36 @@ export class WorkspaceContextInterceptor implements NestInterceptor {
     }
 
     // Verify Tenant Membership to prevent cross-tenant pollution
-    // Query UserTenantMembership using BOTH userId and tenantId
-    // We must run this inside the requested context so PlatformKernel allows the query.
     return new Observable((subscriber) => {
       tenantContext.run({ tenantId }, () => {
-        this.membershipRepo.findByUserId(user.sub, tenantId).then((membership) => {
+        this.membershipRepo.findByUserId(user.sub, tenantId).then(async (membership) => {
           if (!membership) {
-            // Reject with ForbiddenException when membership does not exist
             subscriber.error(new ForbiddenException('User does not have access to this tenant workspace'));
             return;
           }
           
-          // Store the verified roles/permissions on the request object for RBAC guards to use later
+          let validatedSchoolId: string | undefined = undefined;
+          const requestedSchoolId = request.headers['x-school-id'] as string;
+          
+          if (requestedSchoolId) {
+            // Validate the school belongs to the authorized tenant
+            const { kernel } = require('@saas/core-platform');
+            const school = await kernel.db.school.findFirst({
+              where: { id: requestedSchoolId, tenantId: membership.tenantId }
+            });
+            
+            if (!school) {
+              subscriber.error(new ForbiddenException('Invalid or unauthorized school workspace'));
+              return;
+            }
+            validatedSchoolId = school.id;
+          }
+
           request.workspace = {
             membershipId: membership.id,
             roleId: membership.roleId,
-            tenantId: membership.tenantId
+            tenantId: membership.tenantId,
+            schoolId: validatedSchoolId
           };
 
           next.handle().subscribe(subscriber);
