@@ -92,12 +92,7 @@ class PlatformKernel {
   public async $transaction<T>(
     fn: (tx: ReturnType<typeof buildScopedExtension>) => Promise<T>,
   ): Promise<T> {
-    return this.basePrisma.$transaction((prismaTx) => {
-      // Build a fresh scoped extension on the transaction client so the tenant enforcement
-      // middleware continues to apply to all model operations inside the transaction.
-      const scopedTx = buildScopedExtension(prismaTx as unknown as PrismaClient);
-      return fn(scopedTx);
-    });
+    return this.db.$transaction(fn as any) as Promise<T>;
   }
 
   /**
