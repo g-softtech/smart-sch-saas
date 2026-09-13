@@ -36,6 +36,7 @@ jest.mock('@saas/core-platform', () => {
         academicYear: { findFirst: jest.fn() },
         class: { findFirst: jest.fn() },
         arm: { findFirst: jest.fn() },
+        $queryRaw: jest.fn(),
       },
       $queryRaw: jest.fn(),
       $transaction: jest.fn(),
@@ -209,7 +210,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
   describe('Student CRUD', () => {
     it('POST /api/v1/students — creates student successfully (201)', async () => {
       (kernel.db.school.findUnique as jest.Mock).mockResolvedValue(mockSchool);
-      (kernel.$queryRaw as jest.Mock).mockResolvedValue([{ lastNumber: 1 }]);
+      (kernel.db.$queryRaw as jest.Mock).mockResolvedValue([{ lastNumber: 1 }]);
       (kernel.db.student.create as jest.Mock).mockResolvedValue(mockStudent);
 
       const res = await request(app.getHttpServer())

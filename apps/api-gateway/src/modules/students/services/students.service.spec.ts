@@ -93,7 +93,7 @@ describe('StudentsService (Unit / Mocked)', () => {
 
         const result = await service.createStudent(baseInput);
         expect(result.id).toBe('stu-1');
-        expect(repo.mintStudentNumber).toHaveBeenCalledWith(TENANT_ID, SCHOOL_ID);
+        expect(repo.mintStudentNumber).toHaveBeenCalledWith(TENANT_ID, SCHOOL_ID, undefined);
       }));
 
     it('rejects when school not found (cross-tenant or nonexistent)',
@@ -120,7 +120,7 @@ describe('StudentsService (Unit / Mocked)', () => {
         repo.createStudent.mockResolvedValueOnce({ id: 'stu-2', studentNumber: 'STU-0042' } as any);
 
         await service.createStudent(baseInput);
-        expect(repo.mintStudentNumber).toHaveBeenCalledWith(TENANT_ID, SCHOOL_ID);
+        expect(repo.mintStudentNumber).toHaveBeenCalledWith(TENANT_ID, SCHOOL_ID, undefined);
       }));
   });
 

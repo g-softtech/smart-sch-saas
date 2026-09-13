@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
-import { tenantContext, EnrollmentStatus, StudentStatus } from '@saas/core-platform';
+import { tenantContext, EnrollmentStatus, StudentStatus, kernel } from '@saas/core-platform';
 import { StudentsRepository, CreateStudentInput, CreateGuardianInput, LinkGuardianInput, CreateEnrollmentInput, TransferEnrollmentInput, WithdrawStudentInput } from '../repositories/students.repository';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,12 +33,12 @@ export class StudentsService {
    * - Atomically allocates a unique student number via DB UPSERT sequence.
    * - tenantId is sourced exclusively from WorkspaceContext, never from caller.
    */
-  async createStudent(input: CreateStudentInput) {
+  async createStudent(input: CreateStudentInput, tx?: typeof kernel.db) {
     const tenantId = this.getActiveTenantId();
 
     // Validate school exists and belongs to the active tenant.
     // kernel.db.school is TENANT_SCOPED; it returns null if school.tenantId != context.tenantId.
-    const school = await this.repo.findSchool(input.schoolId);
+    const school = await this.repo.findSchool(input.schoolId, tx);
     if (!school) {
       throw new BadRequestException('School not found or does not belong to the active tenant');
     }
@@ -49,9 +49,9 @@ export class StudentsService {
     }
 
     // Atomically allocate the next student number for this school.
-    const studentNumber = await this.repo.mintStudentNumber(tenantId, input.schoolId);
+    const studentNumber = await this.repo.mintStudentNumber(tenantId, input.schoolId, tx);
 
-    return this.repo.createStudent({ ...input, studentNumber, tenantId });
+    return this.repo.createStudent({ ...input, studentNumber, tenantId }, tx);
   }
 
   // ─── Guardian Management ───────────────────────────────────────────────────
@@ -121,10 +121,10 @@ export class StudentsService {
    *   AND its campus belongs to the same school.
    * - No existing ACTIVE enrollment for this student/year (pre-check; DB partial index is authoritative).
    */
-  async createEnrollment(input: CreateEnrollmentInput) {
+  async createEnrollment(input: CreateEnrollmentInput, tx?: typeof kernel.db) {
     const tenantId = this.getActiveTenantId();
 
-    const student = await this.repo.findStudent(input.studentId);
+    const student = await this.repo.findStudent(input.studentId, tx);
     if (!student) {
       throw new BadRequestException('Student not found or does not belong to the active tenant');
     }
@@ -133,7 +133,7 @@ export class StudentsService {
     }
 
     // AcademicYear: explicit tenantId filter (not in tenantScopedModels yet).
-    const academicYear = await this.repo.findAcademicYear(input.academicYearId);
+    const academicYear = await this.repo.findAcademicYear(input.academicYearId, tx);
     if (!academicYear) {
       throw new BadRequestException('AcademicYear not found or does not belong to the active tenant');
     }
@@ -142,7 +142,7 @@ export class StudentsService {
     }
 
     // Class: explicit tenantId filter.
-    const classEntity = await this.repo.findClass(input.classId);
+    const classEntity = await this.repo.findClass(input.classId, tx);
     if (!classEntity) {
       throw new BadRequestException('Class not found or does not belong to the active tenant');
     }
@@ -152,7 +152,7 @@ export class StudentsService {
 
     // Arm (optional): validate class and school/campus consistency.
     if (input.armId) {
-      const arm = await this.repo.findArm(input.armId);
+      const arm = await this.repo.findArm(input.armId, tx);
       if (!arm) {
         throw new BadRequestException('Arm not found or does not belong to the active tenant');
       }
@@ -164,7 +164,7 @@ export class StudentsService {
     }
 
     // Friendly pre-check before hitting the DB partial index.
-    const existingActive = await this.repo.findActiveEnrollment(input.studentId, input.academicYearId);
+    const existingActive = await this.repo.findActiveEnrollment(input.studentId, input.academicYearId, tx);
     if (existingActive) {
       throw new ConflictException('Student already has an ACTIVE enrollment for this academic year');
     }
@@ -178,7 +178,7 @@ export class StudentsService {
         academicYearId: input.academicYearId,
         classId: input.classId,
         armId: input.armId,
-      });
+      }, tx);
     } catch (err: unknown) {
       // PostgreSQL unique_violation on the partial index (race condition).
       const code = (err as { code?: string })?.code;

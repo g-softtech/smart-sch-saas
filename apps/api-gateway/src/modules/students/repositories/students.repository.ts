@@ -54,32 +54,37 @@ export type WithdrawStudentInput = {
 export class StudentsRepository {
 
   // ─── School lookup (not TENANT_SCOPED in kernel, but query scoped by tenantId field) ───
-  async findSchool(schoolId: string) {
+  async findSchool(schoolId: string, tx?: typeof kernel.db) {
     // School IS in tenantScopedModels — kernel appends tenantId automatically.
-    return kernel.db.school.findUnique({ where: { id: schoolId } });
+    const db = tx ?? kernel.db;
+    return db.school.findUnique({ where: { id: schoolId } });
   }
 
-  async findAcademicYear(academicYearId: string) {
+  async findAcademicYear(academicYearId: string, tx?: typeof kernel.db) {
     // AcademicYear is NOT in tenantScopedModels; tenantId filter applied explicitly.
+    const db = tx ?? kernel.db;
     const tenantId = tenantContext.getStore()?.tenantId;
-    return kernel.db.academicYear.findFirst({ where: { id: academicYearId, tenantId } });
+    return db.academicYear.findFirst({ where: { id: academicYearId, tenantId } });
   }
 
-  async findClass(classId: string) {
+  async findClass(classId: string, tx?: typeof kernel.db) {
     // Class is NOT in tenantScopedModels; tenantId filter applied explicitly.
+    const db = tx ?? kernel.db;
     const tenantId = tenantContext.getStore()?.tenantId;
-    return kernel.db.class.findFirst({ where: { id: classId, tenantId } });
+    return db.class.findFirst({ where: { id: classId, tenantId } });
   }
 
-  async findArm(armId: string) {
+  async findArm(armId: string, tx?: typeof kernel.db) {
     // Arm is NOT in tenantScopedModels; tenantId filter applied explicitly.
+    const db = tx ?? kernel.db;
     const tenantId = tenantContext.getStore()?.tenantId;
-    return kernel.db.arm.findFirst({ where: { id: armId, tenantId } });
+    return db.arm.findFirst({ where: { id: armId, tenantId } });
   }
 
-  async findStudent(studentId: string) {
+  async findStudent(studentId: string, tx?: typeof kernel.db) {
     // Student IS in tenantScopedModels — kernel appends tenantId automatically.
-    return kernel.db.student.findUnique({ where: { id: studentId } });
+    const db = tx ?? kernel.db;
+    return db.student.findUnique({ where: { id: studentId } });
   }
 
   async findGuardian(guardianId: string) {
@@ -87,8 +92,9 @@ export class StudentsRepository {
     return kernel.db.guardian.findUnique({ where: { id: guardianId } });
   }
 
-  async findActiveEnrollment(studentId: string, academicYearId: string) {
-    return kernel.db.enrollment.findFirst({
+  async findActiveEnrollment(studentId: string, academicYearId: string, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    return db.enrollment.findFirst({
       where: { studentId, academicYearId, status: EnrollmentStatus.ACTIVE },
     });
   }
@@ -111,8 +117,9 @@ export class StudentsRepository {
    * Two simultaneous first-time requests cannot both insert lastNumber=1;
    * the UPSERT serialises them on the unique constraint.
    */
-  async mintStudentNumber(tenantId: string, schoolId: string): Promise<string> {
-    const result = await kernel.$queryRaw<Array<{ lastNumber: number }>>`
+  async mintStudentNumber(tenantId: string, schoolId: string, tx?: typeof kernel.db): Promise<string> {
+    const db = tx ?? kernel.db;
+    const result = await db.$queryRaw<Array<{ lastNumber: number }>>`
       INSERT INTO stud_student_number_sequences ("tenantId", "schoolId", "lastNumber")
       VALUES (${tenantId}, ${schoolId}, 1)
       ON CONFLICT ("tenantId", "schoolId")
@@ -123,10 +130,11 @@ export class StudentsRepository {
     return `STU-${seq.toString().padStart(4, '0')}`;
   }
 
-  async createStudent(data: CreateStudentInput & { studentNumber: string; tenantId: string }) {
+  async createStudent(data: CreateStudentInput & { studentNumber: string; tenantId: string }, tx?: typeof kernel.db) {
     // tenantId injected by kernel from context; also passed explicitly to student-number sequence.
     // The kernel will overwrite any tenantId in data.data with the context value, which is correct.
-    return kernel.db.student.create({
+    const db = tx ?? kernel.db;
+    return db.student.create({
       data: {
         tenantId: data.tenantId, // will be overridden by kernel — included for TypeScript type safety
         schoolId: data.schoolId,
@@ -184,8 +192,9 @@ export class StudentsRepository {
     academicYearId: string;
     classId: string;
     armId?: string;
-  }) {
-    return kernel.db.enrollment.create({
+  }, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    return db.enrollment.create({
       data: {
         tenantId: data.tenantId,
         studentId: data.studentId,

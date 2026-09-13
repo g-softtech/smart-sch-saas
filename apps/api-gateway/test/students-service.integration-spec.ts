@@ -323,4 +323,69 @@ import { kernel, tenantContext, EnrollmentStatus, StudentStatus } from '@saas/co
       });
     });
   });
+
+  describe('Transaction Propagation (Batch 3B Refactor)', () => {
+    it('should successfully create student and enrollment within an external transaction (Test A & D)', async () => {
+      await runAsTenant(tenantA_id, async () => {
+        const result = await kernel.$transaction(async (tx) => {
+          const student = await service.createStudent({
+            schoolId: schoolA_id,
+            firstName: 'TxSuccess',
+            lastName: 'Student',
+            gender: 'MALE',
+            admissionDate: new Date(),
+          }, tx);
+
+          const enrollment = await service.createEnrollment({
+            studentId: student.id,
+            academicYearId: yearA_id,
+            classId: classA_id,
+            armId: armA_id,
+          }, tx);
+
+          return { student, enrollment };
+        });
+
+        // Verify writes committed
+        const studentInDb = await kernel.db.student.findUnique({ where: { id: result.student.id } });
+        expect(studentInDb).toBeDefined();
+        expect(studentInDb!.tenantId).toBe(tenantA_id); // Tenant isolation (Test D)
+
+        const enrollmentInDb = await kernel.db.enrollment.findUnique({ where: { id: result.enrollment.id } });
+        expect(enrollmentInDb).toBeDefined();
+      });
+    });
+
+    it('should completely roll back if a downstream error occurs (Test B)', async () => {
+      await runAsTenant(tenantA_id, async () => {
+        let attemptedStudentId: string | undefined;
+
+        await expect(
+          kernel.$transaction(async (tx) => {
+            const student = await service.createStudent({
+              schoolId: schoolA_id,
+              firstName: 'TxRollback',
+              lastName: 'Student',
+              gender: 'FEMALE',
+              admissionDate: new Date(),
+            }, tx);
+            
+            attemptedStudentId = student.id;
+
+            // Force a downstream failure
+            await service.createEnrollment({
+              studentId: student.id,
+              academicYearId: 'invalid-year-id-that-will-fail',
+              classId: classA_id,
+            }, tx);
+          })
+        ).rejects.toThrow('AcademicYear not found or does not belong to the active tenant');
+
+        // Verify the student was NOT persisted (rolled back)
+        expect(attemptedStudentId).toBeDefined();
+        const studentInDb = await kernel.db.student.findUnique({ where: { id: attemptedStudentId } });
+        expect(studentInDb).toBeNull();
+      });
+    });
+  });
 });
