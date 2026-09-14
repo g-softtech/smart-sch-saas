@@ -3,3 +3,4 @@ export * from './DomainEventPublisher';
 export * from './OutboxService';
 export * from './EventDispatcher';
 export * from './IdempotencyService';
+export * from './attendance.events';

@@ -5,6 +5,7 @@ import { AcademicsModule } from './modules/academics/academics.module';
 import { StudentsModule } from './modules/students/students.module';
 import { AdmissionsModule } from './modules/admissions/admissions.module';
 import { StaffModule } from './modules/staff/staff.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -14,6 +15,7 @@ import { AppController } from './app.controller';
     StudentsModule,
     AdmissionsModule,
     StaffModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [],

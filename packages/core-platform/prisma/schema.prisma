@@ -80,6 +80,10 @@ model Tenant {
   staffProfiles    StaffProfile[]
   staffCredentials StaffCredential[]
 
+  // Attendance (Batch 5)
+  attendanceRegisters AttendanceRegister[]
+  attendanceRecords   AttendanceRecord[]
+
   @@map("plt_tenants")
 }
 
@@ -202,6 +206,10 @@ model School {
   // Staff (Batch 4)
   staffProfiles    StaffProfile[]
   staffCredentials StaffCredential[]
+
+  // Attendance (Batch 5)
+  attendanceRegisters AttendanceRegister[]
+  attendanceRecords   AttendanceRecord[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -317,6 +325,9 @@ model AcademicYear {
   // Admissions (Batch 3C)
   publishedForms PublishedAdmissionForm[]
 
+  // Attendance (Batch 5)
+  attendanceRegisters AttendanceRegister[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -333,6 +344,9 @@ model Term {
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  // Attendance (Batch 5)
+  attendanceRegisters AttendanceRegister[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -378,6 +392,9 @@ model Class {
   // Admissions (Batch 3C)
   publishedForms PublishedAdmissionForm[]
 
+  // Attendance (Batch 5)
+  attendanceRegisters AttendanceRegister[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -399,6 +416,9 @@ model Arm {
 
   // Students (Batch 3B)
   enrollments Enrollment[]
+
+  // Attendance (Batch 5)
+  attendanceRegisters AttendanceRegister[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -508,6 +528,9 @@ model Student {
   enrollments Enrollment[]
   admissionApplication AdmissionApplication?
 
+  // Attendance (Batch 5)
+  attendanceRecords AttendanceRecord[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -582,6 +605,9 @@ model Enrollment {
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
   class        Class        @relation(fields: [classId], references: [id], onDelete: Restrict)
   arm          Arm?         @relation(fields: [armId], references: [id], onDelete: Restrict)
+
+  // Attendance (Batch 5)
+  attendanceRecords AttendanceRecord[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -779,4 +805,74 @@ model StaffCredential {
   @@unique([tenantId, credentialHash])
   @@index([tenantId, schoolId])
   @@map("stf_credentials")
+}
+
+// ================= ATTENDANCE MODELS (Batch 5) =================
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceRegister {
+  id             String   @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  termId         String
+  classId        String
+  armId          String?
+  date           DateTime @db.Date
+  
+  createdById      String
+  lastModifiedById String
+  finalizedById    String?
+  isFinalized      Boolean  @default(false)
+  finalizedAt      DateTime?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  records AttendanceRecord[]
+  
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term         Term         @relation(fields: [termId], references: [id], onDelete: Restrict)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Restrict)
+  arm          Arm?         @relation(fields: [armId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, schoolId, id])
+  @@index([tenantId, schoolId, date])
+  @@map("att_registers")
+}
+
+model AttendanceRecord {
+  id             String           @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  registerId     String
+  studentId      String
+  enrollmentId   String
+  status         AttendanceStatus
+  reason         String?          
+  notes          String?
+  
+  createdById      String
+  lastModifiedById String
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  register   AttendanceRegister @relation(fields: [tenantId, schoolId, registerId], references: [tenantId, schoolId, id], onDelete: Restrict)
+  tenant     Tenant             @relation(fields: [tenantId], references: [id])
+  school     School             @relation(fields: [schoolId], references: [id])
+  student    Student            @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment Enrollment         @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+
+  @@unique([registerId, studentId])
+  @@index([tenantId, studentId])
+  @@map("att_records")
 }

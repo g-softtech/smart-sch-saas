@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 export * from '@prisma/client';
 import { AsyncLocalStorage } from 'async_hooks';
+export * from './domain/events';
 
 export const tenantContext = new AsyncLocalStorage<{ tenantId: string }>();
 
