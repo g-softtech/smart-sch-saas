@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
@@ -10,8 +10,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login: authLogin, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      router.push('/workspaces');
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +28,7 @@ export default function LoginPage() {
       const response = await apiClient.post('api/v1/auth/login', { email, password }, { requireAuth: false });
       
       if (response && response.accessToken) {
-        login(response.accessToken);
+        authLogin(response.accessToken);
         router.push('/workspaces');
       } else {
         setError('Invalid response from server.');

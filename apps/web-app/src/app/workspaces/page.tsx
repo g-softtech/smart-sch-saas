@@ -23,12 +23,12 @@ export default function WorkspacesPage() {
   const [error, setError] = useState('');
   
   const { setWorkspace } = useWorkspace();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // If not authenticated, the api client or AuthContext will handle redirection,
-    // but we can also preemptively check.
+    if (isAuthLoading) return;
+
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -56,19 +56,23 @@ export default function WorkspacesPage() {
     };
 
     fetchWorkspaces();
-  }, [isAuthenticated, router]);
+  }, [isAuthLoading, isAuthenticated, router]);
 
   const handleSelectSchool = (tenantId: string, schoolId: string) => {
     setWorkspace(tenantId, schoolId);
     router.push('/dashboard');
   };
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <p className="text-gray-500">Loading your workspaces...</p>
+        <p className="text-gray-500">{isAuthLoading ? 'Authenticating...' : 'Loading your workspaces...'}</p>
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

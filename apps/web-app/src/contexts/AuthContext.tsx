@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -37,11 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
   };
 
-  // Prevent rendering protected content before initial token load
-  if (!isInitialized) return null;
-
   return (
-    <AuthContext.Provider value={{ token, isAuthenticated: !!token, login, logout }}>
+    <AuthContext.Provider value={{ token, isAuthenticated: !!token, isLoading: !isInitialized, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

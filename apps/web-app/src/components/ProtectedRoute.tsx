@@ -5,17 +5,25 @@ import { useRouter } from 'next/navigation';
 import { useEffect, ReactNode } from 'react';
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <p className="text-gray-500">Authenticating...</p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
-    return null; // or a loading spinner
+    return null;
   }
 
   return <>{children}</>;
