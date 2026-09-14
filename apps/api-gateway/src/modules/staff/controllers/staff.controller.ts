@@ -7,7 +7,7 @@ import { StaffResponseDto } from '../dto/staff-response.dto';
 import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
 import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
 
-@Controller('v1/staff')
+@Controller(['api/v1/staff', 'v1/staff'])
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
 export class StaffController {

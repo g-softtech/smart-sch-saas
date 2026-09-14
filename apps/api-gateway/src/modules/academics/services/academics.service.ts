@@ -90,4 +90,24 @@ export class AcademicsService {
 
     return this.repo.createSubject(data);
   }
+
+  async listAcademicYears(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listAcademicYears(tenantId, schoolId, skip, take);
+  }
+
+  async listTerms(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listTerms(tenantId, schoolId, skip, take);
+  }
+
+  async listClasses(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listClasses(tenantId, schoolId, skip, take);
+  }
+
+  async listArms(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listArms(tenantId, schoolId, skip, take);
+  }
+
+  async listSubjects(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listSubjects(tenantId, schoolId, skip, take);
+  }
 }

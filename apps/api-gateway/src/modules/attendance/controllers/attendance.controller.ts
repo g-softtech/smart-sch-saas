@@ -16,7 +16,7 @@ import { randomUUID } from 'crypto';
 @ApiBearerAuth()
 @ApiHeader({ name: 'x-tenant-id', description: 'Tenant ID', required: true })
 @ApiHeader({ name: 'x-school-id', description: 'School ID', required: true })
-@Controller('v1/attendance')
+@Controller(['api/v1/attendance', 'v1/attendance'])
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
 export class AttendanceController {

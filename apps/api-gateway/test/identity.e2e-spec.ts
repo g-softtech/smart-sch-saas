@@ -22,8 +22,10 @@ jest.mock('@saas/core-platform', () => {
         role: { findUnique: jest.fn(), findFirst: jest.fn() },
         permission: { findUnique: jest.fn() },
         rolePermission: { findMany: jest.fn() },
-        userTenantMembership: { findFirst: jest.fn(), findUnique: jest.fn() },
-      }
+        userTenantMembership: { findFirst: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
+      },
+      // $queryRaw is used by workspace resolution (cross-tenant SQL query in repository)
+      $queryRaw: jest.fn(),
     }
   };
 });
@@ -143,5 +145,29 @@ describe('Identity & Security (e2e)', () => {
       .set('Authorization', `Bearer ${validToken}`)
       .set('x-tenant-id', testTenant.id)
       .expect(403); // ForbiddenException
+  });
+
+  it('/api/v1/auth/workspaces (GET) - workspace resolution', async () => {
+    // Mock the $queryRaw call used by the repository's findActiveByUserId.
+    // The repository returns flat SQL rows; we simulate that shape here.
+    (kernel.$queryRaw as jest.Mock).mockResolvedValue([
+      {
+        membership_id: 'm1',
+        tenant_id: testTenant.id,
+        tenant_name: testTenant.name,
+        school_id: 's1',
+        school_name: 'Test Campus',
+      },
+    ]);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/auth/workspaces')
+      .set('Authorization', `Bearer ${validToken}`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0].tenantId).toBe(testTenant.id);
+    expect(res.body.data[0].schools[0].schoolId).toBe('s1');
   });
 });

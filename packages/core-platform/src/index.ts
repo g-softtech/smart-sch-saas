@@ -81,7 +81,7 @@ function buildScopedExtension(base: PrismaClient) {
 class PlatformKernel {
   private basePrisma = new PrismaClient();
 
-  // The client exposed to the rest of the application
+  // The client exposed to the rest of the application — enforces tenant-scoped Zero-Trust
   public db = buildScopedExtension(this.basePrisma);
 
   /**
@@ -100,8 +100,9 @@ class PlatformKernel {
 
   /**
    * Raw SQL execution — bypasses the extension entirely.
-   * Only use for system-level operations (e.g. student-number sequence allocation)
-   * where tenantId is passed explicitly in the SQL.
+   * Only use for system-level operations (e.g. student-number sequence allocation,
+   * cross-tenant user membership discovery) where tenantId is passed explicitly in the SQL.
+   * Callers are responsible for supplying all necessary WHERE predicates.
    */
   public $queryRaw<T = unknown>(
     query: TemplateStringsArray,
@@ -112,3 +113,4 @@ class PlatformKernel {
 }
 
 export const kernel = new PlatformKernel();
+

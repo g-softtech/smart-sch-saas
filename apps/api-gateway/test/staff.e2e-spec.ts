@@ -309,17 +309,18 @@ describe('StaffController (e2e) - Final Verification Audit', () => {
   it('12. CREDENTIAL_SECRET is required and has no fallback/default/hardcoded value', async () => {
     const originalSecret = process.env.CREDENTIAL_SECRET;
     delete process.env.CREDENTIAL_SECRET;
-
-    const res = await request(app.getHttpServer())
-      .post('/v1/staff/credentials/verify')
-      .set('x-tenant-id', tenantAId)
-      .set('x-school-id', schoolAId)
-      .set('Authorization', `Bearer ${tokenA}`)
-      .send({ rawToken: rawCredentialToken });
-    
-    expect(res.status).toBe(500);
-
-    process.env.CREDENTIAL_SECRET = originalSecret;
+    try {
+      const res = await request(app.getHttpServer())
+        .post('/v1/staff/credentials/verify')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rawToken: rawCredentialToken });
+      
+      expect(res.status).toBe(500);
+    } finally {
+      process.env.CREDENTIAL_SECRET = originalSecret;
+    }
   });
 
 

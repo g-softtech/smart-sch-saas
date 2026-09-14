@@ -1,8 +1,9 @@
-import { Controller, Post, Body, HttpCode } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthenticationService } from '../services/authentication.service';
 import { RegistrationService } from '../services/registration.service';
 import { RegisterUserDto, LoginDto, ApiResponseDto } from '../dto/auth.dto';
+import { JwtAuthGuard } from '../security/jwt-auth.guard';
 
 @ApiTags('Authentication')
 @Controller('api/v1/auth')
@@ -33,6 +34,18 @@ export class AuthController {
     return {
       success: true,
       data: { accessToken: result.accessToken }
+    };
+  }
+
+  @Get('workspaces')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Discover user workspaces' })
+  @ApiResponse({ status: 200 })
+  async getWorkspaces(@Req() req: any) {
+    const workspaces = await this.authService.getWorkspaces(req.user.sub);
+    return {
+      success: true,
+      data: workspaces
     };
   }
 }

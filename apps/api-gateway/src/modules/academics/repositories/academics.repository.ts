@@ -54,4 +54,55 @@ export class AcademicsRepository {
   async createSubject(data: any) {
     return kernel.db.subject.create({ data });
   }
+
+  async listAcademicYears(tenantId: string, schoolId: string, skip: number, take: number) {
+    return kernel.db.academicYear.findMany({
+      where: { tenantId, schoolId },
+      skip,
+      take,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async listTerms(tenantId: string, schoolId: string, skip: number, take: number) {
+    return kernel.db.term.findMany({
+      where: { 
+        tenantId, 
+        academicYear: { schoolId } 
+      },
+      skip,
+      take,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async listClasses(tenantId: string, schoolId: string, skip: number, take: number) {
+    return kernel.db.class.findMany({
+      where: { tenantId, schoolId },
+      skip,
+      take,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async listArms(tenantId: string, schoolId: string, skip: number, take: number) {
+    return kernel.db.arm.findMany({
+      where: { 
+        tenantId,
+        class: { schoolId }
+      },
+      skip,
+      take,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async listSubjects(tenantId: string, schoolId: string, skip: number, take: number) {
+    return kernel.db.subject.findMany({
+      where: { tenantId, schoolId },
+      skip,
+      take,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
 }

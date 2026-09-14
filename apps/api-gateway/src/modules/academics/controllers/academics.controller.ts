@@ -1,14 +1,16 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AcademicsService } from '../services/academics.service';
 import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
+import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
 import { 
   CreateCampusDto, CreateAcademicYearDto, CreateTermDto, 
   CreateDepartmentDto, CreateClassDto, CreateArmDto, 
-  CreateSubjectGroupDto, CreateSubjectDto 
+  CreateSubjectGroupDto, CreateSubjectDto, AcademicsPaginationQueryDto
 } from '../dto/academics.dto';
 
 @Controller('api/v1/academics')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(WorkspaceContextInterceptor)
 export class AcademicsController {
   constructor(private readonly academicsService: AcademicsService) {}
 
@@ -50,5 +52,65 @@ export class AcademicsController {
   @Post('subjects')
   async createSubject(@Body() dto: CreateSubjectDto) {
     return this.academicsService.createSubject(dto);
+  }
+
+  @Get('academic-years')
+  async listAcademicYears(
+    @Req() req: Request & { workspace: any },
+    @Query() query: AcademicsPaginationQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    const skip = Number(query.skip ?? 0);
+    const take = Number(query.take ?? 50);
+    const items = await this.academicsService.listAcademicYears(tenantId, schoolId, skip, take);
+    return { success: true, data: items };
+  }
+
+  @Get('terms')
+  async listTerms(
+    @Req() req: Request & { workspace: any },
+    @Query() query: AcademicsPaginationQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    const skip = Number(query.skip ?? 0);
+    const take = Number(query.take ?? 50);
+    const items = await this.academicsService.listTerms(tenantId, schoolId, skip, take);
+    return { success: true, data: items };
+  }
+
+  @Get('classes')
+  async listClasses(
+    @Req() req: Request & { workspace: any },
+    @Query() query: AcademicsPaginationQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    const skip = Number(query.skip ?? 0);
+    const take = Number(query.take ?? 50);
+    const items = await this.academicsService.listClasses(tenantId, schoolId, skip, take);
+    return { success: true, data: items };
+  }
+
+  @Get('arms')
+  async listArms(
+    @Req() req: Request & { workspace: any },
+    @Query() query: AcademicsPaginationQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    const skip = Number(query.skip ?? 0);
+    const take = Number(query.take ?? 50);
+    const items = await this.academicsService.listArms(tenantId, schoolId, skip, take);
+    return { success: true, data: items };
+  }
+
+  @Get('subjects')
+  async listSubjects(
+    @Req() req: Request & { workspace: any },
+    @Query() query: AcademicsPaginationQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    const skip = Number(query.skip ?? 0);
+    const take = Number(query.take ?? 50);
+    const items = await this.academicsService.listSubjects(tenantId, schoolId, skip, take);
+    return { success: true, data: items };
   }
 }
