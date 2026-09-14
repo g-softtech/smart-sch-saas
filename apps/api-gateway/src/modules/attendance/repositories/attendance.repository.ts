@@ -88,10 +88,25 @@ export class AttendanceRepository {
     });
   }
 
-  async getRegisters(tenantId: string, schoolId: string) {
+  async getRegisters(tenantId: string, schoolId: string, skip: number = 0, take: number = 50, startDate?: Date, endDate?: Date) {
+    const where: Prisma.AttendanceRegisterWhereInput = { tenantId, schoolId };
+    
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) where.date.gte = startDate;
+      if (endDate) where.date.lte = endDate;
+    }
+
     return kernel.db.attendanceRegister.findMany({
-      where: { tenantId, schoolId },
-      orderBy: { date: 'desc' },
+      where,
+      skip,
+      take,
+      orderBy: [
+        { date: 'desc' },
+        { classId: 'asc' },
+        { armId: 'asc' },
+        { id: 'asc' }
+      ],
     });
   }
 }

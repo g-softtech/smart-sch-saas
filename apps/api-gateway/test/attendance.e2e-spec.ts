@@ -417,4 +417,152 @@ describe('AttendanceController (e2e) - Final Verification Audit', () => {
     expect(resCross.status).toBe(200);
     expect(resCross.body.length).toBe(0); // Tenant isolation correctly returns empty array
   });
+  describe('Step 3 Hardening: Pagination, Filtering, and Response DTOs', () => {
+    it('B. registers default pagination & E. deterministic ordering', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/v1/attendance/registers')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(res.status).toBe(200);
+      expect(res.body.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.length).toBeLessThanOrEqual(50); // Default take
+      
+      // Deterministic ordering: date DESC
+      const dates = res.body.map((r: any) => new Date(r.date).getTime());
+      const sortedDates = [...dates].sort((a, b) => b - a);
+      expect(dates).toEqual(sortedDates);
+    });
+
+    it('A. registers pagination & C. maximum take enforcement', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/v1/attendance/registers?skip=0&take=1')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(res.status).toBe(200);
+      expect(res.body.length).toBe(1);
+
+      // Max take enforcement
+      const resMax = await request(app.getHttpServer())
+        .get('/v1/attendance/registers?take=101')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(resMax.status).toBe(400); // Exceeds max 100
+    });
+
+    it('D. invalid skip/take rejection', async () => {
+      const resSkip = await request(app.getHttpServer())
+        .get('/v1/attendance/registers?skip=-1')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(resSkip.status).toBe(400); // Minimum 0
+      
+      const resTake = await request(app.getHttpServer())
+        .get('/v1/attendance/registers?take=0')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(resTake.status).toBe(400); // Minimum 1
+    });
+
+    it('F. startDate & G. endDate & H. startDate + endDate filtering', async () => {
+      // First, get all to find bounds
+      const allRes = await request(app.getHttpServer())
+        .get('/v1/attendance/registers')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      
+      const res = await request(app.getHttpServer())
+        .get('/v1/attendance/registers?startDate=2026-09-01&endDate=2026-09-05')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(res.status).toBe(200);
+      for (const reg of res.body) {
+        const d = new Date(reg.date).getTime();
+        expect(d).toBeGreaterThanOrEqual(new Date('2026-09-01').getTime());
+        expect(d).toBeLessThanOrEqual(new Date('2026-09-05').getTime());
+      }
+    });
+
+    it('I. invalid date rejection & J. startDate > endDate rejection', async () => {
+      const invalidDates = ['2026-13-45', '2026-9-14', '2026-09-1', '2026-02-30', '2026-09-14T00:00:00Z', '2026-09-14T12:30:00Z'];
+      for (const d of invalidDates) {
+        const resInvalid = await request(app.getHttpServer())
+          .get(`/v1/attendance/registers?startDate=${d}`)
+          .set('x-tenant-id', tenantAId)
+          .set('x-school-id', schoolAId)
+          .set('Authorization', `Bearer ${tokenA}`);
+        expect(resInvalid.status).toBe(400); 
+      }
+
+      const resOrder = await request(app.getHttpServer())
+        .get('/v1/attendance/registers?startDate=2026-09-05&endDate=2026-09-01')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(resOrder.status).toBe(400);
+      expect(resOrder.body.message).toContain('startDate cannot be after endDate');
+    });
+
+    it('K. student-history pagination & L. student-history maximum take & M. deterministic ordering', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/v1/attendance/students/${student1Id}?skip=0&take=1`)
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(res.status).toBe(200);
+      expect(res.body.length).toBeLessThanOrEqual(1);
+
+      const resMax = await request(app.getHttpServer())
+        .get(`/v1/attendance/students/${student1Id}?take=101`)
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(resMax.status).toBe(400);
+
+      const resOrder = await request(app.getHttpServer())
+        .get(`/v1/attendance/students/${student1Id}?take=10`)
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(resOrder.status).toBe(200);
+      const dates = resOrder.body.filter((r: any) => r.register).map((r: any) => new Date(r.register.date).getTime());
+      const sortedDates = [...dates].sort((a, b) => b - a);
+      expect(dates).toEqual(sortedDates);
+    });
+
+    it('N. response DTO sanitization & O. audit fields do not leak', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/v1/attendance/registers')
+        .set('x-tenant-id', tenantAId)
+        .set('x-school-id', schoolAId)
+        .set('Authorization', `Bearer ${tokenA}`);
+      
+      expect(res.status).toBe(200);
+      const reg = res.body[0];
+      expect(reg).toBeDefined();
+      expect(reg.createdById).toBeUndefined();
+      expect(reg.lastModifiedById).toBeUndefined();
+      expect(reg.finalizedById).toBeUndefined();
+      expect(reg.createdAt).toBeUndefined();
+      expect(reg.updatedAt).toBeUndefined();
+      expect(reg.id).toBeDefined(); // explicitly allowed
+    });
+
+    it('P. tenant isolation remains intact & Q. school isolation remains intact', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/v1/attendance/registers?startDate=2026-09-01&endDate=2026-09-10')
+        .set('x-tenant-id', tenantBId)
+        .set('x-school-id', schoolBId)
+        .set('Authorization', `Bearer ${tokenB}`);
+      
+      expect(res.status).toBe(200);
+      expect(res.body.length).toBe(0); // Tenant/School B has no registers
+    });
+  });
 });

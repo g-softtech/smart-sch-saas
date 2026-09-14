@@ -12,6 +12,9 @@ export class AttendanceService {
 
   private parseDate(dateStr: string): Date {
     const d = new Date(dateStr);
+    if (isNaN(d.getTime()) || !d.toISOString().startsWith(dateStr)) {
+      throw new BadRequestException(`Invalid date provided: ${dateStr}`);
+    }
     d.setUTCHours(0, 0, 0, 0);
     return d;
   }
@@ -179,8 +182,13 @@ export class AttendanceService {
     });
   }
 
-  async getRegisters(tenantId: string, schoolId: string) {
-    return this.repo.getRegisters(tenantId, schoolId);
+  async getRegisters(tenantId: string, schoolId: string, skip: number = 0, take: number = 50, startDate?: string, endDate?: string) {
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      throw new BadRequestException('startDate cannot be after endDate');
+    }
+    const start = startDate ? this.parseDate(startDate) : undefined;
+    const end = endDate ? this.parseDate(endDate) : undefined;
+    return this.repo.getRegisters(tenantId, schoolId, skip, take, start, end);
   }
   
   async getRegisterById(tenantId: string, schoolId: string, registerId: string) {
@@ -189,11 +197,16 @@ export class AttendanceService {
     return register;
   }
 
-  async getStudentAttendance(tenantId: string, schoolId: string, studentId: string) {
+  async getStudentAttendance(tenantId: string, schoolId: string, studentId: string, skip: number = 0, take: number = 50) {
     return kernel.db.attendanceRecord.findMany({
       where: { tenantId, schoolId, studentId },
       include: { register: true },
-      orderBy: { register: { date: 'desc' } },
+      orderBy: [
+        { register: { date: 'desc' } },
+        { id: 'asc' }
+      ],
+      skip,
+      take,
     });
   }
 }
