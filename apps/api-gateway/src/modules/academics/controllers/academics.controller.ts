@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Req, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, Query, UseGuards, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { AcademicsService } from '../services/academics.service';
 import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
 import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
@@ -24,7 +24,11 @@ export class AcademicsController {
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateAcademicYearDto,
   ) {
-    return this.academicsService.createAcademicYear(req.workspace.tenantId, dto);
+    try {
+      return await this.academicsService.createAcademicYear(req.workspace.tenantId, dto);
+    } catch (err: any) {
+      throw new BadRequestException(\`\${err.name}: \${err.message}\`);
+    }
   }
 
   @Post('terms')
