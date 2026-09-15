@@ -36,7 +36,7 @@ const initialTabState: TabState = {
 };
 
 export default function AcademicsPage() {
-  const { schoolId } = useWorkspace();
+  const { schoolId, tenantId } = useWorkspace();
   const [activeTab, setActiveTab] = useState<TabType>('academic-years');
   const [tabStates, setTabStates] = useState<Record<TabType, TabState>>({
     'academic-years': { ...initialTabState },
@@ -60,6 +60,16 @@ export default function AcademicsPage() {
   const [createTermLoading, setCreateTermLoading] = useState(false);
   const [createTermError, setCreateTermError] = useState<string | null>(null);
   const [createTermSuccess, setCreateTermSuccess] = useState(false);
+
+  // Create Class Modal State
+  const [isCreateClassModalOpen, setIsCreateClassModalOpen] = useState(false);
+  const [createClassName, setCreateClassName] = useState('');
+  const [createClassSchoolId, setCreateClassSchoolId] = useState('');
+  const [createClassLoading, setCreateClassLoading] = useState(false);
+  const [createClassError, setCreateClassError] = useState<string | null>(null);
+  const [createClassSuccess, setCreateClassSuccess] = useState(false);
+  const [schoolsList, setSchoolsList] = useState<{schoolId: string, schoolName: string}[]>([]);
+  const [schoolsLoading, setSchoolsLoading] = useState(false);
 
   const fetchTabData = useCallback(async (tab: TabType, page: number) => {
     setTabStates(prev => ({
@@ -207,6 +217,64 @@ export default function AcademicsPage() {
     }
   };
 
+  const handleCreateClassSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createClassName.trim() || !createClassSchoolId) return;
+
+    setCreateClassLoading(true);
+    setCreateClassError(null);
+    setCreateClassSuccess(false);
+
+    try {
+      await apiClient.post('api/v1/academics/classes', {
+        schoolId: createClassSchoolId,
+        name: createClassName.trim()
+      });
+
+      setCreateClassSuccess(true);
+      setCreateClassName('');
+      setCreateClassSchoolId('');
+      setTimeout(() => {
+        setIsCreateClassModalOpen(false);
+        setCreateClassSuccess(false);
+      }, 1500);
+
+      // Refresh list
+      fetchTabData('classes', 0);
+
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setCreateClassError(err.message || 'Failed to create class');
+      } else {
+        setCreateClassError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setCreateClassLoading(false);
+    }
+  };
+
+  const openCreateClassModal = async () => {
+    setIsCreateClassModalOpen(true);
+    setCreateClassSchoolId(schoolId || '');
+
+    if (schoolsList.length === 0) {
+      setSchoolsLoading(true);
+      try {
+        const response = await apiClient.get('api/v1/auth/workspaces');
+        if (Array.isArray(response)) {
+          const workspace = response.find((w: { tenantId: string; schools: { schoolId: string; schoolName: string }[] }) => w.tenantId === tenantId);
+          if (workspace && Array.isArray(workspace.schools)) {
+            setSchoolsList(workspace.schools);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load schools', err);
+      } finally {
+        setSchoolsLoading(false);
+      }
+    }
+  };
+
   const currentState = tabStates[activeTab];
 
   // Define columns based on active tab
@@ -260,6 +328,14 @@ export default function AcademicsPage() {
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
           >
             Add Term
+          </button>
+        )}
+        {activeTab === 'classes' && (
+          <button
+            onClick={openCreateClassModal}
+            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+          >
+            Add Class
           </button>
         )}
       </div>
@@ -458,6 +534,96 @@ export default function AcademicsPage() {
                       className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2 disabled:opacity-50"
                     >
                       {createTermLoading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateClassModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setIsCreateClassModalOpen(false)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
+              <div>
+                <h3 className="text-lg font-semibold leading-6 text-gray-900">Add Class</h3>
+                <form onSubmit={handleCreateClassSubmit} className="mt-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="classSchoolId" className="block text-sm font-medium leading-6 text-gray-900">
+                        School
+                      </label>
+                      <div className="mt-2">
+                        <select
+                          id="classSchoolId"
+                          name="classSchoolId"
+                          required
+                          value={createClassSchoolId}
+                          onChange={(e) => setCreateClassSchoolId(e.target.value)}
+                          disabled={createClassLoading || schoolsLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3 bg-white"
+                        >
+                          <option value="">Select a School</option>
+                          {schoolsList.map((s) => (
+                            <option key={s.schoolId} value={s.schoolId}>
+                              {s.schoolName}
+                            </option>
+                          ))}
+                        </select>
+                        {schoolsLoading && (
+                          <p className="mt-1 text-xs text-gray-500">Loading schools...</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="className" className="block text-sm font-medium leading-6 text-gray-900">
+                        Class Name
+                      </label>
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          name="className"
+                          id="className"
+                          required
+                          value={createClassName}
+                          onChange={(e) => setCreateClassName(e.target.value)}
+                          disabled={createClassLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
+                          placeholder="e.g. Grade 1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {createClassError && (
+                    <div className="mt-2 text-sm text-red-600">
+                      {createClassError}
+                    </div>
+                  )}
+                  {createClassSuccess && (
+                    <div className="mt-2 text-sm text-green-600">
+                      Class created successfully!
+                    </div>
+                  )}
+
+                  <div className="mt-5 sm:mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateClassModalOpen(false)}
+                      disabled={createClassLoading}
+                      className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createClassLoading || !createClassName.trim() || !createClassSchoolId}
+                      className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2 disabled:opacity-50"
+                    >
+                      {createClassLoading ? 'Saving...' : 'Save'}
                     </button>
                   </div>
                 </form>
