@@ -97,7 +97,7 @@ export default function AdmissionsPage() {
       ) : (
         <DataTable
           data={data}
-          columns={columns as unknown as Column<Record<string, unknown>>[]}
+          columns={columns}
           loading={loading}
           emptyMessage="No applications found in this workspace."
           disablePagination={true}
