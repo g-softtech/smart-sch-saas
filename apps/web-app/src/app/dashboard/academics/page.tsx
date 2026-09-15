@@ -22,6 +22,7 @@ interface TabState {
   error: string | null;
   pageIndex: number;
   hasMore: boolean;
+  initialized: boolean;
 }
 
 const initialTabState: TabState = {
@@ -29,7 +30,8 @@ const initialTabState: TabState = {
   loading: false,
   error: null,
   pageIndex: 0,
-  hasMore: true
+  hasMore: true,
+  initialized: false
 };
 
 export default function AcademicsPage() {
@@ -63,7 +65,8 @@ export default function AcademicsPage() {
           data,
           pageIndex: page,
           hasMore: data.length === TAKE,
-          error: null
+          error: null,
+          initialized: true
         }
       }));
     } catch (err: unknown) {
@@ -77,7 +80,7 @@ export default function AcademicsPage() {
       }
       setTabStates(prev => ({
         ...prev,
-        [tab]: { ...prev[tab], loading: false, error: errorMessage }
+        [tab]: { ...prev[tab], loading: false, error: errorMessage, initialized: true }
       }));
     }
   }, []);
@@ -85,7 +88,7 @@ export default function AcademicsPage() {
   // Fetch data when active tab changes if it hasn't been fetched yet
   useEffect(() => {
     const currentState = tabStates[activeTab];
-    if (currentState.data.length === 0 && !currentState.loading && !currentState.error) {
+    if (!currentState.initialized && !currentState.loading) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchTabData(activeTab, 0);
     }
