@@ -31,46 +31,46 @@ export function DataTable<T>({
 
   if (loading && data.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm">
-        <p className="text-sm text-gray-500">Loading data...</p>
+      <div className="flex h-32 items-center justify-center rounded-lg border border-gray-200 dark:border-brand-border-dark bg-white dark:bg-brand-navy-surface shadow-sm">
+        <p className="text-sm text-gray-500 dark:text-brand-gray-text">Loading data...</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-lg border border-gray-200 dark:border-brand-border-dark bg-white dark:bg-brand-navy-surface shadow-sm overflow-hidden">
       <div className="overflow-x-auto relative">
         {loading && data.length > 0 && (
-          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center">
-             <p className="text-sm font-medium text-gray-600">Updating...</p>
+          <div className="absolute inset-0 bg-white/50 dark:bg-brand-navy-surface/50 backdrop-blur-sm z-10 flex items-center justify-center">
+             <p className="text-sm font-medium text-gray-600 dark:text-brand-offwhite">Updating...</p>
           </div>
         )}
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-brand-border-dark">
+          <thead className="bg-gray-50 dark:bg-brand-navy border-b border-gray-200 dark:border-brand-border-dark">
             <tr>
               {columns.map((col, i) => (
                 <th 
                   key={i} 
                   scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                  className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-brand-gray-text"
                 >
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-brand-border-dark bg-white dark:bg-brand-navy-surface">
             {data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan={columns.length} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-brand-gray-text">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
               data.map((item, i) => (
-                <tr key={i} className="hover:bg-gray-50 transition-colors">
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-brand-navy transition-colors">
                   {columns.map((col, j) => (
-                    <td key={j} className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                    <td key={j} className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-brand-offwhite">
                       {typeof col.accessor === 'function' ? col.accessor(item) : (item[col.accessor] as React.ReactNode)}
                     </td>
                   ))}
@@ -82,19 +82,19 @@ export function DataTable<T>({
       </div>
 
       {!disablePagination && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between border-t border-gray-200 dark:border-brand-border-dark bg-white dark:bg-brand-navy-surface px-4 py-3 sm:px-6">
           <div className="flex flex-1 justify-between sm:hidden">
             <button
               onClick={onPrev}
               disabled={pageIndex === 0 || loading}
-              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative inline-flex items-center rounded-md border border-gray-300 dark:border-brand-border-dark bg-white dark:bg-brand-navy-surface px-4 py-2 text-sm font-medium text-gray-700 dark:text-brand-offwhite hover:bg-gray-50 dark:hover:bg-brand-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Previous
             </button>
             <button
               onClick={onNext}
               disabled={!hasMore || loading}
-              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 dark:border-brand-border-dark bg-white dark:bg-brand-navy-surface px-4 py-2 text-sm font-medium text-gray-700 dark:text-brand-offwhite hover:bg-gray-50 dark:hover:bg-brand-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Next
             </button>
@@ -102,8 +102,8 @@ export function DataTable<T>({
           
           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
-                Page <span className="font-medium">{pageIndex + 1}</span>
+              <p className="text-sm text-gray-700 dark:text-brand-gray-text">
+                Showing page <span className="font-semibold text-gray-900 dark:text-brand-offwhite">{pageIndex + 1}</span>
               </p>
             </div>
             <div>
@@ -111,7 +111,7 @@ export function DataTable<T>({
                 <button
                   onClick={onPrev}
                   disabled={pageIndex === 0 || loading}
-                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 dark:text-brand-gray-text ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <span className="sr-only">Previous</span>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -121,7 +121,7 @@ export function DataTable<T>({
                 <button
                   onClick={onNext}
                   disabled={!hasMore || loading}
-                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 dark:text-brand-gray-text ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <span className="sr-only">Next</span>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
