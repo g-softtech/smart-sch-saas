@@ -20,8 +20,11 @@ export class AcademicsController {
   }
 
   @Post('academic-years')
-  async createAcademicYear(@Body() dto: CreateAcademicYearDto) {
-    return this.academicsService.createAcademicYear(dto);
+  async createAcademicYear(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateAcademicYearDto,
+  ) {
+    return this.academicsService.createAcademicYear(req.workspace.tenantId, dto);
   }
 
   @Post('terms')

@@ -62,17 +62,17 @@ describe('AcademicsService (Unit / Mocked)', () => {
 
   describe('AcademicYear', () => {
     it('valid AcademicYear', async () => {
-      repo.findSchool.mockResolvedValueOnce({ id: 'school-1' } as any);
+      repo.findSchool.mockResolvedValueOnce({ id: 'school-1', tenantId: 'tenant-1' } as any);
       repo.createAcademicYear.mockResolvedValueOnce({ id: 'year-1' } as any);
 
-      const result = await service.createAcademicYear({ schoolId: 'school-1', name: '2026/2027' });
+      const result = await service.createAcademicYear('tenant-1', { schoolId: 'school-1', name: '2026/2027' });
       expect(result.id).toBe('year-1');
     });
 
     it('AcademicYear with mismatched School tenant rejected', async () => {
       repo.findSchool.mockResolvedValueOnce(null);
 
-      await expect(service.createAcademicYear({ schoolId: 'school-1', name: '2026/2027' }))
+      await expect(service.createAcademicYear('tenant-1', { schoolId: 'school-1', name: '2026/2027' }))
         .rejects.toThrow(BadRequestException);
     });
   });
