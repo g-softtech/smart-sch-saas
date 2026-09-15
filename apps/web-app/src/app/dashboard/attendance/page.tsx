@@ -90,7 +90,9 @@ export default function AttendancePage() {
       header: 'Date', 
       accessor: (item) => {
         try {
-          return new Date(item.date).toLocaleDateString();
+          const d = new Date(item.date);
+          if (isNaN(d.getTime())) return item.date;
+          return d.toLocaleDateString(undefined, { timeZone: 'UTC' });
         } catch {
           return item.date;
         }

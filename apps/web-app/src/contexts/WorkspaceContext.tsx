@@ -20,7 +20,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const storedSchool = localStorage.getItem('x-school-id');
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (storedTenant) setTenantId(storedTenant);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (storedSchool) setSchoolId(storedSchool);
   }, []);
 
