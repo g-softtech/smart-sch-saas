@@ -3,8 +3,15 @@ export class CreateCampusDto {
   name!: string;
 }
 
+import { IsString, IsNotEmpty } from 'class-validator';
+
 export class CreateAcademicYearDto {
+  @IsString()
+  @IsNotEmpty()
   schoolId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
