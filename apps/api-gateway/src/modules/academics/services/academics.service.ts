@@ -21,12 +21,12 @@ export class AcademicsService {
     return this.repo.createAcademicYear({ ...data, tenantId });
   }
 
-  async createTerm(data: { academicYearId: string; name: string }) {
+  async createTerm(tenantId: string, data: { academicYearId: string; name: string }) {
     const academicYear = await this.repo.findAcademicYear(data.academicYearId);
-    if (!academicYear) {
+    if (!academicYear || academicYear.tenantId !== tenantId) {
       throw new BadRequestException('Academic Year not found or belongs to another tenant');
     }
-    return this.repo.createTerm(data);
+    return this.repo.createTerm({ ...data, tenantId });
   }
 
   async createDepartment(data: { schoolId: string; name: string }) {

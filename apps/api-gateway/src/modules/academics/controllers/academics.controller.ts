@@ -28,8 +28,11 @@ export class AcademicsController {
   }
 
   @Post('terms')
-  async createTerm(@Body() dto: CreateTermDto) {
-    return this.academicsService.createTerm(dto);
+  async createTerm(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateTermDto,
+  ) {
+    return this.academicsService.createTerm(req.workspace.tenantId, dto);
   }
 
   @Post('departments')

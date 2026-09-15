@@ -79,17 +79,29 @@ describe('AcademicsService (Unit / Mocked)', () => {
 
   describe('Term', () => {
     it('valid Term', async () => {
-      repo.findAcademicYear.mockResolvedValueOnce({ id: 'year-1' } as any);
+      repo.findAcademicYear.mockResolvedValueOnce({ id: 'year-1', tenantId: 'tenant-1' } as any);
       repo.createTerm.mockResolvedValueOnce({ id: 'term-1' } as any);
 
-      const result = await service.createTerm({ academicYearId: 'year-1', name: 'Fall Term' });
+      const result = await service.createTerm('tenant-1', { academicYearId: 'year-1', name: 'Fall Term' });
       expect(result.id).toBe('term-1');
+      expect(repo.createTerm).toHaveBeenCalledWith({
+        academicYearId: 'year-1',
+        name: 'Fall Term',
+        tenantId: 'tenant-1'
+      });
     });
 
     it('Term with mismatched AcademicYear tenant rejected', async () => {
+      repo.findAcademicYear.mockResolvedValueOnce({ id: 'year-1', tenantId: 'other-tenant' } as any);
+
+      await expect(service.createTerm('tenant-1', { academicYearId: 'year-1', name: 'Fall Term' }))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('Term with missing AcademicYear rejected', async () => {
       repo.findAcademicYear.mockResolvedValueOnce(null);
 
-      await expect(service.createTerm({ academicYearId: 'year-1', name: 'Fall Term' }))
+      await expect(service.createTerm('tenant-1', { academicYearId: 'year-1', name: 'Fall Term' }))
         .rejects.toThrow(BadRequestException);
     });
   });

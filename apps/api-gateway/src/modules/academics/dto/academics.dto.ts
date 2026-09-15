@@ -16,7 +16,12 @@ export class CreateAcademicYearDto {
 }
 
 export class CreateTermDto {
+  @IsString()
+  @IsNotEmpty()
   academicYearId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
