@@ -41,8 +41,11 @@ export class AcademicsController {
   }
 
   @Post('classes')
-  async createClass(@Body() dto: CreateClassDto) {
-    return this.academicsService.createClass(dto);
+  async createClass(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateClassDto,
+  ) {
+    return this.academicsService.createClass(req.workspace.tenantId, dto);
   }
 
   @Post('arms')

@@ -37,12 +37,12 @@ export class AcademicsService {
     return this.repo.createDepartment(data);
   }
 
-  async createClass(data: { schoolId: string; name: string }) {
+  async createClass(tenantId: string, data: { schoolId: string; name: string }) {
     const school = await this.repo.findSchool(data.schoolId);
-    if (!school) {
+    if (!school || school.tenantId !== tenantId) {
       throw new BadRequestException('School not found or belongs to another tenant');
     }
-    return this.repo.createClass(data);
+    return this.repo.createClass({ ...data, tenantId });
   }
 
   async createArm(data: { classId: string; campusId: string; name: string }) {

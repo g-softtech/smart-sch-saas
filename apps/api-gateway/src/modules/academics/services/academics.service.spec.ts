@@ -108,10 +108,30 @@ describe('AcademicsService (Unit / Mocked)', () => {
 
   describe('Class', () => {
     it('valid Class', async () => {
-      repo.findSchool.mockResolvedValueOnce({ id: 'school-1' } as any);
+      repo.findSchool.mockResolvedValueOnce({ id: 'school-1', tenantId: 'tenant-1' } as any);
       repo.createClass.mockResolvedValueOnce({ id: 'class-1' } as any);
 
-      await expect(service.createClass({ schoolId: 'school-1', name: 'Year 1' })).resolves.toBeDefined();
+      const result = await service.createClass('tenant-1', { schoolId: 'school-1', name: 'Year 1' });
+      expect(result.id).toBe('class-1');
+      expect(repo.createClass).toHaveBeenCalledWith({
+        schoolId: 'school-1',
+        name: 'Year 1',
+        tenantId: 'tenant-1'
+      });
+    });
+
+    it('Class with mismatched School tenant rejected', async () => {
+      repo.findSchool.mockResolvedValueOnce({ id: 'school-1', tenantId: 'other-tenant' } as any);
+
+      await expect(service.createClass('tenant-1', { schoolId: 'school-1', name: 'Year 1' }))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('Class with missing School rejected', async () => {
+      repo.findSchool.mockResolvedValueOnce(null);
+
+      await expect(service.createClass('tenant-1', { schoolId: 'school-1', name: 'Year 1' }))
+        .rejects.toThrow(BadRequestException);
     });
   });
 

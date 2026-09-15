@@ -31,7 +31,12 @@ export class CreateDepartmentDto {
 }
 
 export class CreateClassDto {
+  @IsString()
+  @IsNotEmpty()
   schoolId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
