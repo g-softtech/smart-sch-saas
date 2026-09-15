@@ -53,7 +53,7 @@ export default function AdmissionsPage() {
   }, [initialized, loading, fetchApplications]);
 
   const columns: Column<Application>[] = [
-    { header: 'ID', accessor: 'id' },
+    { header: 'ID', accessor: 'id', hideOnMobile: true },
     { 
       header: 'Applicant Name', 
       accessor: (item) => {

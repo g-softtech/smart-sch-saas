@@ -282,27 +282,27 @@ export default function AcademicsPage() {
 
   if (activeTab === 'academic-years') {
     columns = [
-      { header: 'ID', accessor: 'id' },
+      { header: 'ID', accessor: 'id', hideOnMobile: true },
       { header: 'Name', accessor: 'name' }
     ];
   } else if (activeTab === 'terms') {
     columns = [
-      { header: 'ID', accessor: 'id' },
+      { header: 'ID', accessor: 'id', hideOnMobile: true },
       { header: 'Name', accessor: 'name' }
     ];
   } else if (activeTab === 'classes') {
     columns = [
-      { header: 'ID', accessor: 'id' },
+      { header: 'ID', accessor: 'id', hideOnMobile: true },
       { header: 'Name', accessor: 'name' }
     ];
   } else if (activeTab === 'arms') {
     columns = [
-      { header: 'ID', accessor: 'id' },
+      { header: 'ID', accessor: 'id', hideOnMobile: true },
       { header: 'Name', accessor: 'name' }
     ];
   } else if (activeTab === 'subjects') {
     columns = [
-      { header: 'ID', accessor: 'id' },
+      { header: 'ID', accessor: 'id', hideOnMobile: true },
       { header: 'Name', accessor: 'name' }
     ];
   }

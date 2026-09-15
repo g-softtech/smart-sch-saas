@@ -115,7 +115,7 @@ export default function StudentsPage() {
   
   if (activeTab === 'students') {
     columns = [
-      { header: 'ID', accessor: 'id' },
+      { header: 'ID', accessor: 'id', hideOnMobile: true },
       { 
         header: 'Name', 
         accessor: (item) => {
@@ -134,7 +134,7 @@ export default function StudentsPage() {
     ];
   } else if (activeTab === 'guardians') {
     columns = [
-      { header: 'ID', accessor: 'id' },
+      { header: 'ID', accessor: 'id', hideOnMobile: true },
       { 
         header: 'Name', 
         accessor: (item) => {

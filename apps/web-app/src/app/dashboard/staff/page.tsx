@@ -74,7 +74,7 @@ export default function StaffPage() {
   };
 
   const columns: Column<StaffProfile>[] = [
-    { header: 'ID', accessor: 'id' },
+    { header: 'ID', accessor: 'id', hideOnMobile: true },
     { 
       header: 'Name', 
       accessor: (item) => {

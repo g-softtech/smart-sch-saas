@@ -3,6 +3,7 @@ import React from 'react';
 export interface Column<T> {
   header: string;
   accessor: keyof T | ((item: T) => React.ReactNode);
+  hideOnMobile?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -52,7 +53,7 @@ export function DataTable<T>({
                 <th 
                   key={i} 
                   scope="col" 
-                  className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-brand-gray-text"
+                  className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-brand-gray-text ${col.hideOnMobile ? 'hidden sm:table-cell' : ''}`}
                 >
                   {col.header}
                 </th>
@@ -70,7 +71,10 @@ export function DataTable<T>({
               data.map((item, i) => (
                 <tr key={i} className="hover:bg-gray-50 dark:hover:bg-brand-navy transition-colors">
                   {columns.map((col, j) => (
-                    <td key={j} className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-brand-offwhite">
+                    <td
+                      key={j}
+                      className={`whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-brand-offwhite ${col.hideOnMobile ? 'hidden sm:table-cell' : ''}`}
+                    >
                       {typeof col.accessor === 'function' ? col.accessor(item) : (item[col.accessor] as React.ReactNode)}
                     </td>
                   ))}

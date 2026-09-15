@@ -85,7 +85,7 @@ export default function AttendancePage() {
   };
 
   const columns: Column<AttendanceRegister>[] = [
-    { header: 'ID', accessor: 'id' },
+    { header: 'ID', accessor: 'id', hideOnMobile: true },
     { 
       header: 'Date', 
       accessor: (item) => {
