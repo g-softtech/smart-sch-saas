@@ -29,6 +29,7 @@ async function request(endpoint: string, options: RequestOptions = {}) {
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   const config: RequestInit = {
+    cache: 'no-store',
     ...customConfig,
     headers: {
       'Content-Type': 'application/json',

@@ -71,6 +71,28 @@ export default function AcademicsPage() {
   const [schoolsList, setSchoolsList] = useState<{schoolId: string, schoolName: string}[]>([]);
   const [schoolsLoading, setSchoolsLoading] = useState(false);
 
+  // Create Arm Modal State
+  const [isCreateArmModalOpen, setIsCreateArmModalOpen] = useState(false);
+  const [createArmName, setCreateArmName] = useState('');
+  const [createArmClassId, setCreateArmClassId] = useState('');
+  const [createArmCampusId, setCreateArmCampusId] = useState('');
+  const [createArmLoading, setCreateArmLoading] = useState(false);
+  const [createArmError, setCreateArmError] = useState<string | null>(null);
+  const [createArmSuccess, setCreateArmSuccess] = useState(false);
+  const [campusesList, setCampusesList] = useState<Record<string, unknown>[]>([]);
+  const [campusesLoading, setCampusesLoading] = useState(false);
+
+  // Create Subject Modal State
+  const [isCreateSubjectModalOpen, setIsCreateSubjectModalOpen] = useState(false);
+  const [createSubjectName, setCreateSubjectName] = useState('');
+  const [createSubjectSchoolId, setCreateSubjectSchoolId] = useState('');
+  const [createSubjectGroupId, setCreateSubjectGroupId] = useState('');
+  const [createSubjectLoading, setCreateSubjectLoading] = useState(false);
+  const [createSubjectError, setCreateSubjectError] = useState<string | null>(null);
+  const [createSubjectSuccess, setCreateSubjectSuccess] = useState(false);
+  const [subjectGroupsList, setSubjectGroupsList] = useState<Record<string, unknown>[]>([]);
+  const [subjectGroupsLoading, setSubjectGroupsLoading] = useState(false);
+
   const fetchTabData = useCallback(async (tab: TabType, page: number) => {
     setTabStates(prev => ({
       ...prev,
@@ -275,6 +297,139 @@ export default function AcademicsPage() {
     }
   };
 
+  const handleCreateArmSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createArmName.trim() || !createArmClassId || !createArmCampusId) return;
+
+    setCreateArmLoading(true);
+    setCreateArmError(null);
+    setCreateArmSuccess(false);
+
+    try {
+      await apiClient.post('api/v1/academics/arms', {
+        name: createArmName.trim(),
+        classId: createArmClassId,
+        campusId: createArmCampusId
+      });
+
+      setCreateArmSuccess(true);
+      setCreateArmName('');
+      setCreateArmClassId('');
+      setCreateArmCampusId('');
+      setTimeout(() => {
+        setIsCreateArmModalOpen(false);
+        setCreateArmSuccess(false);
+      }, 1500);
+
+      fetchTabData('arms', 0);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setCreateArmError(err.message || 'Failed to create arm');
+      } else {
+        setCreateArmError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setCreateArmLoading(false);
+    }
+  };
+
+  const openCreateArmModal = async () => {
+    setIsCreateArmModalOpen(true);
+    if (!tabStates['classes'].initialized && !tabStates['classes'].loading) {
+      fetchTabData('classes', 0);
+    }
+    
+    setCampusesLoading(true);
+    try {
+      const response = await apiClient.get('api/v1/academics/campuses?skip=0&take=100');
+      const resObj = response as { data?: Record<string, unknown>[] };
+      if (Array.isArray(response) || (response && Array.isArray(resObj.data))) {
+        setCampusesList(Array.isArray(response) ? response : resObj.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load campuses', err);
+    } finally {
+      setCampusesLoading(false);
+    }
+  };
+
+  const handleCreateSubjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createSubjectName.trim() || !createSubjectSchoolId) return;
+
+    setCreateSubjectLoading(true);
+    setCreateSubjectError(null);
+    setCreateSubjectSuccess(false);
+
+    try {
+      const payload: Record<string, string> = {
+        name: createSubjectName.trim(),
+        schoolId: createSubjectSchoolId,
+      };
+      if (createSubjectGroupId) {
+        payload.subjectGroupId = createSubjectGroupId;
+      }
+
+      await apiClient.post('api/v1/academics/subjects', payload);
+
+      setCreateSubjectSuccess(true);
+      setCreateSubjectName('');
+      setCreateSubjectSchoolId('');
+      setCreateSubjectGroupId('');
+      setTimeout(() => {
+        setIsCreateSubjectModalOpen(false);
+        setCreateSubjectSuccess(false);
+      }, 1500);
+
+      fetchTabData('subjects', 0);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setCreateSubjectError(err.message || 'Failed to create subject');
+      } else {
+        setCreateSubjectError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setCreateSubjectLoading(false);
+    }
+  };
+
+  const openCreateSubjectModal = async () => {
+    setIsCreateSubjectModalOpen(true);
+    setCreateSubjectSchoolId(schoolId || '');
+
+    if (schoolsList.length === 0) {
+      setSchoolsLoading(true);
+      try {
+        const response = await apiClient.get('api/v1/auth/workspaces');
+        const resObj = response as { data?: unknown[] };
+        const workspaceList = Array.isArray(response) ? response : resObj.data || [];
+        if (Array.isArray(workspaceList)) {
+          const workspace = workspaceList.find((w: { tenantId: string; schools: { schoolId: string; schoolName: string }[] }) => w.tenantId === tenantId);
+          if (workspace && Array.isArray(workspace.schools)) {
+            setSchoolsList(workspace.schools);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load schools', err);
+      } finally {
+        setSchoolsLoading(false);
+      }
+    }
+
+    setSubjectGroupsLoading(true);
+    try {
+      const response = await apiClient.get('api/v1/academics/subject-groups?skip=0&take=100');
+      const resObj = response as { data?: Record<string, unknown>[] };
+      if (Array.isArray(response) || (response && Array.isArray(resObj.data))) {
+        setSubjectGroupsList(Array.isArray(response) ? response : resObj.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load subject groups', err);
+    } finally {
+      setSubjectGroupsLoading(false);
+    }
+  };
+
   const currentState = tabStates[activeTab];
 
   // Define columns based on active tab
@@ -336,6 +491,22 @@ export default function AcademicsPage() {
             className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
           >
             Add Class
+          </button>
+        )}
+        {activeTab === 'arms' && (
+          <button
+            onClick={openCreateArmModal}
+            className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
+          >
+            Add Arm
+          </button>
+        )}
+        {activeTab === 'subjects' && (
+          <button
+            onClick={openCreateSubjectModal}
+            className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
+          >
+            Add Subject
           </button>
         )}
       </div>
@@ -624,6 +795,237 @@ export default function AcademicsPage() {
                       className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
                     >
                       {createClassLoading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateArmModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-brand-navy/80 backdrop-blur-sm transition-opacity" onClick={() => setIsCreateArmModalOpen(false)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-brand-navy-surface border border-gray-200 dark:border-brand-border-dark px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
+              <div>
+                <h3 className="text-lg font-semibold leading-6 text-brand-navy dark:text-brand-offwhite">Add Arm</h3>
+                <form onSubmit={handleCreateArmSubmit} className="mt-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="armClassId" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Class
+                      </label>
+                      <div className="mt-2">
+                        <select
+                          id="armClassId"
+                          name="armClassId"
+                          required
+                          value={createArmClassId}
+                          onChange={(e) => setCreateArmClassId(e.target.value)}
+                          disabled={createArmLoading || tabStates['classes'].loading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        >
+                          <option value="">Select a Class</option>
+                          {classesList.map((c: Record<string, unknown>) => (
+                            <option key={c.id as string} value={c.id as string}>
+                              {c.name as string}
+                            </option>
+                          ))}
+                        </select>
+                        {classesLoading && (
+                          <p className="mt-1 text-xs text-gray-500 dark:text-brand-gray-text">Loading classes...</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="armCampusId" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Campus
+                      </label>
+                      <div className="mt-2">
+                        <select
+                          id="armCampusId"
+                          name="armCampusId"
+                          required
+                          value={createArmCampusId}
+                          onChange={(e) => setCreateArmCampusId(e.target.value)}
+                          disabled={createArmLoading || campusesLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        >
+                          <option value="">Select a Campus</option>
+                          {campusesList.map((c: Record<string, unknown>) => (
+                            <option key={c.id as string} value={c.id as string}>
+                              {c.name as string}
+                            </option>
+                          ))}
+                        </select>
+                        {campusesLoading && (
+                          <p className="mt-1 text-xs text-gray-500 dark:text-brand-gray-text">Loading campuses...</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="armName" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Arm Name
+                      </label>
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          name="armName"
+                          id="armName"
+                          required
+                          value={createArmName}
+                          onChange={(e) => setCreateArmName(e.target.value)}
+                          disabled={createArmLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark placeholder:text-gray-400 dark:placeholder:text-brand-gray-text focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                          placeholder="e.g. Science"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {createArmError && (
+                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      {createArmError}
+                    </div>
+                  )}
+                  {createArmSuccess && (
+                    <div className="mt-2 text-sm text-brand-teal">
+                      Arm created successfully!
+                    </div>
+                  )}
+
+                  <div className="mt-5 sm:mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateArmModalOpen(false)}
+                      disabled={createArmLoading}
+                      className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy-surface px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy sm:col-start-1 sm:mt-0 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createArmLoading || !createArmName.trim() || !createArmClassId || !createArmCampusId}
+                      className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
+                    >
+                      {createArmLoading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateSubjectModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-brand-navy/80 backdrop-blur-sm transition-opacity" onClick={() => setIsCreateSubjectModalOpen(false)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-brand-navy-surface border border-gray-200 dark:border-brand-border-dark px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
+              <div>
+                <h3 className="text-lg font-semibold leading-6 text-brand-navy dark:text-brand-offwhite">Add Subject</h3>
+                <form onSubmit={handleCreateSubjectSubmit} className="mt-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="subjectSchoolId" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        School
+                      </label>
+                      <div className="mt-2">
+                        <select
+                          id="subjectSchoolId"
+                          name="subjectSchoolId"
+                          required
+                          value={createSubjectSchoolId}
+                          onChange={(e) => setCreateSubjectSchoolId(e.target.value)}
+                          disabled={createSubjectLoading || schoolsLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        >
+                          <option value="">Select a School</option>
+                          {schoolsList.map((s) => (
+                            <option key={s.schoolId} value={s.schoolId}>
+                              {s.schoolName}
+                            </option>
+                          ))}
+                        </select>
+                        {schoolsLoading && (
+                          <p className="mt-1 text-xs text-gray-500 dark:text-brand-gray-text">Loading schools...</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="subjectGroupId" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Subject Group (Optional)
+                      </label>
+                      <div className="mt-2">
+                        <select
+                          id="subjectGroupId"
+                          name="subjectGroupId"
+                          value={createSubjectGroupId}
+                          onChange={(e) => setCreateSubjectGroupId(e.target.value)}
+                          disabled={createSubjectLoading || subjectGroupsLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        >
+                          <option value="">No Group</option>
+                          {subjectGroupsList.map((sg: Record<string, unknown>) => (
+                            <option key={sg.id as string} value={sg.id as string}>
+                              {sg.name as string}
+                            </option>
+                          ))}
+                        </select>
+                        {subjectGroupsLoading && (
+                          <p className="mt-1 text-xs text-gray-500 dark:text-brand-gray-text">Loading groups...</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="subjectName" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Subject Name
+                      </label>
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          name="subjectName"
+                          id="subjectName"
+                          required
+                          value={createSubjectName}
+                          onChange={(e) => setCreateSubjectName(e.target.value)}
+                          disabled={createSubjectLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark placeholder:text-gray-400 dark:placeholder:text-brand-gray-text focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                          placeholder="e.g. Mathematics"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {createSubjectError && (
+                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      {createSubjectError}
+                    </div>
+                  )}
+                  {createSubjectSuccess && (
+                    <div className="mt-2 text-sm text-brand-teal">
+                      Subject created successfully!
+                    </div>
+                  )}
+
+                  <div className="mt-5 sm:mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateSubjectModalOpen(false)}
+                      disabled={createSubjectLoading}
+                      className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy-surface px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy sm:col-start-1 sm:mt-0 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createSubjectLoading || !createSubjectName.trim() || !createSubjectSchoolId}
+                      className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
+                    >
+                      {createSubjectLoading ? 'Saving...' : 'Save'}
                     </button>
                   </div>
                 </form>
