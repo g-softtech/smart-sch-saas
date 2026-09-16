@@ -45,14 +45,14 @@ export class AcademicsService {
     return this.repo.createClass({ ...data, tenantId });
   }
 
-  async createArm(data: { classId: string; campusId: string; name: string }) {
+  async createArm(tenantId: string, data: { classId: string; campusId: string; name: string }) {
     const classEntity = await this.repo.findClass(data.classId);
-    if (!classEntity) {
+    if (!classEntity || classEntity.tenantId !== tenantId) {
       throw new BadRequestException('Class not found or belongs to another tenant');
     }
 
     const campusEntity = await this.repo.findCampus(data.campusId);
-    if (!campusEntity) {
+    if (!campusEntity || campusEntity.tenantId !== tenantId) {
       throw new BadRequestException('Campus not found or belongs to another tenant');
     }
 
@@ -60,7 +60,7 @@ export class AcademicsService {
       throw new BadRequestException('Class and Campus must belong to the same school');
     }
 
-    return this.repo.createArm(data);
+    return this.repo.createArm({ ...data, tenantId });
   }
 
   async createSubjectGroup(data: { schoolId: string; name: string }) {
@@ -71,15 +71,15 @@ export class AcademicsService {
     return this.repo.createSubjectGroup(data);
   }
 
-  async createSubject(data: { schoolId: string; name: string; subjectGroupId?: string }) {
+  async createSubject(tenantId: string, data: { schoolId: string; name: string; subjectGroupId?: string }) {
     const school = await this.repo.findSchool(data.schoolId);
-    if (!school) {
+    if (!school || school.tenantId !== tenantId) {
       throw new BadRequestException('School not found or belongs to another tenant');
     }
 
     if (data.subjectGroupId) {
       const subjectGroup = await this.repo.findSubjectGroup(data.subjectGroupId);
-      if (!subjectGroup) {
+      if (!subjectGroup || subjectGroup.tenantId !== tenantId) {
         throw new BadRequestException('Subject Group not found or belongs to another tenant');
       }
       
@@ -88,7 +88,7 @@ export class AcademicsService {
       }
     }
 
-    return this.repo.createSubject(data);
+    return this.repo.createSubject({ ...data, tenantId });
   }
 
   async listAcademicYears(tenantId: string, schoolId: string, skip: number, take: number) {

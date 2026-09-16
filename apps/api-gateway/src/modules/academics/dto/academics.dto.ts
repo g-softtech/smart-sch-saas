@@ -3,7 +3,7 @@ export class CreateCampusDto {
   name!: string;
 }
 
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateAcademicYearDto {
   @IsString()
@@ -41,8 +41,16 @@ export class CreateClassDto {
 }
 
 export class CreateArmDto {
+  @IsString()
+  @IsNotEmpty()
   classId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   campusId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
@@ -52,8 +60,16 @@ export class CreateSubjectGroupDto {
 }
 
 export class CreateSubjectDto {
+  @IsString()
+  @IsNotEmpty()
   schoolId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
+
+  @IsOptional()
+  @IsString()
   subjectGroupId?: string;
 }
 

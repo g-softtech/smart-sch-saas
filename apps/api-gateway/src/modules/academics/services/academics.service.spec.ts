@@ -137,68 +137,67 @@ describe('AcademicsService (Unit / Mocked)', () => {
 
   describe('Arm', () => {
     it('valid Arm', async () => {
-      repo.findClass.mockResolvedValueOnce({ id: 'class-1', schoolId: 'school-1' } as any);
-      repo.findCampus.mockResolvedValueOnce({ id: 'campus-1', schoolId: 'school-1' } as any);
+      repo.findClass.mockResolvedValueOnce({ id: 'class-1', schoolId: 'school-1', tenantId: 'tenant-1' } as any);
+      repo.findCampus.mockResolvedValueOnce({ id: 'campus-1', schoolId: 'school-1', tenantId: 'tenant-1' } as any);
       repo.createArm.mockResolvedValueOnce({ id: 'arm-1' } as any);
 
-      await expect(service.createArm({ classId: 'class-1', campusId: 'campus-1', name: 'A' })).resolves.toBeDefined();
+      await expect(service.createArm('tenant-1', { classId: 'class-1', campusId: 'campus-1', name: 'A' })).resolves.toBeDefined();
     });
 
     it('Arm with mismatched Class tenant rejected', async () => {
-      repo.findClass.mockResolvedValueOnce(null);
-      // Even if campus is valid, it should fail
-      repo.findCampus.mockResolvedValueOnce({ id: 'campus-1', schoolId: 'school-1' } as any);
+      repo.findClass.mockResolvedValueOnce(null); // Mock repo filters it out or returns not found
+      repo.findCampus.mockResolvedValueOnce({ id: 'campus-1', schoolId: 'school-1', tenantId: 'tenant-1' } as any);
 
-      await expect(service.createArm({ classId: 'class-1', campusId: 'campus-1', name: 'A' }))
+      await expect(service.createArm('tenant-1', { classId: 'class-1', campusId: 'campus-1', name: 'A' }))
         .rejects.toThrow(BadRequestException);
     });
 
     it('Arm with mismatched Campus tenant rejected', async () => {
-      repo.findClass.mockResolvedValueOnce({ id: 'class-1', schoolId: 'school-1' } as any);
+      repo.findClass.mockResolvedValueOnce({ id: 'class-1', schoolId: 'school-1', tenantId: 'tenant-1' } as any);
       repo.findCampus.mockResolvedValueOnce(null);
 
-      await expect(service.createArm({ classId: 'class-1', campusId: 'campus-1', name: 'A' }))
+      await expect(service.createArm('tenant-1', { classId: 'class-1', campusId: 'campus-1', name: 'A' }))
         .rejects.toThrow(BadRequestException);
     });
 
     it('Arm whose Class and Campus belong to different schools rejected', async () => {
-      repo.findClass.mockResolvedValueOnce({ id: 'class-1', schoolId: 'school-1' } as any);
-      repo.findCampus.mockResolvedValueOnce({ id: 'campus-1', schoolId: 'school-2' } as any); // Different school
+      repo.findClass.mockResolvedValueOnce({ id: 'class-1', schoolId: 'school-1', tenantId: 'tenant-1' } as any);
+      repo.findCampus.mockResolvedValueOnce({ id: 'campus-1', schoolId: 'school-2', tenantId: 'tenant-1' } as any); // Different school
 
-      await expect(service.createArm({ classId: 'class-1', campusId: 'campus-1', name: 'A' }))
+      await expect(service.createArm('tenant-1', { classId: 'class-1', campusId: 'campus-1', name: 'A' }))
         .rejects.toThrow(BadRequestException);
     });
   });
 
   describe('Subject', () => {
     it('valid Subject without SubjectGroup', async () => {
-      repo.findSchool.mockResolvedValueOnce({ id: 'school-1' } as any);
+      repo.findSchool.mockResolvedValueOnce({ id: 'school-1', tenantId: 'tenant-1' } as any);
       repo.createSubject.mockResolvedValueOnce({ id: 'sub-1' } as any);
 
-      await expect(service.createSubject({ schoolId: 'school-1', name: 'Math' })).resolves.toBeDefined();
+      await expect(service.createSubject('tenant-1', { schoolId: 'school-1', name: 'Math' })).resolves.toBeDefined();
     });
 
     it('valid Subject with matching SubjectGroup', async () => {
-      repo.findSchool.mockResolvedValueOnce({ id: 'school-1' } as any);
-      repo.findSubjectGroup.mockResolvedValueOnce({ id: 'group-1', schoolId: 'school-1' } as any);
+      repo.findSchool.mockResolvedValueOnce({ id: 'school-1', tenantId: 'tenant-1' } as any);
+      repo.findSubjectGroup.mockResolvedValueOnce({ id: 'group-1', schoolId: 'school-1', tenantId: 'tenant-1' } as any);
       repo.createSubject.mockResolvedValueOnce({ id: 'sub-1' } as any);
 
-      await expect(service.createSubject({ schoolId: 'school-1', name: 'Math', subjectGroupId: 'group-1' })).resolves.toBeDefined();
+      await expect(service.createSubject('tenant-1', { schoolId: 'school-1', name: 'Math', subjectGroupId: 'group-1' })).resolves.toBeDefined();
     });
 
     it('Subject with mismatched SubjectGroup tenant rejected', async () => {
-      repo.findSchool.mockResolvedValueOnce({ id: 'school-1' } as any);
+      repo.findSchool.mockResolvedValueOnce({ id: 'school-1', tenantId: 'tenant-1' } as any);
       repo.findSubjectGroup.mockResolvedValueOnce(null); // Kernel filters it out
 
-      await expect(service.createSubject({ schoolId: 'school-1', name: 'Math', subjectGroupId: 'group-1' }))
+      await expect(service.createSubject('tenant-1', { schoolId: 'school-1', name: 'Math', subjectGroupId: 'group-1' }))
         .rejects.toThrow(BadRequestException);
     });
 
     it('Subject with mismatched SubjectGroup school rejected', async () => {
-      repo.findSchool.mockResolvedValueOnce({ id: 'school-1' } as any);
-      repo.findSubjectGroup.mockResolvedValueOnce({ id: 'group-1', schoolId: 'school-2' } as any);
+      repo.findSchool.mockResolvedValueOnce({ id: 'school-1', tenantId: 'tenant-1' } as any);
+      repo.findSubjectGroup.mockResolvedValueOnce({ id: 'group-1', schoolId: 'school-2', tenantId: 'tenant-1' } as any);
 
-      await expect(service.createSubject({ schoolId: 'school-1', name: 'Math', subjectGroupId: 'group-1' }))
+      await expect(service.createSubject('tenant-1', { schoolId: 'school-1', name: 'Math', subjectGroupId: 'group-1' }))
         .rejects.toThrow(BadRequestException);
     });
   });

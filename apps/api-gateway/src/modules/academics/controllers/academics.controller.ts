@@ -49,8 +49,12 @@ export class AcademicsController {
   }
 
   @Post('arms')
-  async createArm(@Body() dto: CreateArmDto) {
-    return this.academicsService.createArm(dto);
+  async createArm(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateArmDto,
+  ) {
+    const tenantId = req.workspace.tenantId;
+    return this.academicsService.createArm(tenantId, dto);
   }
 
   @Post('subject-groups')
@@ -59,8 +63,12 @@ export class AcademicsController {
   }
 
   @Post('subjects')
-  async createSubject(@Body() dto: CreateSubjectDto) {
-    return this.academicsService.createSubject(dto);
+  async createSubject(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateSubjectDto,
+  ) {
+    const tenantId = req.workspace.tenantId;
+    return this.academicsService.createSubject(tenantId, dto);
   }
 
   @Get('academic-years')
