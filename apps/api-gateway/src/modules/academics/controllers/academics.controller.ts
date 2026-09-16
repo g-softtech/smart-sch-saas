@@ -130,4 +130,28 @@ export class AcademicsController {
     const items = await this.academicsService.listSubjects(tenantId, schoolId, skip, take);
     return { success: true, data: items };
   }
+
+  @Get('campuses')
+  async listCampuses(
+    @Req() req: Request & { workspace: any },
+    @Query() query: AcademicsPaginationQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    const skip = Number(query.skip ?? 0);
+    const take = Number(query.take ?? 50);
+    const items = await this.academicsService.listCampuses(tenantId, schoolId, skip, take);
+    return { success: true, data: items };
+  }
+
+  @Get('subject-groups')
+  async listSubjectGroups(
+    @Req() req: Request & { workspace: any },
+    @Query() query: AcademicsPaginationQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    const skip = Number(query.skip ?? 0);
+    const take = Number(query.take ?? 50);
+    const items = await this.academicsService.listSubjectGroups(tenantId, schoolId, skip, take);
+    return { success: true, data: items };
+  }
 }

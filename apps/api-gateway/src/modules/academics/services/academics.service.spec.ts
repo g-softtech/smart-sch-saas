@@ -26,6 +26,8 @@ describe('AcademicsService (Unit / Mocked)', () => {
       createArm: jest.fn(),
       createSubjectGroup: jest.fn(),
       createSubject: jest.fn(),
+      listCampuses: jest.fn(),
+      listSubjectGroups: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -199,6 +201,22 @@ describe('AcademicsService (Unit / Mocked)', () => {
 
       await expect(service.createSubject('tenant-1', { schoolId: 'school-1', name: 'Math', subjectGroupId: 'group-1' }))
         .rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('Queries', () => {
+    it('listCampuses proxies to repo with tenantId', async () => {
+      repo.listCampuses.mockResolvedValueOnce([{ id: 'campus-1' }] as any);
+      const result = await service.listCampuses('tenant-1', 'school-1', 0, 50);
+      expect(result).toEqual([{ id: 'campus-1' }]);
+      expect(repo.listCampuses).toHaveBeenCalledWith('tenant-1', 'school-1', 0, 50);
+    });
+
+    it('listSubjectGroups proxies to repo with tenantId', async () => {
+      repo.listSubjectGroups.mockResolvedValueOnce([{ id: 'sg-1' }] as any);
+      const result = await service.listSubjectGroups('tenant-1', 'school-1', 0, 50);
+      expect(result).toEqual([{ id: 'sg-1' }]);
+      expect(repo.listSubjectGroups).toHaveBeenCalledWith('tenant-1', 'school-1', 0, 50);
     });
   });
 });

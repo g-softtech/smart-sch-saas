@@ -110,4 +110,12 @@ export class AcademicsService {
   async listSubjects(tenantId: string, schoolId: string, skip: number, take: number) {
     return this.repo.listSubjects(tenantId, schoolId, skip, take);
   }
+
+  async listCampuses(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listCampuses(tenantId, schoolId, skip, take);
+  }
+
+  async listSubjectGroups(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listSubjectGroups(tenantId, schoolId, skip, take);
+  }
 }

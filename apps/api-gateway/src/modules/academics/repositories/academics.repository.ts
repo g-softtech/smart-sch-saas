@@ -105,4 +105,22 @@ export class AcademicsRepository {
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
   }
+
+  async listCampuses(tenantId: string, schoolId: string, skip: number, take: number) {
+    return kernel.db.campus.findMany({
+      where: { tenantId, schoolId },
+      skip,
+      take,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async listSubjectGroups(tenantId: string, schoolId: string, skip: number, take: number) {
+    return kernel.db.subjectGroup.findMany({
+      where: { tenantId, schoolId },
+      skip,
+      take,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
 }
