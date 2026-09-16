@@ -105,6 +105,7 @@ export default function StudentsPage() {
   useEffect(() => {
     const currentState = tabStates[activeTab];
     if (!currentState.initialized && !currentState.loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchTabData(activeTab, 0);
     }
   }, [activeTab, tabStates, fetchTabData]);
@@ -132,7 +133,17 @@ export default function StudentsPage() {
     setCreateSuccess(false);
 
     try {
-      const payload: any = {
+      interface CreateStudentPayload {
+        firstName: string;
+        lastName: string;
+        gender: string;
+        admissionDate: string;
+        middleName?: string;
+        dateOfBirth?: string;
+        nationality?: string;
+      }
+
+      const payload: CreateStudentPayload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         gender,
