@@ -12,6 +12,10 @@ import {
   IsInt,
   Min,
   Max,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+  Validate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -39,6 +43,21 @@ export enum GuardianRelationshipDto {
   OTHER = 'OTHER',
 }
 
+@ValidatorConstraint({ name: 'isBeforeAdmissionDate', async: false })
+export class IsBeforeAdmissionDateConstraint implements ValidatorConstraintInterface {
+  validate(dateOfBirth: string, args: ValidationArguments) {
+    if (!dateOfBirth) return true;
+    const obj = args.object as any;
+    if (!obj.admissionDate) return true;
+
+    return new Date(dateOfBirth) < new Date(obj.admissionDate);
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'Date of birth must be earlier than admission date.';
+  }
+}
+
 // ─── Student DTOs ────────────────────────────────────────────────────────────
 
 export class CreateStudentDto {
@@ -64,6 +83,7 @@ export class CreateStudentDto {
   @ApiPropertyOptional({ example: '2010-05-15' })
   @IsISO8601()
   @IsOptional()
+  @Validate(IsBeforeAdmissionDateConstraint)
   dateOfBirth?: string;
 
   @ApiProperty({ enum: GenderEnumDto })

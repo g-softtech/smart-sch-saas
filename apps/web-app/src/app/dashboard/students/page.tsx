@@ -132,6 +132,12 @@ export default function StudentsPage() {
     setCreateError(null);
     setCreateSuccess(false);
 
+    if (dateOfBirth && new Date(dateOfBirth) >= new Date(admissionDate)) {
+      setCreateError('Date of birth must be earlier than admission date.');
+      setCreateLoading(false);
+      return;
+    }
+
     try {
       interface CreateStudentPayload {
         firstName: string;

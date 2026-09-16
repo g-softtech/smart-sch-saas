@@ -105,6 +105,8 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
     jest.clearAllMocks();
     // Default: membership resolves for all requests that need it
     (kernel.db.userTenantMembership.findUnique as jest.Mock).mockResolvedValue(testMembership);
+    (kernel.db.school.findUnique as jest.Mock).mockResolvedValue(mockSchool);
+    (kernel.db.school.findFirst as jest.Mock).mockResolvedValue(mockSchool);
   });
 
   // ─── Authentication enforcement ────────────────────────────────────────────
@@ -128,6 +130,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post('/api/v1/students')
         .set('Authorization', 'Bearer invalid.token.value')
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send(validCreateStudentBody)
         .expect(401);
     });
@@ -164,6 +167,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ schoolId: SCHOOL_ID, lastName: 'Okonkwo', gender: 'FEMALE', admissionDate: '2026-09-01' })
         .expect(400);
     });
@@ -173,16 +177,28 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ ...validCreateStudentBody, gender: 'UNKNOWN' })
         .expect(400);
     });
 
-    it('POST /api/v1/students — rejects non-UUID schoolId (400)', async () => {
+    it('POST /api/v1/students — rejects dateOfBirth equal to admissionDate (400)', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
-        .send({ ...validCreateStudentBody, schoolId: 'not-a-uuid' })
+        .set('x-school-id', SCHOOL_ID)
+        .send({ ...validCreateStudentBody, dateOfBirth: '2026-09-01', admissionDate: '2026-09-01' })
+        .expect(400);
+    });
+
+    it('POST /api/v1/students — rejects dateOfBirth after admissionDate (400)', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/students')
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
+        .send({ ...validCreateStudentBody, dateOfBirth: '2026-09-10', admissionDate: '2026-09-01' })
         .expect(400);
     });
 
@@ -191,6 +207,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/enrollments`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ academicYearId: 'bad', classId: CLASS_ID })
         .expect(400);
     });
@@ -200,6 +217,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ guardianId: GUARDIAN_ID, relationship: 'SIBLING' })
         .expect(400);
     });
@@ -217,6 +235,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send(validCreateStudentBody)
         .expect(201);
 
@@ -232,6 +251,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send(validCreateStudentBody)
         .expect(400);
     });
@@ -243,6 +263,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .expect(200);
 
       expect(res.body.success).toBe(true);
@@ -257,6 +278,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .get(`/api/v1/students/${STUDENT_ID}`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .expect(200);
 
       expect(res.body.success).toBe(true);
@@ -270,6 +292,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .get(`/api/v1/students/${STUDENT_ID}`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .expect(400);
     });
 
@@ -280,6 +303,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .get(`/api/v1/students/${STUDENT_ID}`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .expect(400);
     });
   });
@@ -294,6 +318,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post('/api/v1/students/guardians')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ firstName: 'Emeka', lastName: 'Okonkwo' })
         .expect(201);
 
@@ -313,6 +338,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' })
         .expect(201);
 
@@ -328,6 +354,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' })
         .expect(409);
     });
@@ -340,6 +367,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .get(`/api/v1/students/${STUDENT_ID}/guardians`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .expect(200);
 
       expect(res.body.success).toBe(true);
@@ -361,6 +389,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/enrollments`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ academicYearId: YEAR_ID, classId: CLASS_ID })
         .expect(201);
 
@@ -379,6 +408,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/enrollments`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ academicYearId: YEAR_ID, classId: CLASS_ID })
         .expect(409);
     });
@@ -391,6 +421,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .get(`/api/v1/students/${STUDENT_ID}/enrollments`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .expect(200);
 
       expect(res.body.success).toBe(true);
@@ -408,6 +439,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/enrollments/${ENROLLMENT_ID}/transfer`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({ newClassId })
         .expect(201);
 
@@ -425,6 +457,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .post(`/api/v1/students/${STUDENT_ID}/enrollments/${ENROLLMENT_ID}/withdraw`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
         .send({})
         .expect(200);
 
