@@ -73,7 +73,7 @@ export class CreateSubjectDto {
   subjectGroupId?: string;
 }
 
-import { IsOptional, IsInt, Min } from 'class-validator';
+import { IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AcademicsPaginationQueryDto {
