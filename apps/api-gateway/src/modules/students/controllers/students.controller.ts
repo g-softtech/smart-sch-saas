@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Body, Param, Query,
-  UseGuards, UseInterceptors, HttpCode,
+  UseGuards, UseInterceptors, HttpCode, Req, BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { StudentsService } from '../services/students.service';
@@ -44,9 +44,14 @@ export class StudentsController {
   @Post()
   @ApiOperation({ summary: 'Create a new student (post-admission)' })
   @ApiResponse({ status: 201 })
-  async createStudent(@Body() dto: CreateStudentDto): Promise<ApiResponseDto<any>> {
+  async createStudent(@Req() req: any, @Body() dto: CreateStudentDto): Promise<ApiResponseDto<any>> {
+    const { schoolId } = req.workspace;
+    if (!schoolId) {
+      throw new BadRequestException('School context is required');
+    }
+
     const student = await this.studentsService.createStudent({
-      schoolId: dto.schoolId,
+      schoolId,
       firstName: dto.firstName,
       lastName: dto.lastName,
       middleName: dto.middleName,

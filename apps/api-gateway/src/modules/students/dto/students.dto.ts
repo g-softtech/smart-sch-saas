@@ -42,9 +42,6 @@ export enum GuardianRelationshipDto {
 // ─── Student DTOs ────────────────────────────────────────────────────────────
 
 export class CreateStudentDto {
-  @ApiProperty({ example: 'uuid-of-school' })
-  @IsUUID('all')
-  schoolId!: string;
 
   @ApiProperty({ example: 'Ada' })
   @IsString()
