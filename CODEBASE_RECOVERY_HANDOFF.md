@@ -128,4 +128,86 @@ Implemented Unit tests for `AcademicsService` using `jest`.
 ## 8. Final Checkpoint
 - **Commit Hash:** `d93bf262`
 - **Working Tree:** The working tree is clean.
-- **Next Phase:** Batch 3B (Students) is explicitly NOT started. Do not begin Students until authorized.
+
+---
+
+# Codebase Recovery - Batch 3A Stage 10 (Academics UI Integration)
+
+## 1. Objective
+Complete the frontend UI for Academics (Arms and Subjects) and ensure tenant isolation across all endpoints.
+
+## 2. Stage 10D (Backend Preparation)
+- **Completed:** Migrated database structure for `School`, `Class`, `Campus`, `Arm`, `Subject`.
+- **Validation:** Verified API endpoints properly enforce tenant boundaries and block cross-tenant lookups via integration tests and API manual calls.
+
+## 3. Stage 10E (Frontend Verification)
+- **Implemented:** Selectors for Campus and Subject Group exposed through `GET /api/v1/academics/campuses` and `GET /api/v1/academics/subject-groups` with strict tenant scoping.
+- **Fixed:** Resolved `tabStates` binding error in UI state mapping, ensuring `classesList` handles independent modal selection.
+- **Fixed:** Mitigated aggressive browser caching on `GET /api/v1/auth/workspaces` by globally appending `cache: 'no-store'` in `apiClient`. This ensures newly provisioned schools and campuses appear instantly across the Academics Dashboard.
+- **Verified Evidence:** User manually validated Arm creation (`glory`), Subject creation (`biology`, `english`), layout rendering in Dark Mode, and dropdown availability.
+
+## 4. Current Status
+- **Commit:** `287f6ec8`
+- **Next Phase:** Stage 10F (TBD / pending project documentation). Stage 10E is completely verified.
+
+---
+
+# Codebase Recovery - Stage 9A (Students Domain & UI Integration)
+
+## 1. Objective
+Recover the frontend and backend security mechanics for Student Creation (Stage 9A) without implementing unrelated features or Stage 9B.
+
+## 2. Security Correction (Backend)
+- **Vulnerability:** Student creation originally trusted the client-supplied `schoolId`.
+- **Correction:** Removed `schoolId` from `CreateStudentDto`.
+- **Enforcement:** The controller now derives school scope entirely from `req.workspace.schoolId` via the `WorkspaceContextInterceptor`.
+- **Persistence:** Client-supplied `schoolId` cannot influence persistence.
+- **Tenant Validation:** Tenant ownership remains securely validated against the authenticated tenant context.
+- **Checkpoint:** `a6f61ebe38244f512dae4ab2908f78913da943a7`
+
+## 3. Frontend Implementation
+- **Scope:** Student creation form implemented at `apps/web-app/src/app/dashboard/students/page.tsx`.
+- **API Payload:** `schoolId` is omitted from the POST payload.
+- **Workspace:** Existing `apiClient` handles necessary workspace header injection.
+- **UX:** Implemented required/optional fields, loading states, duplicate-submit protection, and list refresh upon success.
+- **UI:** Retained dark/light theme implementations and responsive/mobile conventions.
+- **Checkpoint:** `53b66b550de912e958b575b8327bfa7c6d27bec2`
+- **Lint Correction:** Resolved creation form lint errors in `3bfb9a3fbdf9327812ca9f8a9b72f54dca4b76d6` (lint/typecheck/build passed).
+
+## 4. Date Validation Correction
+Established a strict chronological invariant for Student creation:
+> If `dateOfBirth` is provided, it must be strictly earlier than `admissionDate`.
+
+- **Policy Note:** SchoolOS explicitly does NOT impose an arbitrary minimum or maximum student age through this change.
+- **Implementation:** Backend validation (`IsBeforeAdmissionDateConstraint`), mirrored frontend validation, and full E2E test coverage (verifying same-day DOB/admission rejection, DOB-after-admission rejection, and allowing omitted DOB).
+- **Checkpoint:** `897ac0bf` (`fix(students): validate birth and admission dates`)
+
+## 5. Verification State
+- **Student E2E suite:** 26/26 passed
+- **Student Unit/Controller suite:** 37/37 passed (previously verified)
+- **Frontend lint:** passed
+- **Typecheck:** passed
+- **Frontend production build:** passed
+- **Git status:** `git diff --check` passed, latest branch pushed to `origin/main`, working tree clean.
+
+## 6. Outstanding Items
+**Manual browser verification remains outstanding** because the automated browser subagent experienced a network failure.
+The outstanding manual checks are:
+- Students page in dark mode
+- Students page in light mode
+- Add Student modal on desktop
+- Add Student modal on mobile/narrow viewport
+- required-field validation
+- successful student creation
+- error handling
+- Network request inspection confirming `schoolId` is absent from POST payload
+- workspace headers supplied by existing `apiClient`
+
+## 7. Current Status & Next Actions
+**Stage 9A — Student Creation: implementation complete; automated verification complete; manual browser verification pending.**
+
+**Stage 9B — Guardian Creation/Linking: NOT STARTED.**
+
+**Resume Instructions:**
+1. Execute the manual browser verification of Stage 9A.
+2. Only after Stage 9A manual verification is confirmed complete should you begin work on Stage 9B.
