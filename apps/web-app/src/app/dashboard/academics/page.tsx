@@ -81,6 +81,8 @@ export default function AcademicsPage() {
   const [createArmSuccess, setCreateArmSuccess] = useState(false);
   const [campusesList, setCampusesList] = useState<Record<string, unknown>[]>([]);
   const [campusesLoading, setCampusesLoading] = useState(false);
+  const [classesList, setClassesList] = useState<Record<string, unknown>[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
 
   // Create Subject Modal State
   const [isCreateSubjectModalOpen, setIsCreateSubjectModalOpen] = useState(false);
