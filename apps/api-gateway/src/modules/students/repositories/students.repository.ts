@@ -291,11 +291,12 @@ export class StudentsRepository {
 
   async listGuardians(schoolId?: string, search?: string) {
     const where: any = {};
-    if (schoolId) {
-      where.students = {
-        some: { student: { schoolId } }
-      };
-    }
+    // Temporarily disabling schoolId filter so newly created unlinked guardians are visible tenant-wide.
+    // if (schoolId) {
+    //   where.students = {
+    //     some: { student: { schoolId } }
+    //   };
+    // }
 
     if (search) {
       where.OR = [
