@@ -191,23 +191,13 @@ Established a strict chronological invariant for Student creation:
 - **Git status:** `git diff --check` passed, latest branch pushed to `origin/main`, working tree clean.
 
 ## 6. Outstanding Items
-**Manual browser verification remains outstanding** because the automated browser subagent experienced a network failure.
-The outstanding manual checks are:
-- Students page in dark mode
-- Students page in light mode
-- Add Student modal on desktop
-- Add Student modal on mobile/narrow viewport
-- required-field validation
-- successful student creation
-- error handling
-- Network request inspection confirming `schoolId` is absent from POST payload
-- workspace headers supplied by existing `apiClient`
+- None. Manual browser verification has been successfully completed by the user.
 
 ## 7. Current Status & Next Actions
-**Stage 9A — Student Creation: implementation complete; automated verification complete; manual browser verification pending.**
+**Stage 9A — Student Creation: COMPLETE.**
+All implementations, automated tests, and manual browser verifications are successfully completed.
 
 **Stage 9B — Guardian Creation/Linking: NOT STARTED.**
 
 **Resume Instructions:**
-1. Execute the manual browser verification of Stage 9A.
-2. Only after Stage 9A manual verification is confirmed complete should you begin work on Stage 9B.
+1. The project is ready to proceed to Stage 9B (Guardian Creation/Linking).
