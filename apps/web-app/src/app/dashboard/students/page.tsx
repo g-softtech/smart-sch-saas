@@ -67,6 +67,27 @@ export default function StudentsPage() {
   const [createGuardianError, setCreateGuardianError] = useState<string | null>(null);
   const [createGuardianSuccess, setCreateGuardianSuccess] = useState(false);
 
+  // Link Guardian Modal State
+  const [isLinkGuardianModalOpen, setIsLinkGuardianModalOpen] = useState(false);
+  const [linkStudentId, setLinkStudentId] = useState<string | null>(null);
+
+  // Search State
+  const [searchGuardianQuery, setSearchGuardianQuery] = useState('');
+  const [searchGuardianResults, setSearchGuardianResults] = useState<{ id: string; firstName: string; lastName: string; email?: string; phone?: string; }[]>([]);
+  const [isSearchingGuardians, setIsSearchingGuardians] = useState(false);
+  const [searchGuardianError, setSearchGuardianError] = useState<string | null>(null);
+
+  // Selection & Link Payload State
+  const [selectedGuardianId, setSelectedGuardianId] = useState<string | null>(null);
+  const [linkRelationship, setLinkRelationship] = useState('GUARDIAN'); // Default
+  const [linkIsPrimary, setLinkIsPrimary] = useState(false);
+  const [linkIsEmergency, setLinkIsEmergency] = useState(false);
+
+  // Link Submission State
+  const [linkGuardianLoading, setLinkGuardianLoading] = useState(false);
+  const [linkGuardianError, setLinkGuardianError] = useState<string | null>(null);
+  const [linkGuardianSuccess, setLinkGuardianSuccess] = useState(false);
+
   const fetchTabData = useCallback(async (tab: TabType, pageIndex: number) => {
     setTabStates(prev => ({
       ...prev,
@@ -258,6 +279,76 @@ export default function StudentsPage() {
     }
   };
 
+  const handleSearchGuardian = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchGuardianQuery.trim()) {
+       setSearchGuardianResults([]);
+       return;
+    }
+    setIsSearchingGuardians(true);
+    setSearchGuardianError(null);
+    try {
+      const response = await apiClient.get(`api/v1/students/guardians/list?search=${encodeURIComponent(searchGuardianQuery.trim())}&limit=50`);
+      const data = Array.isArray(response) ? response : [];
+      setSearchGuardianResults(data);
+      setSelectedGuardianId(null); // Reset selection on new search
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setSearchGuardianError(err.message || 'Failed to search guardians');
+      } else {
+        setSearchGuardianError('An error occurred while searching');
+      }
+    } finally {
+      setIsSearchingGuardians(false);
+    }
+  };
+
+  const handleLinkGuardianSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkStudentId || !selectedGuardianId) {
+      setLinkGuardianError('Please select a student and a guardian.');
+      return;
+    }
+
+    setLinkGuardianLoading(true);
+    setLinkGuardianError(null);
+    setLinkGuardianSuccess(false);
+
+    try {
+      const payload = {
+        guardianId: selectedGuardianId,
+        relationship: linkRelationship,
+        isPrimary: linkIsPrimary,
+        isEmergencyContact: linkIsEmergency,
+      };
+
+      await apiClient.post(`api/v1/students/${linkStudentId}/guardians/link`, payload);
+
+      setLinkGuardianSuccess(true);
+
+      setTimeout(() => {
+        setIsLinkGuardianModalOpen(false);
+        setLinkGuardianSuccess(false);
+        setLinkStudentId(null);
+        setSelectedGuardianId(null);
+        setSearchGuardianQuery('');
+        setSearchGuardianResults([]);
+        setLinkRelationship('GUARDIAN');
+        setLinkIsPrimary(false);
+        setLinkIsEmergency(false);
+      }, 1500);
+
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setLinkGuardianError(err.message || 'Failed to link guardian');
+      } else {
+        setLinkGuardianError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setLinkGuardianLoading(false);
+    }
+  };
+
   const currentState = tabStates[activeTab];
 
   let columns: Column<Record<string, unknown>>[] = [];
@@ -279,6 +370,20 @@ export default function StudentsPage() {
         accessor: (item) => {
           return item.admissionDate ? new Date(item.admissionDate as string).toLocaleDateString() : 'N/A';
         }
+      },
+      {
+        header: 'Actions',
+        accessor: (item) => (
+          <button
+            onClick={() => {
+              setLinkStudentId(item.id as string);
+              setIsLinkGuardianModalOpen(true);
+            }}
+            className="text-brand-teal hover:text-brand-navy dark:hover:text-brand-gold transition-colors font-medium"
+          >
+            Link Guardian
+          </button>
+        )
       }
     ];
   } else if (activeTab === 'guardians') {
@@ -694,6 +799,170 @@ export default function StudentsPage() {
                       type="button"
                       onClick={() => setIsCreateGuardianModalOpen(false)}
                       disabled={createGuardianLoading}
+                      className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy-surface sm:col-start-1 sm:mt-0 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link Guardian Modal */}
+      {isLinkGuardianModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-brand-navy/80 backdrop-blur-sm transition-opacity" onClick={() => setIsLinkGuardianModalOpen(false)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-brand-navy-surface border border-gray-200 dark:border-brand-border-dark px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+              <div>
+                <h3 className="text-lg font-semibold leading-6 text-brand-navy dark:text-brand-offwhite mb-4">Link Guardian to Student</h3>
+
+                {/* Search Form */}
+                <form onSubmit={handleSearchGuardian} className="mb-6">
+                  <label htmlFor="searchGuardianQuery" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                    Search Guardian
+                  </label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="text"
+                      name="searchGuardianQuery"
+                      id="searchGuardianQuery"
+                      placeholder="Name, phone, or email"
+                      value={searchGuardianQuery}
+                      onChange={(e) => setSearchGuardianQuery(e.target.value)}
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSearchingGuardians || !searchGuardianQuery.trim()}
+                      className="inline-flex justify-center rounded-md bg-gray-100 dark:bg-brand-navy px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-200 dark:hover:bg-brand-navy-surface disabled:opacity-50 transition-colors"
+                    >
+                      {isSearchingGuardians ? 'Searching...' : 'Search'}
+                    </button>
+                  </div>
+                  {searchGuardianError && (
+                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">{searchGuardianError}</p>
+                  )}
+                </form>
+
+                {/* Search Results */}
+                {searchGuardianResults.length > 0 && (
+                  <div className="mb-6 max-h-48 overflow-y-auto border border-gray-200 dark:border-brand-border-dark rounded-md">
+                    <ul className="divide-y divide-gray-200 dark:divide-brand-border-dark bg-white dark:bg-brand-navy">
+                      {searchGuardianResults.map((g) => (
+                        <li key={g.id} className="p-3 hover:bg-gray-50 dark:hover:bg-brand-navy-surface transition-colors cursor-pointer" onClick={() => setSelectedGuardianId(g.id)}>
+                          <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="guardianSelection"
+                              checked={selectedGuardianId === g.id}
+                              onChange={() => setSelectedGuardianId(g.id)}
+                              className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold dark:bg-brand-navy dark:border-brand-border-dark"
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-gray-900 dark:text-brand-offwhite">{g.firstName} {g.lastName}</span>
+                              <span className="text-xs text-gray-500 dark:text-brand-gray-text">{g.email || g.phone || 'No contact info'}</span>
+                            </div>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {searchGuardianResults.length === 0 && searchGuardianQuery && !isSearchingGuardians && !searchGuardianError && (
+                  <p className="mb-6 text-sm text-gray-500 dark:text-brand-gray-text italic">No guardians found matching &quot;{searchGuardianQuery}&quot;</p>
+                )}
+
+                {/* Link Form */}
+                <form onSubmit={handleLinkGuardianSubmit}>
+                  <div className="grid grid-cols-1 gap-y-4">
+                    {/* Relationship */}
+                    <div>
+                      <label htmlFor="linkRelationship" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Relationship <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="linkRelationship"
+                        name="linkRelationship"
+                        value={linkRelationship}
+                        onChange={(e) => setLinkRelationship(e.target.value)}
+                        disabled={linkGuardianLoading || !selectedGuardianId}
+                        className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                      >
+                        <option value="FATHER">Father</option>
+                        <option value="MOTHER">Mother</option>
+                        <option value="GUARDIAN">Guardian</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Flags */}
+                    <div className="space-y-4 mt-2">
+                      <div className="flex items-start">
+                        <div className="flex h-6 items-center">
+                          <input
+                            id="linkIsPrimary"
+                            name="linkIsPrimary"
+                            type="checkbox"
+                            checked={linkIsPrimary}
+                            onChange={(e) => setLinkIsPrimary(e.target.checked)}
+                            disabled={linkGuardianLoading || !selectedGuardianId}
+                            className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold dark:bg-brand-navy dark:border-brand-border-dark"
+                          />
+                        </div>
+                        <div className="ml-3 text-sm leading-6">
+                          <label htmlFor="linkIsPrimary" className="font-medium text-brand-navy dark:text-brand-offwhite">Primary Guardian</label>
+                          <p className="text-gray-500 dark:text-brand-gray-text">Set as the primary contact for this student. (Replaces any existing primary)</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start">
+                        <div className="flex h-6 items-center">
+                          <input
+                            id="linkIsEmergency"
+                            name="linkIsEmergency"
+                            type="checkbox"
+                            checked={linkIsEmergency}
+                            onChange={(e) => setLinkIsEmergency(e.target.checked)}
+                            disabled={linkGuardianLoading || !selectedGuardianId}
+                            className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold dark:bg-brand-navy dark:border-brand-border-dark"
+                          />
+                        </div>
+                        <div className="ml-3 text-sm leading-6">
+                          <label htmlFor="linkIsEmergency" className="font-medium text-brand-navy dark:text-brand-offwhite">Emergency Contact</label>
+                          <p className="text-gray-500 dark:text-brand-gray-text">Authorized to be contacted in an emergency.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {linkGuardianError && (
+                    <div className="mt-4 text-sm text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-900/30">
+                      {linkGuardianError}
+                    </div>
+                  )}
+                  {linkGuardianSuccess && (
+                    <div className="mt-4 text-sm text-brand-teal p-2 bg-brand-teal/10 rounded border border-brand-teal/20">
+                      Guardian linked successfully!
+                    </div>
+                  )}
+
+                  <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                    <button
+                      type="submit"
+                      disabled={linkGuardianLoading || linkGuardianSuccess || !selectedGuardianId}
+                      className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
+                    >
+                      {linkGuardianLoading ? 'Linking...' : 'Link Guardian'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsLinkGuardianModalOpen(false)}
+                      disabled={linkGuardianLoading}
                       className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy-surface sm:col-start-1 sm:mt-0 transition-colors"
                     >
                       Cancel
