@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { DataTable, Column } from '@/components/DataTable';
 
@@ -374,15 +375,23 @@ export default function StudentsPage() {
       {
         header: 'Actions',
         accessor: (item) => (
-          <button
-            onClick={() => {
-              setLinkStudentId(item.id as string);
-              setIsLinkGuardianModalOpen(true);
-            }}
-            className="text-brand-teal hover:text-brand-navy dark:hover:text-brand-gold transition-colors font-medium"
-          >
-            Link Guardian
-          </button>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/dashboard/students/${item.id}`}
+              className="text-brand-navy dark:text-brand-gold hover:opacity-80 transition-opacity font-medium"
+            >
+              View Profile
+            </Link>
+            <button
+              onClick={() => {
+                setLinkStudentId(item.id as string);
+                setIsLinkGuardianModalOpen(true);
+              }}
+              className="text-brand-teal hover:text-brand-navy dark:hover:text-brand-gold transition-colors font-medium"
+            >
+              Link Guardian
+            </button>
+          </div>
         )
       }
     ];
