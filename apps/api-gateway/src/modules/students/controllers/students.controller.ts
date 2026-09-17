@@ -105,7 +105,7 @@ export class StudentsController {
   async listGuardians(@Req() req: any, @Query() query: PaginationQueryDto): Promise<ApiResponseDto<any>> {
     const schoolId = req.workspace?.schoolId;
     const roleId = req.workspace?.roleId;
-    const guardians = await this.studentsService.listGuardians(schoolId, roleId);
+    const guardians = await this.studentsService.listGuardians(schoolId, roleId, query.search);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const start = (page - 1) * limit;

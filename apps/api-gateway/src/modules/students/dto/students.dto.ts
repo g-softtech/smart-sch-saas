@@ -224,4 +224,10 @@ export class PaginationQueryDto {
   @IsUUID('all')
   @IsOptional()
   schoolId?: string;
+
+  @ApiPropertyOptional({ description: 'Search query for filtering results' })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  search?: string;
 }

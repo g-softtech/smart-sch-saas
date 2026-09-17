@@ -289,13 +289,23 @@ export class StudentsRepository {
     });
   }
 
-  async listGuardians(schoolId?: string) {
+  async listGuardians(schoolId?: string, search?: string) {
     const where: any = {};
     if (schoolId) {
       where.students = {
         some: { student: { schoolId } }
       };
     }
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
     return kernel.db.guardian.findMany({ where });
   }
 }

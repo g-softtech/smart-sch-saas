@@ -323,7 +323,7 @@ export class StudentsService {
     return this.repo.listStudentGuardians(studentId);
   }
 
-  async listGuardians(schoolId?: string, roleId?: string) {
+  async listGuardians(schoolId?: string, roleId?: string, search?: string) {
     const tenantId = this.getActiveTenantId();
 
     if (!schoolId) {
@@ -336,6 +336,6 @@ export class StudentsService {
       }
     }
 
-    return this.repo.listGuardians(schoolId);
+    return this.repo.listGuardians(schoolId, search);
   }
 }

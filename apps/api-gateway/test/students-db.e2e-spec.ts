@@ -73,7 +73,7 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
           roleId: roleId,
         }
       });
-      
+
       validToken = jwtService.sign(
         { sub: user.id, email: user.email },
         { secret: process.env.JWT_SECRET || 'super-secret-default-key-do-not-use-in-prod' }
@@ -187,6 +187,69 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
 
       // ONLY ONE MUST BE PRIMARY (Invariant maintained by DB locking and transactional clearPrimaryGuardian)
       expect(primaryLinks.length).toBe(1);
+    });
+  });
+
+  describe('Guardian Search Pagination', () => {
+    beforeAll(async () => {
+      // Seed some distinct guardians for search testing and link them to the student so they appear in school scope
+      await tenantContext.run({ tenantId: tenantA_id }, async () => {
+        const student = await kernel.db.student.create({
+          data: {
+            tenantId: tenantA_id,
+            schoolId: schoolA_id,
+            firstName: 'Search',
+            lastName: 'Student',
+            gender: 'MALE',
+            admissionDate: new Date(),
+            studentNumber: 'STU-' + Date.now()
+          }
+        });
+
+        const g1 = await kernel.db.guardian.create({
+          data: { tenantId: tenantA_id, firstName: 'Searchable', lastName: 'GuardianOne', email: 'search1@example.com', phone: '0801111111' }
+        });
+        const g2 = await kernel.db.guardian.create({
+          data: { tenantId: tenantA_id, firstName: 'Hidden', lastName: 'GuardianTwo', email: 'hidden@example.com', phone: '0802222222' }
+        });
+        const g3 = await kernel.db.guardian.create({
+          data: { tenantId: tenantA_id, firstName: 'Searchable', lastName: 'GuardianThree', email: 'search3@example.com', phone: '0803333333' }
+        });
+
+        await kernel.db.studentGuardian.createMany({
+          data: [
+            { tenantId: tenantA_id, studentId: student.id, guardianId: g1.id, relationship: 'FATHER', isPrimary: false },
+            { tenantId: tenantA_id, studentId: student.id, guardianId: g2.id, relationship: 'MOTHER', isPrimary: false },
+            { tenantId: tenantA_id, studentId: student.id, guardianId: g3.id, relationship: 'OTHER', isPrimary: false }
+          ]
+        });
+      });
+    });
+
+    it('should return paginated results matching the search query', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/students/guardians/list?search=Searchable&page=1&limit=10`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBe(2);
+      expect(res.body.meta.total).toBeGreaterThanOrEqual(2);
+      expect(res.body.data.every((g: any) => g.firstName === 'Searchable')).toBe(true);
+    });
+
+    it('should return empty results for non-matching query', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/students/guardians/list?search=NoMatchForThisQueryXYZ&page=1&limit=10`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBe(0);
     });
   });
 });

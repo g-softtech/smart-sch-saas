@@ -830,13 +830,13 @@ export default function AcademicsPage() {
                           className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
                         >
                           <option value="">Select a Class</option>
-                          {classesList.map((c: Record<string, unknown>) => (
+                          {tabStates['classes'].data.map((c: Record<string, unknown>) => (
                             <option key={c.id as string} value={c.id as string}>
                               {c.name as string}
                             </option>
                           ))}
                         </select>
-                        {classesLoading && (
+                        {tabStates['classes'].loading && (
                           <p className="mt-1 text-xs text-gray-500 dark:text-brand-gray-text">Loading classes...</p>
                         )}
                       </div>
