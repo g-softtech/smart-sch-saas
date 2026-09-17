@@ -388,4 +388,200 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
       expect(enr.arm.name).toBe('A');
     });
   });
+  describe('Enrollment Mutations', () => {
+    let studentId: string;
+    let crossTenantId: string;
+    let crossSchoolId: string;
+    let academicYearId: string;
+    let classId: string;
+    let armId: string;
+    let crossSchoolClassId: string;
+    let crossTenantClassId: string;
+    let activeEnrollmentId: string;
+
+    beforeAll(async () => {
+      // 1. Set up cross-tenant environment
+      const crossTenant = await kernel.db.tenant.create({ data: { name: 'Cross Tenant', slug: 'cross-tenant' } });
+      crossTenantId = crossTenant.id;
+      
+      await tenantContext.run({ tenantId: crossTenantId }, async () => {
+        const ctSchool = await kernel.db.school.create({ data: { tenantId: crossTenantId, name: 'Cross School' } });
+        const ctClass = await kernel.db.class.create({ data: { tenantId: crossTenantId, schoolId: ctSchool.id, name: 'Cross Class' } });
+        crossTenantClassId = ctClass.id;
+      });
+
+      // 2. Set up cross-school environment within same tenant
+      await tenantContext.run({ tenantId: tenantA_id }, async () => {
+        const csSchool = await kernel.db.school.create({ data: { tenantId: tenantA_id, name: 'Cross School Same Tenant' } });
+        crossSchoolId = csSchool.id;
+        const csClass = await kernel.db.class.create({ data: { tenantId: tenantA_id, schoolId: csSchool.id, name: 'Cross School Class' } });
+        crossSchoolClassId = csClass.id;
+
+        // 3. Set up primary environment (School A)
+        const student = await kernel.db.student.create({
+          data: {
+            tenantId: tenantA_id,
+            schoolId: schoolA_id,
+            firstName: 'Mutation',
+            lastName: 'Student',
+            gender: 'MALE',
+            admissionDate: new Date(),
+            studentNumber: 'STU-MUT-' + Date.now()
+          }
+        });
+        studentId = student.id;
+
+        const ay = await kernel.db.academicYear.create({
+          data: { tenantId: tenantA_id, schoolId: schoolA_id, name: '2026/2027 Mut' }
+        });
+        academicYearId = ay.id;
+
+        const cls = await kernel.db.class.create({
+          data: { tenantId: tenantA_id, schoolId: schoolA_id, name: 'JSS 1 Mut' }
+        });
+        classId = cls.id;
+
+        const campus = await kernel.db.campus.create({
+          data: { tenantId: tenantA_id, schoolId: schoolA_id, name: 'Mut Campus' }
+        });
+        const arm = await kernel.db.arm.create({
+          data: { tenantId: tenantA_id, classId: cls.id, campusId: campus.id, name: 'A Mut' }
+        });
+        armId = arm.id;
+      });
+    });
+
+    describe('Create Enrollment', () => {
+      it('should create a valid enrollment', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ academicYearId, classId, armId });
+
+        expect(res.status).toBe(201);
+        expect(res.body.success).toBe(true);
+        activeEnrollmentId = res.body.data.id;
+      });
+
+      it('should reject class from a different school in same tenant', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ academicYearId, classId: crossSchoolClassId });
+
+        expect(res.status).toBe(400); // Class does not belong to student's school
+      });
+
+      it('should reject class from a different tenant', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ academicYearId, classId: crossTenantClassId });
+
+        expect(res.status).toBe(400); // Class not found in active tenant
+      });
+
+      it('should reject duplicate active enrollment in same academic year', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ academicYearId, classId, armId });
+
+        expect(res.status).toBe(409); // Conflict: already active enrollment
+      });
+    });
+
+    describe('Transfer Enrollment', () => {
+      let newClassId: string;
+      beforeAll(async () => {
+        await tenantContext.run({ tenantId: tenantA_id }, async () => {
+          const cls = await kernel.db.class.create({
+            data: { tenantId: tenantA_id, schoolId: schoolA_id, name: 'JSS 2 Mut' }
+          });
+          newClassId = cls.id;
+        });
+      });
+
+      it('should reject transfer to class in a different school', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments/${activeEnrollmentId}/transfer`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ newClassId: crossSchoolClassId });
+
+        expect(res.status).toBe(400);
+      });
+
+      it('should successfully transfer and preserve history', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments/${activeEnrollmentId}/transfer`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ newClassId, notes: 'Promoted' });
+
+        expect(res.status).toBe(201);
+        const newEnrollmentId = res.body.data.id;
+        expect(newEnrollmentId).toBeDefined();
+        expect(newEnrollmentId).not.toBe(activeEnrollmentId);
+
+        // Verify states in DB
+        await tenantContext.run({ tenantId: tenantA_id }, async () => {
+          const oldEnr = await kernel.db.enrollment.findUnique({ where: { id: activeEnrollmentId } });
+          expect(oldEnr?.status).toBe(EnrollmentStatus.TRANSFERRED);
+          
+          const newEnr = await kernel.db.enrollment.findUnique({ where: { id: newEnrollmentId } });
+          expect(newEnr?.status).toBe(EnrollmentStatus.ACTIVE);
+          expect(newEnr?.classId).toBe(newClassId);
+
+          const student = await kernel.db.student.findUnique({ where: { id: studentId } });
+          expect(student?.status).toBe('ACTIVE');
+        });
+        
+        activeEnrollmentId = newEnrollmentId; // update pointer
+      });
+    });
+
+    describe('Withdraw Student', () => {
+      it('should withdraw successfully', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments/${activeEnrollmentId}/withdraw`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ notes: 'Relocated' });
+
+        expect(res.status).toBe(200);
+
+        // Verify DB
+        await tenantContext.run({ tenantId: tenantA_id }, async () => {
+          const enr = await kernel.db.enrollment.findUnique({ where: { id: activeEnrollmentId } });
+          expect(enr?.status).toBe(EnrollmentStatus.WITHDRAWN);
+
+          const student = await kernel.db.student.findUnique({ where: { id: studentId } });
+          expect(student?.status).toBe('WITHDRAWN');
+        });
+      });
+
+      it('should reject withdrawing an already withdrawn enrollment', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/students/${studentId}/enrollments/${activeEnrollmentId}/withdraw`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', tenantA_id)
+          .set('x-school-id', schoolA_id)
+          .send({ notes: 'Relocated again' });
+
+        expect(res.status).toBe(400); // only active enrollments can be withdrawn
+      });
+    });
+  });
 });
