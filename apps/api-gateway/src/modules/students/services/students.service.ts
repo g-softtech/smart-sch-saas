@@ -77,35 +77,40 @@ export class StudentsService {
   async linkGuardian(input: LinkGuardianInput) {
     const tenantId = this.getActiveTenantId();
 
-    // Both kernel-scoped fetches: cross-tenant records return null.
-    const student = await this.repo.findStudent(input.studentId);
-    if (!student) {
-      throw new BadRequestException('Student not found or does not belong to the active tenant');
-    }
+    return require('@saas/core-platform').kernel.db.$transaction(async (tx: any) => {
+      const student = await this.repo.findStudent(input.studentId, tx);
+      if (!student) {
+        throw new BadRequestException('Student not found or does not belong to the active tenant');
+      }
 
-    const guardian = await this.repo.findGuardian(input.guardianId);
-    if (!guardian) {
-      throw new BadRequestException('Guardian not found or does not belong to the active tenant');
-    }
+      if (input.schoolId && student.schoolId !== input.schoolId) {
+        throw new BadRequestException('Student does not belong to the active school');
+      }
 
-    // Guardian and student must share the same tenant (both fetched via kernel, so this holds,
-    // but we validate explicitly to document the invariant clearly).
-    if (guardian.tenantId !== student.tenantId || student.tenantId !== tenantId) {
-      throw new BadRequestException('Student and Guardian must belong to the same tenant');
-    }
+      const guardian = await this.repo.findGuardian(input.guardianId, tx);
+      if (!guardian) {
+        throw new BadRequestException('Guardian not found or does not belong to the active tenant');
+      }
 
-    // Check for duplicate link.
-    const existingLink = await this.repo.findStudentGuardianLink(input.studentId, input.guardianId);
-    if (existingLink) {
-      throw new ConflictException('Guardian is already linked to this student');
-    }
+      // Guardian and student must share the same tenant (both fetched via kernel, so this holds,
+      // but we validate explicitly to document the invariant clearly).
+      if (guardian.tenantId !== student.tenantId || student.tenantId !== tenantId) {
+        throw new BadRequestException('Student and Guardian must belong to the same tenant');
+      }
 
-    // If setting as primary: clear any existing primary first (zero or one).
-    if (input.isPrimary) {
-      await this.repo.clearPrimaryGuardian(input.studentId);
-    }
+      // Check for duplicate link.
+      const existingLink = await this.repo.findStudentGuardianLink(input.studentId, input.guardianId, tx);
+      if (existingLink) {
+        throw new ConflictException('Guardian is already linked to this student');
+      }
 
-    return this.repo.createStudentGuardianLink({ ...input, tenantId });
+      // If setting as primary: clear any existing primary first (zero or one).
+      if (input.isPrimary) {
+        await this.repo.clearPrimaryGuardian(input.studentId, tx);
+      }
+
+      return this.repo.createStudentGuardianLink({ ...input, tenantId }, tx);
+    });
   }
 
   // ─── Enrollment Management ─────────────────────────────────────────────────
@@ -302,7 +307,7 @@ export class StudentsService {
     return this.repo.listStudentGuardians(studentId);
   }
 
-  async listGuardians() {
-    return this.repo.listGuardians();
+  async listGuardians(schoolId?: string) {
+    return this.repo.listGuardians(schoolId);
   }
 }

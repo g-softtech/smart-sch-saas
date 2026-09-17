@@ -39,7 +39,7 @@ jest.mock('@saas/core-platform', () => {
         $queryRaw: jest.fn(),
       },
       $queryRaw: jest.fn(),
-      $transaction: jest.fn(),
+      $transaction: jest.fn().mockImplementation(async (cb) => cb(original.kernel.db)),
     },
   };
 });
@@ -329,7 +329,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
     it('POST /api/v1/students/:id/guardians/link — links guardian (201)', async () => {
       (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(mockStudent);
       (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
-      (kernel.db.studentGuardian.findFirst as jest.Mock).mockResolvedValue(null);
+      (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
       (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({
         id: 'sg-1', studentId: STUDENT_ID, guardianId: GUARDIAN_ID, relationship: 'FATHER',
       });
@@ -348,7 +348,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
     it('POST /api/v1/students/:id/guardians/link — rejects duplicate link (409)', async () => {
       (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(mockStudent);
       (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
-      (kernel.db.studentGuardian.findFirst as jest.Mock).mockResolvedValue({ id: 'existing' });
+      (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue({ id: 'existing' });
 
       await request(app.getHttpServer())
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
@@ -372,6 +372,76 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
 
       expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.data)).toBe(true);
+    });
+
+    it('POST /api/v1/students/:id/guardians/link — rejects cross-school linking (400)', async () => {
+      const studentOtherSchool = { ...mockStudent, schoolId: 'other-school-id' };
+      (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(studentOtherSchool);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
+        .send({ guardianId: GUARDIAN_ID, relationship: 'MOTHER' })
+        .expect(400); // Bad Request per conventions
+    });
+
+    it('POST /api/v1/students/:id/guardians/link — accepts tenant-wide linking without school context (201)', async () => {
+      const studentOtherSchool = { ...mockStudent, schoolId: 'other-school-id' };
+      (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(studentOtherSchool);
+      (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
+      (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
+      (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({ id: 'sg-2' });
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        // No x-school-id header
+        .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' })
+        .expect(201);
+    });
+
+    it('POST /api/v1/students/:id/guardians/link — updates primary guardian (201)', async () => {
+      (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(mockStudent);
+      (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
+      (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
+      (kernel.db.studentGuardian.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+      (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({ id: 'sg-3' });
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
+        .send({ guardianId: GUARDIAN_ID, relationship: 'MOTHER', isPrimary: true })
+        .expect(201);
+      
+      expect(kernel.db.studentGuardian.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ studentId: STUDENT_ID, isPrimary: true }),
+        })
+      );
+    });
+
+    it('GET /api/v1/students/guardians/list — filters by schoolId when school-scoped (200)', async () => {
+      (kernel.db.guardian.findMany as jest.Mock).mockResolvedValue([mockGuardian]);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/students/guardians/list`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
+        .expect(200);
+
+      expect(kernel.db.guardian.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            students: { some: { student: { schoolId: SCHOOL_ID } } }
+          })
+        })
+      );
     });
   });
 

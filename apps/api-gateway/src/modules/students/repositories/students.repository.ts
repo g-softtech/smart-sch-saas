@@ -28,6 +28,7 @@ export type LinkGuardianInput = {
   relationship: 'FATHER' | 'MOTHER' | 'GUARDIAN' | 'OTHER';
   isPrimary?: boolean;
   isEmergencyContact?: boolean;
+  schoolId?: string;
 };
 
 export type CreateEnrollmentInput = {
@@ -87,9 +88,10 @@ export class StudentsRepository {
     return db.student.findUnique({ where: { id: studentId } });
   }
 
-  async findGuardian(guardianId: string) {
+  async findGuardian(guardianId: string, tx?: typeof kernel.db) {
     // Guardian IS in tenantScopedModels — kernel appends tenantId automatically.
-    return kernel.db.guardian.findUnique({ where: { id: guardianId } });
+    const db = tx ?? kernel.db;
+    return db.guardian.findUnique({ where: { id: guardianId } });
   }
 
   async findActiveEnrollment(studentId: string, academicYearId: string, tx?: typeof kernel.db) {
@@ -99,16 +101,24 @@ export class StudentsRepository {
     });
   }
 
-  async findEnrollment(enrollmentId: string) {
-    return kernel.db.enrollment.findUnique({ where: { id: enrollmentId } });
+  async findEnrollment(enrollmentId: string, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    return db.enrollment.findUnique({ where: { id: enrollmentId } });
   }
 
-  async findStudentGuardianLink(studentId: string, guardianId: string) {
-    return kernel.db.studentGuardian.findFirst({ where: { studentId, guardianId } });
+  async findStudentGuardianLink(studentId: string, guardianId: string, tx?: typeof kernel.db) {
+    // Also tenantScopedModels
+    const db = tx ?? kernel.db;
+    return db.studentGuardian.findUnique({
+      where: {
+        studentId_guardianId: { studentId, guardianId },
+      },
+    });
   }
 
-  async findPrimaryGuardian(studentId: string) {
-    return kernel.db.studentGuardian.findFirst({ where: { studentId, isPrimary: true } });
+  async findPrimaryGuardian(studentId: string, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    return db.studentGuardian.findFirst({ where: { studentId, isPrimary: true } });
   }
 
   /**
@@ -164,8 +174,9 @@ export class StudentsRepository {
     });
   }
 
-  async createStudentGuardianLink(data: LinkGuardianInput & { tenantId: string }) {
-    return kernel.db.studentGuardian.create({
+  async createStudentGuardianLink(data: LinkGuardianInput & { tenantId: string }, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    return db.studentGuardian.create({
       data: {
         tenantId: data.tenantId,
         studentId: data.studentId,
@@ -177,9 +188,10 @@ export class StudentsRepository {
     });
   }
 
-  async clearPrimaryGuardian(studentId: string) {
+  async clearPrimaryGuardian(studentId: string, tx?: typeof kernel.db) {
     // Clear any existing primary flag before setting a new one.
-    return kernel.db.studentGuardian.updateMany({
+    const db = tx ?? kernel.db;
+    return db.studentGuardian.updateMany({
       where: { studentId, isPrimary: true },
       data: { isPrimary: false },
     });
@@ -276,7 +288,13 @@ export class StudentsRepository {
     });
   }
 
-  async listGuardians() {
-    return kernel.db.guardian.findMany({ where: {} });
+  async listGuardians(schoolId?: string) {
+    const where: any = {};
+    if (schoolId) {
+      where.students = {
+        some: { student: { schoolId } }
+      };
+    }
+    return kernel.db.guardian.findMany({ where });
   }
 }

@@ -102,8 +102,9 @@ export class StudentsController {
 
   @Get('guardians/list')
   @ApiOperation({ summary: 'List all guardians within the active tenant' })
-  async listGuardians(@Query() query: PaginationQueryDto): Promise<ApiResponseDto<any>> {
-    const guardians = await this.studentsService.listGuardians();
+  async listGuardians(@Req() req: any, @Query() query: PaginationQueryDto): Promise<ApiResponseDto<any>> {
+    const schoolId = req.workspace?.schoolId;
+    const guardians = await this.studentsService.listGuardians(schoolId);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const start = (page - 1) * limit;
@@ -118,15 +119,18 @@ export class StudentsController {
   @Post(':studentId/guardians/link')
   @ApiOperation({ summary: 'Link an existing guardian to a student' })
   async linkGuardian(
+    @Req() req: any,
     @Param('studentId') studentId: string,
     @Body() dto: LinkGuardianDto,
   ): Promise<ApiResponseDto<any>> {
+    const schoolId = req.workspace?.schoolId;
     const link = await this.studentsService.linkGuardian({
       studentId,
       guardianId: dto.guardianId,
       relationship: dto.relationship,
       isPrimary: dto.isPrimary,
       isEmergencyContact: dto.isEmergencyContact,
+      schoolId,
     });
     return { success: true, data: link };
   }
