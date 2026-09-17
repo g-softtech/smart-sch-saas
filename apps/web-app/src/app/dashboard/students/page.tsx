@@ -55,6 +55,18 @@ export default function StudentsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState(false);
 
+  // Guardian Modal State
+  const [isCreateGuardianModalOpen, setIsCreateGuardianModalOpen] = useState(false);
+  const [guardianFirstName, setGuardianFirstName] = useState('');
+  const [guardianLastName, setGuardianLastName] = useState('');
+  const [guardianPhone, setGuardianPhone] = useState('');
+  const [guardianEmail, setGuardianEmail] = useState('');
+  const [guardianAddress, setGuardianAddress] = useState('');
+  const [guardianOccupation, setGuardianOccupation] = useState('');
+  const [createGuardianLoading, setCreateGuardianLoading] = useState(false);
+  const [createGuardianError, setCreateGuardianError] = useState<string | null>(null);
+  const [createGuardianSuccess, setCreateGuardianSuccess] = useState(false);
+
   const fetchTabData = useCallback(async (tab: TabType, pageIndex: number) => {
     setTabStates(prev => ({
       ...prev,
@@ -193,6 +205,59 @@ export default function StudentsPage() {
     }
   };
 
+  const handleCreateGuardianSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guardianFirstName.trim() || !guardianLastName.trim()) {
+      setCreateGuardianError('First Name and Last Name are required.');
+      return;
+    }
+
+    setCreateGuardianLoading(true);
+    setCreateGuardianError(null);
+    setCreateGuardianSuccess(false);
+
+    try {
+      const payload: Record<string, string> = {
+        firstName: guardianFirstName.trim(),
+        lastName: guardianLastName.trim(),
+      };
+
+      if (guardianPhone.trim()) payload.phone = guardianPhone.trim();
+      if (guardianEmail.trim()) payload.email = guardianEmail.trim();
+      if (guardianAddress.trim()) payload.address = guardianAddress.trim();
+      if (guardianOccupation.trim()) payload.occupation = guardianOccupation.trim();
+
+      await apiClient.post('api/v1/students/guardians', payload);
+
+      setCreateGuardianSuccess(true);
+
+      // Reset form
+      setGuardianFirstName('');
+      setGuardianLastName('');
+      setGuardianPhone('');
+      setGuardianEmail('');
+      setGuardianAddress('');
+      setGuardianOccupation('');
+
+      setTimeout(() => {
+        setIsCreateGuardianModalOpen(false);
+        setCreateGuardianSuccess(false);
+      }, 1500);
+
+      // Refresh list
+      fetchTabData('guardians', 0);
+
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setCreateGuardianError(err.message || 'Failed to create guardian');
+      } else {
+        setCreateGuardianError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setCreateGuardianLoading(false);
+    }
+  };
+
   const currentState = tabStates[activeTab];
 
   let columns: Column<Record<string, unknown>>[] = [];
@@ -245,6 +310,14 @@ export default function StudentsPage() {
             className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
           >
             Add Student
+          </button>
+        )}
+        {activeTab === 'guardians' && (
+          <button
+            onClick={() => setIsCreateGuardianModalOpen(true)}
+            className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
+          >
+            Add Guardian
           </button>
         )}
       </div>
@@ -465,6 +538,162 @@ export default function StudentsPage() {
                       type="button"
                       onClick={() => setIsCreateModalOpen(false)}
                       disabled={createLoading}
+                      className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy-surface sm:col-start-1 sm:mt-0 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Guardian Modal */}
+      {isCreateGuardianModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-brand-navy/80 backdrop-blur-sm transition-opacity" onClick={() => setIsCreateGuardianModalOpen(false)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-brand-navy-surface border border-gray-200 dark:border-brand-border-dark px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+              <div>
+                <h3 className="text-lg font-semibold leading-6 text-brand-navy dark:text-brand-offwhite">Add Guardian</h3>
+                <form onSubmit={handleCreateGuardianSubmit} className="mt-4">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+                    {/* First Name */}
+                    <div>
+                      <label htmlFor="guardianFirstName" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          name="guardianFirstName"
+                          id="guardianFirstName"
+                          required
+                          value={guardianFirstName}
+                          onChange={(e) => setGuardianFirstName(e.target.value)}
+                          disabled={createGuardianLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Last Name */}
+                    <div>
+                      <label htmlFor="guardianLastName" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          name="guardianLastName"
+                          id="guardianLastName"
+                          required
+                          value={guardianLastName}
+                          onChange={(e) => setGuardianLastName(e.target.value)}
+                          disabled={createGuardianLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <label htmlFor="guardianPhone" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Phone
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          name="guardianPhone"
+                          id="guardianPhone"
+                          value={guardianPhone}
+                          onChange={(e) => setGuardianPhone(e.target.value)}
+                          disabled={createGuardianLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label htmlFor="guardianEmail" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Email
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="email"
+                          name="guardianEmail"
+                          id="guardianEmail"
+                          value={guardianEmail}
+                          onChange={(e) => setGuardianEmail(e.target.value)}
+                          disabled={createGuardianLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Occupation */}
+                    <div className="sm:col-span-2">
+                      <label htmlFor="guardianOccupation" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Occupation
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          name="guardianOccupation"
+                          id="guardianOccupation"
+                          value={guardianOccupation}
+                          onChange={(e) => setGuardianOccupation(e.target.value)}
+                          disabled={createGuardianLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Address */}
+                    <div className="sm:col-span-2">
+                      <label htmlFor="guardianAddress" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                        Address
+                      </label>
+                      <div className="mt-1">
+                        <textarea
+                          name="guardianAddress"
+                          id="guardianAddress"
+                          rows={2}
+                          value={guardianAddress}
+                          onChange={(e) => setGuardianAddress(e.target.value)}
+                          disabled={createGuardianLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {createGuardianError && (
+                    <div className="mt-4 text-sm text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-900/30">
+                      {createGuardianError}
+                    </div>
+                  )}
+                  {createGuardianSuccess && (
+                    <div className="mt-4 text-sm text-brand-teal p-2 bg-brand-teal/10 rounded border border-brand-teal/20">
+                      Guardian created successfully!
+                    </div>
+                  )}
+
+                  <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                    <button
+                      type="submit"
+                      disabled={createGuardianLoading || createGuardianSuccess}
+                      className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
+                    >
+                      {createGuardianLoading ? 'Creating...' : 'Create Guardian'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateGuardianModalOpen(false)}
+                      disabled={createGuardianLoading}
                       className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy-surface sm:col-start-1 sm:mt-0 transition-colors"
                     >
                       Cancel
