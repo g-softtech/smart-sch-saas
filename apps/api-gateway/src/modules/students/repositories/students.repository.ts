@@ -279,6 +279,11 @@ export class StudentsRepository {
   async listEnrollments(studentId: string) {
     return kernel.db.enrollment.findMany({
       where: { studentId },
+      include: {
+        academicYear: true,
+        class: true,
+        arm: true,
+      },
       orderBy: { enrolledAt: 'desc' },
     });
   }
@@ -286,6 +291,7 @@ export class StudentsRepository {
   async listStudentGuardians(studentId: string) {
     return kernel.db.studentGuardian.findMany({
       where: { studentId },
+      include: { guardian: true },
     });
   }
 

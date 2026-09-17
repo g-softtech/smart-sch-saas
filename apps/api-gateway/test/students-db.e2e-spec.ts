@@ -252,4 +252,140 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
       expect(res.body.data.length).toBe(0);
     });
   });
+
+  describe('Student Profile - Guardians', () => {
+    let studentId: string;
+    let guardianId: string;
+
+    beforeAll(async () => {
+      await tenantContext.run({ tenantId: tenantA_id }, async () => {
+        const student = await kernel.db.student.create({
+          data: {
+            tenantId: tenantA_id,
+            schoolId: schoolA_id,
+            firstName: 'Profile',
+            lastName: 'Student',
+            gender: 'MALE',
+            admissionDate: new Date(),
+            studentNumber: 'STU-PROF-' + Date.now()
+          }
+        });
+        studentId = student.id;
+
+        const g = await kernel.db.guardian.create({
+          data: { tenantId: tenantA_id, firstName: 'ProfileGuardian', lastName: 'Okonkwo', email: 'prof@example.com', phone: '0809999999' }
+        });
+        guardianId = g.id;
+
+        await kernel.db.studentGuardian.create({
+          data: { tenantId: tenantA_id, studentId: student.id, guardianId: g.id, relationship: 'FATHER', isPrimary: true }
+        });
+      });
+    });
+
+    it('should return linked guardians with guardian details included', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/students/${studentId}/guardians`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBe(1);
+
+      const link = res.body.data[0];
+      expect(link.relationship).toBe('FATHER');
+      expect(link.isPrimary).toBe(true);
+
+      // Verify enrichment
+      expect(link.guardian).toBeDefined();
+      expect(link.guardian.firstName).toBe('ProfileGuardian');
+      expect(link.guardian.lastName).toBe('Okonkwo');
+    });
+
+    it('should return 401 without auth', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/students/${studentId}/guardians`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id);
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('Student Profile - Enrollments', () => {
+    let studentId: string;
+    let enrollmentId: string;
+
+    beforeAll(async () => {
+      await tenantContext.run({ tenantId: tenantA_id }, async () => {
+        const student = await kernel.db.student.create({
+          data: {
+            tenantId: tenantA_id,
+            schoolId: schoolA_id,
+            firstName: 'Enroll',
+            lastName: 'Student',
+            gender: 'FEMALE',
+            admissionDate: new Date(),
+            studentNumber: 'STU-ENR-' + Date.now()
+          }
+        });
+        studentId = student.id;
+
+        const academicYear = await kernel.db.academicYear.create({
+          data: { tenantId: tenantA_id, schoolId: schoolA_id, name: '2026/2027' }
+        });
+
+        const cls = await kernel.db.class.create({
+          data: { tenantId: tenantA_id, schoolId: schoolA_id, name: 'JSS 1' }
+        });
+
+        const campus = await kernel.db.campus.create({
+          data: { tenantId: tenantA_id, schoolId: schoolA_id, name: 'Main Campus' }
+        });
+
+        const arm = await kernel.db.arm.create({
+          data: { tenantId: tenantA_id, classId: cls.id, campusId: campus.id, name: 'A' }
+        });
+
+        const enrollment = await kernel.db.enrollment.create({
+          data: {
+            tenantId: tenantA_id,
+            schoolId: schoolA_id,
+            studentId: student.id,
+            academicYearId: academicYear.id,
+            classId: cls.id,
+            armId: arm.id,
+            status: EnrollmentStatus.ACTIVE
+          }
+        });
+        enrollmentId = enrollment.id;
+      });
+    });
+
+    it('should return enrollments with academicYear, class, and arm details included', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/students/${studentId}/enrollments`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBe(1);
+
+      const enr = res.body.data[0];
+      expect(enr.status).toBe(EnrollmentStatus.ACTIVE);
+
+      // Verify enrichment
+      expect(enr.academicYear).toBeDefined();
+      expect(enr.academicYear.name).toBe('2026/2027');
+
+      expect(enr.class).toBeDefined();
+      expect(enr.class.name).toBe('JSS 1');
+
+      expect(enr.arm).toBeDefined();
+      expect(enr.arm.name).toBe('A');
+    });
+  });
 });
