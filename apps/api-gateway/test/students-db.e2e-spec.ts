@@ -94,8 +94,8 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id)
         .send({
-          schoolId: schoolA_id,
           firstName: 'Http',
           lastName: 'Student',
           gender: 'MALE',
@@ -117,14 +117,76 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/students')
         .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id)
         .send({
-          schoolId: schoolA_id,
           firstName: 'No',
           lastName: 'Auth',
           gender: 'MALE',
           admissionDate: new Date().toISOString(),
         });
       expect(res.status).toBe(401);
+    });
+  });
+  describe('Guardian Concurrency', () => {
+    it('should serialize concurrent primary-guardian links preventing duplicates', async () => {
+      // 1. Setup Student
+      const studentRes = await request(app.getHttpServer())
+        .post('/api/v1/students')
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id)
+        .send({ firstName: 'Race', lastName: 'Condition', gender: 'MALE', admissionDate: new Date().toISOString() });
+
+      expect(studentRes.status).toBe(201);
+      const studentId = studentRes.body.data.id;
+
+      // 2. Setup Distinct Guardians natively via Prisma inside tenantContext
+      let g1, g2;
+      await tenantContext.run({ tenantId: tenantA_id }, async () => {
+        g1 = await kernel.db.guardian.create({
+          data: { tenantId: tenantA_id, firstName: 'C1', lastName: 'Concurrency' }
+        });
+        g2 = await kernel.db.guardian.create({
+          data: { tenantId: tenantA_id, firstName: 'C2', lastName: 'Concurrency' }
+        });
+      });
+
+      // 3. Fire Concurrent Link Requests via HTTP (bypassing node.js execution sequence to force DB locking)
+      const req1 = request(app.getHttpServer())
+        .post(`/api/v1/students/${studentId}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id)
+        .send({ guardianId: g1.id, relationship: 'FATHER', isPrimary: true });
+
+      const req2 = request(app.getHttpServer())
+        .post(`/api/v1/students/${studentId}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', tenantA_id)
+        .set('x-school-id', schoolA_id)
+        .send({ guardianId: g2.id, relationship: 'MOTHER', isPrimary: true });
+
+      const responses = await Promise.all([req1, req2]);
+
+      // 4. Verify HTTP Expectations
+      // Depending on the exact serialization path, both should receive 201 Created.
+      // One request will acquire the FOR UPDATE lock, process the link, clear any primary, and commit.
+      // The second request will wait at FOR UPDATE, then process the link, clear the primary set by the first, and commit.
+      expect(responses[0].status).toBe(201);
+      expect(responses[1].status).toBe(201);
+
+      // 5. Verify PostgreSQL Data Invariant
+      let links = [];
+      await tenantContext.run({ tenantId: tenantA_id }, async () => {
+        links = await kernel.db.studentGuardian.findMany({ where: { studentId } });
+      });
+      const primaryLinks = links.filter(l => l.isPrimary);
+
+      // Both guardians must be linked
+      expect(links.length).toBe(2);
+
+      // ONLY ONE MUST BE PRIMARY (Invariant maintained by DB locking and transactional clearPrimaryGuardian)
+      expect(primaryLinks.length).toBe(1);
     });
   });
 });
