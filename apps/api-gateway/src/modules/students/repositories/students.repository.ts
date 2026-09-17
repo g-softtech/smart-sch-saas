@@ -29,6 +29,7 @@ export type LinkGuardianInput = {
   isPrimary?: boolean;
   isEmergencyContact?: boolean;
   schoolId?: string;
+  roleId?: string;
 };
 
 export type CreateEnrollmentInput = {

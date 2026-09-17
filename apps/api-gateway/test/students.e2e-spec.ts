@@ -330,6 +330,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
       (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(mockStudent);
       (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
       (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
+      (kernel.db.$queryRaw as jest.Mock).mockResolvedValue([{ id: STUDENT_ID }]);
       (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({
         id: 'sg-1', studentId: STUDENT_ID, guardianId: GUARDIAN_ID, relationship: 'FATHER',
       });
@@ -349,6 +350,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
       (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(mockStudent);
       (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
       (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue({ id: 'existing' });
+      (kernel.db.$queryRaw as jest.Mock).mockResolvedValue([{ id: STUDENT_ID }]);
 
       await request(app.getHttpServer())
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
@@ -387,20 +389,69 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .expect(400); // Bad Request per conventions
     });
 
-    it('POST /api/v1/students/:id/guardians/link — accepts tenant-wide linking without school context (201)', async () => {
-      const studentOtherSchool = { ...mockStudent, schoolId: 'other-school-id' };
-      (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(studentOtherSchool);
-      (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
-      (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
-      (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({ id: 'sg-2' });
+    it('POST /api/v1/students/:id/guardians/link — denies omitted school context for standard user (403)', async () => {
+      (kernel.db.role.findUnique as jest.Mock).mockResolvedValue({ id: 'r1', name: 'USER', tenantId: TENANT_ID });
 
       await request(app.getHttpServer())
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
-        // No x-school-id header
+        .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' })
+        .expect(403);
+    });
+
+    it('POST /api/v1/students/:id/guardians/link — accepts tenant-wide linking if SUPER_ADMIN (201)', async () => {
+      const studentOtherSchool = { ...mockStudent, schoolId: 'other-school-id' };
+      (kernel.db.role.findUnique as jest.Mock).mockResolvedValue({ id: 'r1', name: 'SUPER_ADMIN', tenantId: TENANT_ID });
+      (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(studentOtherSchool);
+      (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
+      (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
+      (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({ id: 'sg-2' });
+      (kernel.db.$queryRaw as jest.Mock).mockResolvedValue([{ id: STUDENT_ID }]);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
         .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' })
         .expect(201);
+    });
+
+    it('POST /api/v1/students/:id/guardians/link — concurrent requests invoke FOR UPDATE and complete safely', async () => {
+      (kernel.db.student.findUnique as jest.Mock).mockResolvedValue(mockStudent);
+      (kernel.db.guardian.findUnique as jest.Mock).mockResolvedValue(mockGuardian);
+
+      let linkCount = 0;
+      (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
+      (kernel.db.studentGuardian.create as jest.Mock).mockImplementation(() => {
+         linkCount++;
+         return { id: `sg-${linkCount}` };
+      });
+      (kernel.db.$queryRaw as jest.Mock).mockResolvedValue([{ id: STUDENT_ID }]);
+
+      const req1 = request(app.getHttpServer())
+        .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
+        .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER', isPrimary: true });
+
+      const req2 = request(app.getHttpServer())
+        .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', SCHOOL_ID)
+        .send({ guardianId: 'other-guardian', relationship: 'MOTHER', isPrimary: true });
+
+      const [res1, res2] = await Promise.all([req1, req2]);
+
+      expect(res1.status).toBe(201);
+      expect(res2.status).toBe(201);
+
+      expect(kernel.db.$queryRaw).toHaveBeenCalledTimes(2);
+
+      // Note: Since this uses a mocked Prisma client, it does not truly serialize the DB transaction block,
+      // but it validates that the application logic properly delegates the locking responsibility to PostgreSQL.
     });
 
     it('POST /api/v1/students/:id/guardians/link — updates primary guardian (201)', async () => {
@@ -409,6 +460,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
       (kernel.db.studentGuardian.findUnique as jest.Mock).mockResolvedValue(null);
       (kernel.db.studentGuardian.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
       (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({ id: 'sg-3' });
+      (kernel.db.$queryRaw as jest.Mock).mockResolvedValue([{ id: STUDENT_ID }]);
 
       await request(app.getHttpServer())
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
@@ -417,7 +469,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .set('x-school-id', SCHOOL_ID)
         .send({ guardianId: GUARDIAN_ID, relationship: 'MOTHER', isPrimary: true })
         .expect(201);
-      
+
       expect(kernel.db.studentGuardian.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ studentId: STUDENT_ID, isPrimary: true }),

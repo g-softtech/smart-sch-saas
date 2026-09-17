@@ -70,6 +70,11 @@ describe('StudentsService (Unit / Mocked)', () => {
 
     service = module.get<StudentsService>(StudentsService);
     repo = module.get(StudentsRepository);
+
+    // Mock kernel.db.$queryRaw globally for these unit tests since they don't mock Prisma
+    const { kernel } = require('@saas/core-platform');
+    kernel.db.$queryRaw = jest.fn().mockResolvedValue([{ id: 'mock' }]);
+    kernel.db.role = { findUnique: jest.fn() };
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -143,6 +148,7 @@ describe('StudentsService (Unit / Mocked)', () => {
     const linkInput = {
       studentId: 'stu-1',
       guardianId: 'g-1',
+      schoolId: 'school-1',
       relationship: 'FATHER' as const,
       isPrimary: false,
       isEmergencyContact: false,
@@ -150,7 +156,7 @@ describe('StudentsService (Unit / Mocked)', () => {
 
     it('links guardian to student when both belong to active tenant',
       withTenant(async () => {
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.findGuardian.mockResolvedValueOnce({ id: 'g-1', tenantId: TENANT_ID } as any);
         repo.findStudentGuardianLink.mockResolvedValueOnce(null);
         repo.createStudentGuardianLink.mockResolvedValueOnce({ id: 'sg-1' } as any);
@@ -169,7 +175,7 @@ describe('StudentsService (Unit / Mocked)', () => {
 
     it('rejects when guardian not found (cross-tenant)',
       withTenant(async () => {
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.findGuardian.mockResolvedValueOnce(null);
 
         await expect(service.linkGuardian(linkInput))
@@ -178,9 +184,9 @@ describe('StudentsService (Unit / Mocked)', () => {
 
     it('rejects duplicate guardian link',
       withTenant(async () => {
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.findGuardian.mockResolvedValueOnce({ id: 'g-1', tenantId: TENANT_ID } as any);
-        repo.findStudentGuardianLink.mockResolvedValueOnce({ id: 'existing' } as any);
+        repo.findStudentGuardianLink.mockResolvedValueOnce({ id: 'link-1' } as any);
 
         await expect(service.linkGuardian(linkInput))
           .rejects.toThrow(ConflictException);
@@ -188,19 +194,19 @@ describe('StudentsService (Unit / Mocked)', () => {
 
     it('clears existing primary guardian before setting new primary',
       withTenant(async () => {
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.findGuardian.mockResolvedValueOnce({ id: 'g-1', tenantId: TENANT_ID } as any);
         repo.findStudentGuardianLink.mockResolvedValueOnce(null);
         repo.clearPrimaryGuardian.mockResolvedValueOnce({ count: 1 } as any);
         repo.createStudentGuardianLink.mockResolvedValueOnce({ id: 'sg-1', isPrimary: true } as any);
 
         await service.linkGuardian({ ...linkInput, isPrimary: true });
-        expect(repo.clearPrimaryGuardian).toHaveBeenCalledWith('stu-1');
+        expect(repo.clearPrimaryGuardian).toHaveBeenCalledWith('stu-1', expect.anything());
       }));
 
     it('does not clear primary when isPrimary is false',
       withTenant(async () => {
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.findGuardian.mockResolvedValueOnce({ id: 'g-1', tenantId: TENANT_ID } as any);
         repo.findStudentGuardianLink.mockResolvedValueOnce(null);
         repo.createStudentGuardianLink.mockResolvedValueOnce({ id: 'sg-1' } as any);
@@ -211,7 +217,7 @@ describe('StudentsService (Unit / Mocked)', () => {
 
     it('correctly records isEmergencyContact separately from relationship',
       withTenant(async () => {
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.findGuardian.mockResolvedValueOnce({ id: 'g-1', tenantId: TENANT_ID } as any);
         repo.findStudentGuardianLink.mockResolvedValueOnce(null);
         repo.createStudentGuardianLink.mockResolvedValueOnce({ id: 'sg-1' } as any);
@@ -219,7 +225,12 @@ describe('StudentsService (Unit / Mocked)', () => {
         await service.linkGuardian({ ...linkInput, relationship: 'OTHER', isEmergencyContact: true });
 
         expect(repo.createStudentGuardianLink).toHaveBeenCalledWith(
-          expect.objectContaining({ relationship: 'OTHER', isEmergencyContact: true }),
+          expect.objectContaining({
+            relationship: 'OTHER',
+            isEmergencyContact: true,
+            schoolId: 'school-1',
+          }),
+          expect.anything()
         );
       }));
   });
@@ -411,7 +422,7 @@ describe('StudentsService (Unit / Mocked)', () => {
     it('withdraws student and sets status to WITHDRAWN',
       withTenant(async () => {
         repo.findEnrollment.mockResolvedValueOnce(activeEnrollment as any);
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.withdrawEnrollment.mockResolvedValueOnce({} as any);
         repo.setStudentStatus.mockResolvedValueOnce({} as any);
 
@@ -432,7 +443,7 @@ describe('StudentsService (Unit / Mocked)', () => {
     it('rejects when enrollment does not belong to the specified student',
       withTenant(async () => {
         repo.findEnrollment.mockResolvedValueOnce({ ...activeEnrollment, studentId: 'stu-OTHER' } as any);
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
 
         await expect(service.withdrawStudent({ enrollmentId: 'enr-1', studentId: 'stu-1' }))
           .rejects.toThrow(BadRequestException);
@@ -441,7 +452,7 @@ describe('StudentsService (Unit / Mocked)', () => {
     it('historical enrollment row is preserved (withdrawEnrollment updates, not deletes)',
       withTenant(async () => {
         repo.findEnrollment.mockResolvedValueOnce(activeEnrollment as any);
-        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID } as any);
+        repo.findStudent.mockResolvedValueOnce({ id: 'stu-1', tenantId: TENANT_ID, schoolId: SCHOOL_ID } as any);
         repo.withdrawEnrollment.mockResolvedValueOnce({ id: 'enr-1', status: 'WITHDRAWN' } as any);
         repo.setStudentStatus.mockResolvedValueOnce({} as any);
 

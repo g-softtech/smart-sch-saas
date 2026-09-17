@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { tenantContext, EnrollmentStatus, StudentStatus, kernel } from '@saas/core-platform';
 import { StudentsRepository, CreateStudentInput, CreateGuardianInput, LinkGuardianInput, CreateEnrollmentInput, TransferEnrollmentInput, WithdrawStudentInput } from '../repositories/students.repository';
 
@@ -77,7 +77,23 @@ export class StudentsService {
   async linkGuardian(input: LinkGuardianInput) {
     const tenantId = this.getActiveTenantId();
 
+    if (!input.schoolId) {
+      if (!input.roleId) {
+        throw new ForbiddenException('Tenant-wide linking requires explicitly authorized role');
+      }
+      const role = await require('@saas/core-platform').kernel.db.role.findUnique({ where: { id: input.roleId } });
+      if (!role || role.name !== 'SUPER_ADMIN' || role.tenantId !== tenantId) {
+        throw new ForbiddenException('Tenant-wide linking requires SUPER_ADMIN role');
+      }
+    }
+
     return require('@saas/core-platform').kernel.db.$transaction(async (tx: any) => {
+      // 1. Acquire row-level lock on the Student record to serialize concurrent requests.
+      const locked = await tx.$queryRaw`SELECT id FROM "stud_students" WHERE id = ${input.studentId} FOR UPDATE`;
+      if (!locked || locked.length === 0) {
+        throw new BadRequestException('Student not found or does not belong to the active tenant');
+      }
+
       const student = await this.repo.findStudent(input.studentId, tx);
       if (!student) {
         throw new BadRequestException('Student not found or does not belong to the active tenant');
@@ -307,7 +323,19 @@ export class StudentsService {
     return this.repo.listStudentGuardians(studentId);
   }
 
-  async listGuardians(schoolId?: string) {
+  async listGuardians(schoolId?: string, roleId?: string) {
+    const tenantId = this.getActiveTenantId();
+
+    if (!schoolId) {
+      if (!roleId) {
+        throw new ForbiddenException('Tenant-wide listing requires explicitly authorized role');
+      }
+      const role = await require('@saas/core-platform').kernel.db.role.findUnique({ where: { id: roleId } });
+      if (!role || role.name !== 'SUPER_ADMIN' || role.tenantId !== tenantId) {
+        throw new ForbiddenException('Tenant-wide listing requires SUPER_ADMIN role');
+      }
+    }
+
     return this.repo.listGuardians(schoolId);
   }
 }
