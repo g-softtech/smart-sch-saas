@@ -218,6 +218,16 @@ describe('Academics Phase 3 (e2e)', () => {
         .set('x-school-id', schoolId)
         .expect(200);
     });
+
+    it('should reject duplicate campus creation', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/academics/campuses')
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .set('x-tenant-id', tenantId)
+        .set('x-school-id', schoolId)
+        .send({ schoolId, name: 'Main Campus' })
+        .expect(409);
+    });
   });
 
   describe('Terms', () => {
@@ -276,6 +286,21 @@ describe('Academics Phase 3 (e2e)', () => {
         .set('x-school-id', schoolId)
         .expect(409);
     });
+
+    it('should successfully delete an unused term', async () => {
+      let termId: string = '';
+      await tenantContext.run({ tenantId }, async () => {
+        const t = await kernel.db.term.create({ data: { tenantId, academicYearId: yearId, name: 'Term To Delete' } });
+        termId = t.id;
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/academics/terms/${termId}`)
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .set('x-tenant-id', tenantId)
+        .set('x-school-id', schoolId)
+        .expect(200);
+    });
   });
 
   describe('Departments', () => {
@@ -327,6 +352,21 @@ describe('Academics Phase 3 (e2e)', () => {
         .set('x-tenant-id', tenantId)
         .set('x-school-id', schoolId)
         .expect(409);
+    });
+
+    it('should successfully delete an unused department', async () => {
+      let deptId: string = '';
+      await tenantContext.run({ tenantId }, async () => {
+        const d = await kernel.db.department.create({ data: { tenantId, schoolId, name: 'Dept To Delete' } });
+        deptId = d.id;
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/academics/departments/${deptId}`)
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .set('x-tenant-id', tenantId)
+        .set('x-school-id', schoolId)
+        .expect(200);
     });
   });
 
