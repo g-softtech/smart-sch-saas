@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { AcademicsRepository } from '../repositories/academics.repository';
 
 @Injectable()
@@ -184,6 +184,12 @@ export class AcademicsService {
   }
 
   async deleteCampus(tenantId: string, id: string) {
+    const armCount = await this.repo.countArmsByCampus(id);
+    if (armCount > 0) {
+      throw new ConflictException(
+        `Cannot delete this campus because it has ${armCount} arm(s) linked to it. Remove or reassign the arms first.`
+      );
+    }
     const result = await this.repo.deleteCampus(tenantId, id);
     if (result.count === 0) throw new NotFoundException('Campus not found');
     return { success: true };

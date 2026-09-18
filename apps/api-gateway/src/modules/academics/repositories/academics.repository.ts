@@ -161,6 +161,10 @@ export class AcademicsRepository {
     return kernel.db.arm.findUnique({ where: { id } });
   }
 
+  async countArmsByCampus(campusId: string) {
+    return kernel.db.arm.count({ where: { campusId } });
+  }
+
   async updateTerm(tenantId: string, id: string, data: { name: string }) {
     return kernel.db.term.updateMany({
       where: { id, tenantId },
