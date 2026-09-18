@@ -101,6 +101,25 @@ export default function AcademicsPage() {
   const [subjectGroupsList, setSubjectGroupsList] = useState<Record<string, unknown>[]>([]);
   const [subjectGroupsLoading, setSubjectGroupsLoading] = useState(false);
 
+  // Added Modal States
+  const [isCreateCampusModalOpen, setIsCreateCampusModalOpen] = useState(false);
+  const [createCampusName, setCreateCampusName] = useState('');
+  const [createCampusLoading, setCreateCampusLoading] = useState(false);
+  const [createCampusError, setCreateCampusError] = useState<string | null>(null);
+  const [createCampusSuccess, setCreateCampusSuccess] = useState(false);
+
+  const [isCreateDepartmentModalOpen, setIsCreateDepartmentModalOpen] = useState(false);
+  const [createDepartmentName, setCreateDepartmentName] = useState('');
+  const [createDepartmentLoading, setCreateDepartmentLoading] = useState(false);
+  const [createDepartmentError, setCreateDepartmentError] = useState<string | null>(null);
+  const [createDepartmentSuccess, setCreateDepartmentSuccess] = useState(false);
+
+  const [isCreateSubjectGroupModalOpen, setIsCreateSubjectGroupModalOpen] = useState(false);
+  const [createSubjectGroupName, setCreateSubjectGroupName] = useState('');
+  const [createSubjectGroupLoading, setCreateSubjectGroupLoading] = useState(false);
+  const [createSubjectGroupError, setCreateSubjectGroupError] = useState<string | null>(null);
+  const [createSubjectGroupSuccess, setCreateSubjectGroupSuccess] = useState(false);
+
   // Generic Edit Modal State
   const [editItem, setEditItem] = useState<{ id: string, name: string, type: TabType } | null>(null);
   const [editName, setEditName] = useState('');
@@ -451,6 +470,139 @@ export default function AcademicsPage() {
     }
   };
 
+  
+  const openCreateCampusModal = () => {
+    setCreateCampusName('');
+    setCreateCampusError(null);
+    setCreateCampusSuccess(false);
+    setIsCreateCampusModalOpen(true);
+  };
+
+  const handleCreateCampusSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createCampusName.trim()) return;
+
+    setCreateCampusLoading(true);
+    setCreateCampusError(null);
+    setCreateCampusSuccess(false);
+
+    try {
+      if (!schoolId) throw new Error("No active school in workspace");
+
+      await apiClient.post('api/v1/academics/campuses', {
+        schoolId,
+        name: createCampusName.trim()
+      });
+
+      setCreateCampusSuccess(true);
+      setCreateCampusName('');
+      setTimeout(() => {
+        setIsCreateCampusModalOpen(false);
+        setCreateCampusSuccess(false);
+      }, 1500);
+
+      // Refresh list
+      fetchTabData('campuses', 0);
+
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setCreateCampusError(err.message || 'Failed to create campus');
+      } else {
+        setCreateCampusError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setCreateCampusLoading(false);
+    }
+  };
+
+  const openCreateDepartmentModal = () => {
+    setCreateDepartmentName('');
+    setCreateDepartmentError(null);
+    setCreateDepartmentSuccess(false);
+    setIsCreateDepartmentModalOpen(true);
+  };
+
+  const handleCreateDepartmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createDepartmentName.trim()) return;
+
+    setCreateDepartmentLoading(true);
+    setCreateDepartmentError(null);
+    setCreateDepartmentSuccess(false);
+
+    try {
+      if (!schoolId) throw new Error("No active school in workspace");
+
+      await apiClient.post('api/v1/academics/departments', {
+        schoolId,
+        name: createDepartmentName.trim()
+      });
+
+      setCreateDepartmentSuccess(true);
+      setCreateDepartmentName('');
+      setTimeout(() => {
+        setIsCreateDepartmentModalOpen(false);
+        setCreateDepartmentSuccess(false);
+      }, 1500);
+
+      // Refresh list
+      fetchTabData('departments', 0);
+
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setCreateDepartmentError(err.message || 'Failed to create department');
+      } else {
+        setCreateDepartmentError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setCreateDepartmentLoading(false);
+    }
+  };
+
+  const openCreateSubjectGroupModal = () => {
+    setCreateSubjectGroupName('');
+    setCreateSubjectGroupError(null);
+    setCreateSubjectGroupSuccess(false);
+    setIsCreateSubjectGroupModalOpen(true);
+  };
+
+  const handleCreateSubjectGroupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createSubjectGroupName.trim()) return;
+
+    setCreateSubjectGroupLoading(true);
+    setCreateSubjectGroupError(null);
+    setCreateSubjectGroupSuccess(false);
+
+    try {
+      if (!schoolId) throw new Error("No active school in workspace");
+
+      await apiClient.post('api/v1/academics/subject-groups', {
+        schoolId,
+        name: createSubjectGroupName.trim()
+      });
+
+      setCreateSubjectGroupSuccess(true);
+      setCreateSubjectGroupName('');
+      setTimeout(() => {
+        setIsCreateSubjectGroupModalOpen(false);
+        setCreateSubjectGroupSuccess(false);
+      }, 1500);
+
+      // Refresh list
+      fetchTabData('subject-groups', 0);
+
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setCreateSubjectGroupError(err.message || 'Failed to create subjectgroup');
+      } else {
+        setCreateSubjectGroupError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setCreateSubjectGroupLoading(false);
+    }
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editItem || !editName.trim()) return;
@@ -589,6 +741,34 @@ export default function AcademicsPage() {
             Add Subject
           </button>
         )}
+
+        {activeTab === 'campuses' && (
+          <button
+            onClick={openCreateCampusModal}
+            className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
+          >
+            Add Campus
+          </button>
+        )}
+
+        {activeTab === 'departments' && (
+          <button
+            onClick={openCreateDepartmentModal}
+            className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
+          >
+            Add Department
+          </button>
+        )}
+
+        {activeTab === 'subject-groups' && (
+          <button
+            onClick={openCreateSubjectGroupModal}
+            className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
+          >
+            Add Subject Group
+          </button>
+        )}
+
       </div>
 
       <div className="border-b border-gray-200 dark:border-brand-border-dark">
