@@ -513,7 +513,7 @@ export default function AcademicsPage() {
   const currentState = tabStates[activeTab];
 
   // Define columns based on active tab
-  let columns: Column<Record<string, unknown>>[] = [
+  const columns: Column<Record<string, unknown>>[] = [
     { header: 'ID', accessor: 'id', hideOnMobile: true },
     { header: 'Name', accessor: 'name' },
     {
@@ -1188,6 +1188,18 @@ export default function AcademicsPage() {
                     Are you sure you want to delete the <span className="font-semibold text-gray-900 dark:text-brand-offwhite">{deleteItem.name}</span> {deleteItem.type.replace('-', ' ')}?
                     This action cannot be undone.
                   </p>
+                  {deleteItem.type === 'subject-groups' && (
+                    <div className="mt-3 rounded-md bg-yellow-50 dark:bg-yellow-900/30 p-3">
+                      <div className="flex">
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Warning: Ungrouping Subjects</h3>
+                          <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                            <p>Deleting this group will remove it from all associated Subjects. The subjects themselves will remain, but they will no longer be grouped.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {deleteError && (
