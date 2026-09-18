@@ -115,6 +115,10 @@ export class AcademicsService {
     return this.repo.listCampuses(tenantId, schoolId, skip, take);
   }
 
+  async listDepartments(tenantId: string, schoolId: string, skip: number, take: number) {
+    return this.repo.listDepartments(tenantId, schoolId, skip, take);
+  }
+
   async listSubjectGroups(tenantId: string, schoolId: string, skip: number, take: number) {
     return this.repo.listSubjectGroups(tenantId, schoolId, skip, take);
   }
