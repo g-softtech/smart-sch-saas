@@ -5,14 +5,17 @@ import { apiClient, ApiError } from '@/lib/api-client';
 import { DataTable, Column } from '@/components/DataTable';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 
-type TabType = 'academic-years' | 'terms' | 'classes' | 'arms' | 'subjects';
+type TabType = 'academic-years' | 'terms' | 'classes' | 'arms' | 'subjects' | 'campuses' | 'departments' | 'subject-groups';
 
 const TABS: { id: TabType; label: string }[] = [
   { id: 'academic-years', label: 'Academic Years' },
   { id: 'terms', label: 'Terms' },
   { id: 'classes', label: 'Classes' },
   { id: 'arms', label: 'Arms' },
-  { id: 'subjects', label: 'Subjects' }
+  { id: 'subjects', label: 'Subjects' },
+  { id: 'campuses', label: 'Campuses' },
+  { id: 'departments', label: 'Departments' },
+  { id: 'subject-groups', label: 'Subject Groups' }
 ];
 
 const TAKE = 50;
@@ -43,7 +46,10 @@ export default function AcademicsPage() {
     'terms': { ...initialTabState },
     'classes': { ...initialTabState },
     'arms': { ...initialTabState },
-    'subjects': { ...initialTabState }
+    'subjects': { ...initialTabState },
+    'campuses': { ...initialTabState },
+    'departments': { ...initialTabState },
+    'subject-groups': { ...initialTabState }
   });
 
   // Create Modal State
@@ -96,14 +102,14 @@ export default function AcademicsPage() {
   const [subjectGroupsLoading, setSubjectGroupsLoading] = useState(false);
 
   // Generic Edit Modal State
-  const [editItem, setEditItem] = useState<{ id: string, name: string, type: 'academic-years' | 'classes' | 'arms' } | null>(null);
+  const [editItem, setEditItem] = useState<{ id: string, name: string, type: TabType } | null>(null);
   const [editName, setEditName] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
 
   // Generic Delete Modal State
-  const [deleteItem, setDeleteItem] = useState<{ id: string, name: string, type: 'academic-years' | 'classes' | 'arms' } | null>(null);
+  const [deleteItem, setDeleteItem] = useState<{ id: string, name: string, type: TabType } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
@@ -507,106 +513,34 @@ export default function AcademicsPage() {
   const currentState = tabStates[activeTab];
 
   // Define columns based on active tab
-  let columns: Column<Record<string, unknown>>[] = [];
-
-  if (activeTab === 'academic-years') {
-    columns = [
-      { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' },
-      {
-        header: 'Actions',
-        accessor: (item: Record<string, unknown>) => (
-          <div className="flex space-x-3">
-            <button
-              onClick={() => {
-                setEditItem({ id: item.id as string, name: item.name as string, type: 'academic-years' });
-                setEditName(item.name as string);
-              }}
-              className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => {
-                setDeleteItem({ id: item.id as string, name: item.name as string, type: 'academic-years' });
-              }}
-              className="text-red-500 hover:text-red-700 font-medium transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-        )
-      }
-    ];
-  } else if (activeTab === 'terms') {
-    columns = [
-      { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' }
-    ];
-  } else if (activeTab === 'classes') {
-    columns = [
-      { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' },
-      {
-        header: 'Actions',
-        accessor: (item: Record<string, unknown>) => (
-          <div className="flex space-x-3">
-            <button
-              onClick={() => {
-                setEditItem({ id: item.id as string, name: item.name as string, type: 'classes' });
-                setEditName(item.name as string);
-              }}
-              className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => {
-                setDeleteItem({ id: item.id as string, name: item.name as string, type: 'classes' });
-              }}
-              className="text-red-500 hover:text-red-700 font-medium transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-        )
-      }
-    ];
-  } else if (activeTab === 'arms') {
-    columns = [
-      { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' },
-      {
-        header: 'Actions',
-        accessor: (item: Record<string, unknown>) => (
-          <div className="flex space-x-3">
-            <button
-              onClick={() => {
-                setEditItem({ id: item.id as string, name: item.name as string, type: 'arms' });
-                setEditName(item.name as string);
-              }}
-              className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => {
-                setDeleteItem({ id: item.id as string, name: item.name as string, type: 'arms' });
-              }}
-              className="text-red-500 hover:text-red-700 font-medium transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-        )
-      }
-    ];
-  } else if (activeTab === 'subjects') {
-    columns = [
-      { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' }
-    ];
-  }
+  let columns: Column<Record<string, unknown>>[] = [
+    { header: 'ID', accessor: 'id', hideOnMobile: true },
+    { header: 'Name', accessor: 'name' },
+    {
+      header: 'Actions',
+      accessor: (item: Record<string, unknown>) => (
+        <div className="flex space-x-3">
+          <button
+            onClick={() => {
+              setEditItem({ id: item.id as string, name: item.name as string, type: activeTab });
+              setEditName(item.name as string);
+            }}
+            className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => {
+              setDeleteItem({ id: item.id as string, name: item.name as string, type: activeTab });
+            }}
+            className="text-red-500 hover:text-red-700 font-medium transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className="space-y-6">

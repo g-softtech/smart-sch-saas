@@ -1,9 +1,15 @@
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+
 export class CreateCampusDto {
+  @IsString()
+  @IsNotEmpty()
   schoolId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateAcademicYearDto {
   @IsString()
@@ -26,7 +32,12 @@ export class CreateTermDto {
 }
 
 export class CreateDepartmentDto {
+  @IsString()
+  @IsNotEmpty()
   schoolId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
@@ -55,7 +66,12 @@ export class CreateArmDto {
 }
 
 export class CreateSubjectGroupDto {
+  @IsString()
+  @IsNotEmpty()
   schoolId!: string;
+
+  @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
@@ -106,4 +122,38 @@ export class UpdateArmDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+}
+
+export class UpdateTermDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class UpdateCampusDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class UpdateDepartmentDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class UpdateSubjectGroupDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class UpdateSubjectDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  subjectGroupId?: string;
 }

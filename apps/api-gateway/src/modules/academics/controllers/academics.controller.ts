@@ -7,7 +7,9 @@ import {
   CreateCampusDto, CreateAcademicYearDto, CreateTermDto, 
   CreateDepartmentDto, CreateClassDto, CreateArmDto, 
   CreateSubjectGroupDto, CreateSubjectDto, AcademicsPaginationQueryDto,
-  UpdateAcademicYearDto, UpdateClassDto, UpdateArmDto
+  UpdateAcademicYearDto, UpdateClassDto, UpdateArmDto,
+  UpdateTermDto, UpdateCampusDto, UpdateDepartmentDto,
+  UpdateSubjectGroupDto, UpdateSubjectDto
 } from '../dto/academics.dto';
 
 @Controller('api/v1/academics')
@@ -222,5 +224,100 @@ export class AcademicsController {
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteArm(tenantId, id);
+  }
+
+  @Put('terms/:id')
+  async updateTerm(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateTermDto,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.updateTerm(tenantId, id, dto);
+  }
+
+  @Delete('terms/:id')
+  async deleteTerm(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteTerm(tenantId, id);
+  }
+
+  @Put('campuses/:id')
+  async updateCampus(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateCampusDto,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.updateCampus(tenantId, id, dto);
+  }
+
+  @Delete('campuses/:id')
+  async deleteCampus(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteCampus(tenantId, id);
+  }
+
+  @Put('departments/:id')
+  async updateDepartment(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateDepartmentDto,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.updateDepartment(tenantId, id, dto);
+  }
+
+  @Delete('departments/:id')
+  async deleteDepartment(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteDepartment(tenantId, id);
+  }
+
+  @Put('subject-groups/:id')
+  async updateSubjectGroup(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateSubjectGroupDto,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.updateSubjectGroup(tenantId, id, dto);
+  }
+
+  @Delete('subject-groups/:id')
+  async deleteSubjectGroup(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteSubjectGroup(tenantId, id);
+  }
+
+  @Put('subjects/:id')
+  async updateSubject(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateSubjectDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    return this.academicsService.updateSubject(tenantId, schoolId, id, dto);
+  }
+
+  @Delete('subjects/:id')
+  async deleteSubject(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteSubject(tenantId, id);
   }
 }

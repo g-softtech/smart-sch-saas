@@ -160,4 +160,73 @@ export class AcademicsService {
     if (existing.tenantId !== tenantId) throw new BadRequestException('Arm belongs to another tenant');
     return this.repo.deleteArm(id);
   }
+
+  async updateTerm(tenantId: string, id: string, data: { name: string }) {
+    const result = await this.repo.updateTerm(tenantId, id, data);
+    if (result.count === 0) throw new NotFoundException('Term not found');
+    return { success: true };
+  }
+
+  async deleteTerm(tenantId: string, id: string) {
+    const result = await this.repo.deleteTerm(tenantId, id);
+    if (result.count === 0) throw new NotFoundException('Term not found');
+    return { success: true };
+  }
+
+  async updateCampus(tenantId: string, id: string, data: { name: string }) {
+    const result = await this.repo.updateCampus(tenantId, id, data);
+    if (result.count === 0) throw new NotFoundException('Campus not found');
+    return { success: true };
+  }
+
+  async deleteCampus(tenantId: string, id: string) {
+    const result = await this.repo.deleteCampus(tenantId, id);
+    if (result.count === 0) throw new NotFoundException('Campus not found');
+    return { success: true };
+  }
+
+  async updateDepartment(tenantId: string, id: string, data: { name: string }) {
+    const result = await this.repo.updateDepartment(tenantId, id, data);
+    if (result.count === 0) throw new NotFoundException('Department not found');
+    return { success: true };
+  }
+
+  async deleteDepartment(tenantId: string, id: string) {
+    const result = await this.repo.deleteDepartment(tenantId, id);
+    if (result.count === 0) throw new NotFoundException('Department not found');
+    return { success: true };
+  }
+
+  async updateSubjectGroup(tenantId: string, id: string, data: { name: string }) {
+    const result = await this.repo.updateSubjectGroup(tenantId, id, data);
+    if (result.count === 0) throw new NotFoundException('Subject Group not found');
+    return { success: true };
+  }
+
+  async deleteSubjectGroup(tenantId: string, id: string) {
+    const result = await this.repo.deleteSubjectGroup(tenantId, id);
+    if (result.count === 0) throw new NotFoundException('Subject Group not found');
+    return { success: true };
+  }
+
+  async updateSubject(tenantId: string, schoolId: string, id: string, data: { name: string; subjectGroupId?: string | null }) {
+    if (data.subjectGroupId) {
+      const subjectGroup = await this.repo.findSubjectGroup(data.subjectGroupId);
+      if (!subjectGroup || subjectGroup.tenantId !== tenantId) {
+        throw new BadRequestException('Subject Group not found or belongs to another tenant');
+      }
+      if (subjectGroup.schoolId !== schoolId) {
+        throw new BadRequestException('Subject Group must belong to the same school as the Subject');
+      }
+    }
+    const result = await this.repo.updateSubject(tenantId, id, data);
+    if (result.count === 0) throw new NotFoundException('Subject not found');
+    return { success: true };
+  }
+
+  async deleteSubject(tenantId: string, id: string) {
+    const result = await this.repo.deleteSubject(tenantId, id);
+    if (result.count === 0) throw new NotFoundException('Subject not found');
+    return { success: true };
+  }
 }

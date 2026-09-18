@@ -151,4 +151,69 @@ export class AcademicsRepository {
   async findArm(id: string) {
     return kernel.db.arm.findUnique({ where: { id } });
   }
+
+  async updateTerm(tenantId: string, id: string, data: { name: string }) {
+    return kernel.db.term.updateMany({
+      where: { id, tenantId },
+      data,
+    });
+  }
+
+  async deleteTerm(tenantId: string, id: string) {
+    return kernel.db.term.deleteMany({
+      where: { id, tenantId },
+    });
+  }
+
+  async updateCampus(tenantId: string, id: string, data: { name: string }) {
+    return kernel.db.campus.updateMany({
+      where: { id, tenantId },
+      data,
+    });
+  }
+
+  async deleteCampus(tenantId: string, id: string) {
+    return kernel.db.campus.deleteMany({
+      where: { id, tenantId },
+    });
+  }
+
+  async updateDepartment(tenantId: string, id: string, data: { name: string }) {
+    return kernel.db.department.updateMany({
+      where: { id, tenantId },
+      data,
+    });
+  }
+
+  async deleteDepartment(tenantId: string, id: string) {
+    return kernel.db.department.deleteMany({
+      where: { id, tenantId },
+    });
+  }
+
+  async updateSubjectGroup(tenantId: string, id: string, data: { name: string }) {
+    return kernel.db.subjectGroup.updateMany({
+      where: { id, tenantId },
+      data,
+    });
+  }
+
+  async deleteSubjectGroup(tenantId: string, id: string) {
+    return kernel.db.subjectGroup.deleteMany({
+      where: { id, tenantId },
+    });
+  }
+
+  async updateSubject(tenantId: string, id: string, data: { name: string; subjectGroupId?: string | null }) {
+    return kernel.db.subject.updateMany({
+      where: { id, tenantId },
+      data,
+    });
+  }
+
+  async deleteSubject(tenantId: string, id: string) {
+    return kernel.db.subject.deleteMany({
+      where: { id, tenantId },
+    });
+  }
 }
