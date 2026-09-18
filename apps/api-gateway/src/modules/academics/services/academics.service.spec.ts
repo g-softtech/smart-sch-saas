@@ -49,7 +49,7 @@ describe('AcademicsService (Unit / Mocked)', () => {
       repo.findSchool.mockResolvedValueOnce({ id: 'school-1' } as any);
       repo.createCampus.mockResolvedValueOnce({ id: 'campus-1' } as any);
 
-      const result = await service.createCampus({ schoolId: 'school-1', name: 'Main Campus' });
+      const result = await service.createCampus('tenant-1', { schoolId: 'school-1', name: 'Main Campus' });
       expect(result.id).toBe('campus-1');
     });
 
@@ -57,7 +57,7 @@ describe('AcademicsService (Unit / Mocked)', () => {
       // PlatformKernel intercepts cross-tenant queries, returning null
       repo.findSchool.mockResolvedValueOnce(null);
 
-      await expect(service.createCampus({ schoolId: 'school-1', name: 'Main Campus' }))
+      await expect(service.createCampus('tenant-1', { schoolId: 'school-1', name: 'Main Campus' }))
         .rejects.toThrow(BadRequestException);
     });
   });
