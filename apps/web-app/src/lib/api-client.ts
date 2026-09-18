@@ -45,8 +45,11 @@ async function request(endpoint: string, options: RequestOptions = {}) {
 
     const tenantId = typeof window !== 'undefined' ? localStorage.getItem('x-tenant-id') : null;
     const schoolId = typeof window !== 'undefined' ? localStorage.getItem('x-school-id') : null;
+    const campusId = typeof window !== 'undefined' ? localStorage.getItem('x-campus-id') : null;
+
     if (tenantId) (config.headers as Record<string, string>)['x-tenant-id'] = tenantId;
     if (schoolId) (config.headers as Record<string, string>)['x-school-id'] = schoolId;
+    if (campusId) (config.headers as Record<string, string>)['x-campus-id'] = campusId;
   }
 
   try {
@@ -77,6 +80,7 @@ async function request(endpoint: string, options: RequestOptions = {}) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('x-tenant-id');
         localStorage.removeItem('x-school-id');
+        localStorage.removeItem('x-campus-id');
         // Prevent redirect loop if already on login
         if (window.location.pathname !== '/login') {
           // eslint-disable-next-line @next/next/no-location-assign-relative-destination

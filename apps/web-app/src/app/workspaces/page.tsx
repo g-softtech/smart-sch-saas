@@ -6,14 +6,22 @@ import { apiClient, ApiError } from '@/lib/api-client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface Campus {
+  id: string;
+  name: string;
+}
+
 interface School {
-  schoolId: string;
-  schoolName: string;
+  id: string;
+  name: string;
+  accessLevel: 'FULL_SCHOOL' | 'CAMPUS_RESTRICTED';
+  campuses: Campus[];
 }
 
 interface TenantWorkspace {
   tenantId: string;
   tenantName: string;
+  role: string;
   schools: School[];
 }
 
@@ -36,7 +44,7 @@ export default function WorkspacesPage() {
 
     const fetchWorkspaces = async () => {
       try {
-        const response = await apiClient.get('api/v1/auth/workspaces');
+        const response = await apiClient.get('api/v1/identity/me/workspaces');
         
         // Ensure response is an array before setting
         if (Array.isArray(response)) {
@@ -58,8 +66,8 @@ export default function WorkspacesPage() {
     fetchWorkspaces();
   }, [isAuthLoading, isAuthenticated, router]);
 
-  const handleSelectSchool = (tenantId: string, schoolId: string) => {
-    setWorkspace(tenantId, schoolId);
+  const handleSelectSchool = (tenantId: string, schoolId: string, campusId?: string) => {
+    setWorkspace(tenantId, schoolId, campusId);
     router.push('/dashboard');
   };
 
@@ -104,14 +112,34 @@ export default function WorkspacesPage() {
                 </div>
                 <ul className="divide-y divide-gray-200">
                   {tenant.schools.map((school) => (
-                    <li key={school.schoolId}>
-                      <button
-                        onClick={() => handleSelectSchool(tenant.tenantId, school.schoolId)}
-                        className="flex w-full items-center justify-between px-4 py-4 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none text-left transition-colors"
-                      >
-                        <span className="text-sm text-gray-700 font-medium">{school.schoolName}</span>
-                        <span className="text-indigo-600 text-sm font-medium">Select &rarr;</span>
-                      </button>
+                    <li key={school.id} className="divide-y divide-gray-100">
+                      <div className="px-4 py-3 bg-white">
+                        <span className="text-sm text-gray-700 font-bold">{school.name}</span>
+                        {school.accessLevel === 'FULL_SCHOOL' && (
+                          <button
+                            onClick={() => handleSelectSchool(tenant.tenantId, school.id)}
+                            className="ml-4 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                          >
+                            Select Entire School &rarr;
+                          </button>
+                        )}
+                      </div>
+                      <div className="bg-gray-50 pl-8 pr-4 py-2 space-y-1">
+                        {school.campuses.length > 0 ? (
+                          school.campuses.map(campus => (
+                            <button
+                              key={campus.id}
+                              onClick={() => handleSelectSchool(tenant.tenantId, school.id, campus.id)}
+                              className="flex w-full items-center justify-between px-2 py-2 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none text-left rounded transition-colors"
+                            >
+                              <span className="text-sm text-gray-600">{campus.name}</span>
+                              <span className="text-indigo-500 text-xs font-medium">Select Campus &rarr;</span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="text-xs text-gray-400 py-1">No campuses available.</div>
+                        )}
+                      </div>
                     </li>
                   ))}
                   {tenant.schools.length === 0 && (

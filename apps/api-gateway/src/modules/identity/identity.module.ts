@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './security/jwt-auth.guard';
 
 // Controllers
 import { AuthController } from './controllers/auth.controller';
+import { IdentityController } from './controllers/identity.controller';
 
 @Global()
 @Module({
@@ -28,7 +29,7 @@ import { AuthController } from './controllers/auth.controller';
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, IdentityController],
   providers: [
     RoleRepository,
     TenantMembershipRepository,

@@ -25,13 +25,16 @@ export type ActiveMembership = {
 
 @Injectable()
 export class TenantMembershipRepository {
-  async findByUserId(userId: string, tenantId: string): Promise<UserTenantMembership | null> {
+  async findByUserId(userId: string, tenantId: string) {
     return kernel.db.userTenantMembership.findUnique({
       where: {
         userId_tenantId: {
           userId,
           tenantId,
         },
+      },
+      include: {
+        role: true,
       },
     });
   }

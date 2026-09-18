@@ -52,6 +52,7 @@ model Tenant {
   updatedAt DateTime     @updatedAt
 
   users     UserTenantMembership[]
+  schoolAccess UserSchoolAccess[]
   roles     Role[]
   auditLogs AuditLog[]
   schools   School[] // TENANT_SCOPED
@@ -99,6 +100,7 @@ model User {
   deletedAt         DateTime?
 
   memberships UserTenantMembership[]
+  schoolAccess UserSchoolAccess[]
   auditLogs   AuditLog[]
 
   // Admissions (Batch 3C)
@@ -133,6 +135,26 @@ model UserTenantMembership {
   @@unique([userId, tenantId])
   @@index([tenantId])
   @@map("idm_tenant_memberships")
+}
+
+model UserSchoolAccess {
+  id       String  @id @default(uuid())
+  tenantId String
+  userId   String
+  schoolId String
+  campusId String?
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  campus Campus? @relation(fields: [campusId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, schoolId, campusId])
+  @@index([tenantId])
+  @@map("idm_user_school_access")
 }
 
 model Role {
@@ -186,6 +208,7 @@ model School {
   name     String
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
+  userAccess UserSchoolAccess[]
 
   // Academics (Batch 3A)
   campuses      Campus[]
@@ -300,6 +323,7 @@ model Campus {
   tenant Tenant @relation(fields: [tenantId], references: [id])
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   arms   Arm[]
+  userAccess UserSchoolAccess[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

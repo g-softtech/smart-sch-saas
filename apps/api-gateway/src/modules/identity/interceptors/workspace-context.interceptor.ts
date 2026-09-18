@@ -33,11 +33,14 @@ export class WorkspaceContextInterceptor implements NestInterceptor {
           }
           
           let validatedSchoolId: string | undefined = undefined;
+          let validatedCampusId: string | undefined = undefined;
           const requestedSchoolId = request.headers['x-school-id'] as string;
+          const requestedCampusId = request.headers['x-campus-id'] as string;
           
           if (requestedSchoolId) {
-            // Validate the school belongs to the authorized tenant
             const { kernel } = require('@saas/core-platform');
+
+            // 1. Validate physical school existence within the tenant
             const school = await kernel.db.school.findFirst({
               where: { id: requestedSchoolId, tenantId: membership.tenantId }
             });
@@ -46,6 +49,48 @@ export class WorkspaceContextInterceptor implements NestInterceptor {
               subscriber.error(new ForbiddenException('Invalid or unauthorized school workspace'));
               return;
             }
+
+            // 2. Validate physical campus existence if requested
+            if (requestedCampusId) {
+              const campus = await kernel.db.campus.findFirst({
+                where: { id: requestedCampusId, schoolId: requestedSchoolId, tenantId: membership.tenantId }
+              });
+              if (!campus) {
+                subscriber.error(new ForbiddenException('Invalid or unauthorized campus workspace'));
+                return;
+              }
+            }
+
+            const isSuperAdmin = membership.role?.name === 'SUPER_ADMIN';
+
+            // 3. Enforce UserSchoolAccess for non-SUPER_ADMIN
+            if (!isSuperAdmin) {
+              const accessRecord = await kernel.db.userSchoolAccess.findFirst({
+                where: { userId: user.sub, schoolId: requestedSchoolId }
+              });
+
+              if (!accessRecord) {
+                subscriber.error(new ForbiddenException('User is not assigned to this school'));
+                return;
+              }
+
+              // If the user has a restricted campus, enforce it
+              if (accessRecord.campusId) {
+                if (requestedCampusId && requestedCampusId !== accessRecord.campusId) {
+                  subscriber.error(new ForbiddenException('User is not assigned to the requested campus'));
+                  return;
+                }
+                // Override/inject the restricted campus into the workspace context
+                validatedCampusId = accessRecord.campusId;
+              } else {
+                // User has full school access
+                validatedCampusId = requestedCampusId;
+              }
+            } else {
+              // SUPER_ADMIN has full access
+              validatedCampusId = requestedCampusId;
+            }
+
             validatedSchoolId = school.id;
           }
 
@@ -53,7 +98,8 @@ export class WorkspaceContextInterceptor implements NestInterceptor {
             membershipId: membership.id,
             roleId: membership.roleId,
             tenantId: membership.tenantId,
-            schoolId: validatedSchoolId
+            schoolId: validatedSchoolId,
+            campusId: validatedCampusId
           };
 
           next.handle().subscribe(subscriber);
