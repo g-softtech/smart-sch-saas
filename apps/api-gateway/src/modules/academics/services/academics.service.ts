@@ -1,16 +1,16 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { AcademicsRepository } from '../repositories/academics.repository';
 
 @Injectable()
 export class AcademicsService {
   constructor(private readonly repo: AcademicsRepository) {}
 
-  async createCampus(data: { schoolId: string; name: string }) {
+  async createCampus(tenantId: string, data: { schoolId: string; name: string }) {
     const school = await this.repo.findSchool(data.schoolId);
-    if (!school) {
+    if (!school || school.tenantId !== tenantId) {
       throw new BadRequestException('School not found or belongs to another tenant');
     }
-    return this.repo.createCampus(data);
+    return this.repo.createCampus({ ...data, tenantId });
   }
 
   async createAcademicYear(tenantId: string, data: { schoolId: string; name: string }) {
@@ -29,12 +29,12 @@ export class AcademicsService {
     return this.repo.createTerm({ ...data, tenantId });
   }
 
-  async createDepartment(data: { schoolId: string; name: string }) {
+  async createDepartment(tenantId: string, data: { schoolId: string; name: string }) {
     const school = await this.repo.findSchool(data.schoolId);
-    if (!school) {
+    if (!school || school.tenantId !== tenantId) {
       throw new BadRequestException('School not found or belongs to another tenant');
     }
-    return this.repo.createDepartment(data);
+    return this.repo.createDepartment({ ...data, tenantId });
   }
 
   async createClass(tenantId: string, data: { schoolId: string; name: string }) {
@@ -63,12 +63,12 @@ export class AcademicsService {
     return this.repo.createArm({ ...data, tenantId });
   }
 
-  async createSubjectGroup(data: { schoolId: string; name: string }) {
+  async createSubjectGroup(tenantId: string, data: { schoolId: string; name: string }) {
     const school = await this.repo.findSchool(data.schoolId);
-    if (!school) {
+    if (!school || school.tenantId !== tenantId) {
       throw new BadRequestException('School not found or belongs to another tenant');
     }
-    return this.repo.createSubjectGroup(data);
+    return this.repo.createSubjectGroup({ ...data, tenantId });
   }
 
   async createSubject(tenantId: string, data: { schoolId: string; name: string; subjectGroupId?: string }) {
@@ -117,5 +117,47 @@ export class AcademicsService {
 
   async listSubjectGroups(tenantId: string, schoolId: string, skip: number, take: number) {
     return this.repo.listSubjectGroups(tenantId, schoolId, skip, take);
+  }
+
+  async updateAcademicYear(tenantId: string, id: string, data: { name: string }) {
+    const existing = await this.repo.findAcademicYear(id);
+    if (!existing) throw new NotFoundException('Academic Year not found');
+    if (existing.tenantId !== tenantId) throw new BadRequestException('Academic Year belongs to another tenant');
+    return this.repo.updateAcademicYear(id, data);
+  }
+
+  async deleteAcademicYear(tenantId: string, id: string) {
+    const existing = await this.repo.findAcademicYear(id);
+    if (!existing) throw new NotFoundException('Academic Year not found');
+    if (existing.tenantId !== tenantId) throw new BadRequestException('Academic Year belongs to another tenant');
+    return this.repo.deleteAcademicYear(id);
+  }
+
+  async updateClass(tenantId: string, id: string, data: { name: string }) {
+    const existing = await this.repo.findClass(id);
+    if (!existing) throw new NotFoundException('Class not found');
+    if (existing.tenantId !== tenantId) throw new BadRequestException('Class belongs to another tenant');
+    return this.repo.updateClass(id, data);
+  }
+
+  async deleteClass(tenantId: string, id: string) {
+    const existing = await this.repo.findClass(id);
+    if (!existing) throw new NotFoundException('Class not found');
+    if (existing.tenantId !== tenantId) throw new BadRequestException('Class belongs to another tenant');
+    return this.repo.deleteClass(id);
+  }
+
+  async updateArm(tenantId: string, id: string, data: { name: string }) {
+    const existing = await this.repo.findArm(id);
+    if (!existing) throw new NotFoundException('Arm not found');
+    if (existing.tenantId !== tenantId) throw new BadRequestException('Arm belongs to another tenant');
+    return this.repo.updateArm(id, data);
+  }
+
+  async deleteArm(tenantId: string, id: string) {
+    const existing = await this.repo.findArm(id);
+    if (!existing) throw new NotFoundException('Arm not found');
+    if (existing.tenantId !== tenantId) throw new BadRequestException('Arm belongs to another tenant');
+    return this.repo.deleteArm(id);
   }
 }

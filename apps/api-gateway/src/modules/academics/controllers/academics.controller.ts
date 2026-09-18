@@ -1,22 +1,28 @@
-import { Controller, Post, Get, Body, Req, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Req, Query, UseGuards, UseInterceptors, UseFilters } from '@nestjs/common';
 import { AcademicsService } from '../services/academics.service';
 import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
 import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
+import { AcademicsPrismaExceptionFilter } from '../filters/prisma-exception.filter';
 import { 
   CreateCampusDto, CreateAcademicYearDto, CreateTermDto, 
   CreateDepartmentDto, CreateClassDto, CreateArmDto, 
-  CreateSubjectGroupDto, CreateSubjectDto, AcademicsPaginationQueryDto
+  CreateSubjectGroupDto, CreateSubjectDto, AcademicsPaginationQueryDto,
+  UpdateAcademicYearDto, UpdateClassDto, UpdateArmDto
 } from '../dto/academics.dto';
 
 @Controller('api/v1/academics')
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
+@UseFilters(AcademicsPrismaExceptionFilter)
 export class AcademicsController {
   constructor(private readonly academicsService: AcademicsService) {}
 
   @Post('campuses')
-  async createCampus(@Body() dto: CreateCampusDto) {
-    return this.academicsService.createCampus(dto);
+  async createCampus(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateCampusDto
+  ) {
+    return this.academicsService.createCampus(req.workspace.tenantId, dto);
   }
 
   @Post('academic-years')
@@ -36,8 +42,11 @@ export class AcademicsController {
   }
 
   @Post('departments')
-  async createDepartment(@Body() dto: CreateDepartmentDto) {
-    return this.academicsService.createDepartment(dto);
+  async createDepartment(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateDepartmentDto
+  ) {
+    return this.academicsService.createDepartment(req.workspace.tenantId, dto);
   }
 
   @Post('classes')
@@ -58,8 +67,11 @@ export class AcademicsController {
   }
 
   @Post('subject-groups')
-  async createSubjectGroup(@Body() dto: CreateSubjectGroupDto) {
-    return this.academicsService.createSubjectGroup(dto);
+  async createSubjectGroup(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateSubjectGroupDto
+  ) {
+    return this.academicsService.createSubjectGroup(req.workspace.tenantId, dto);
   }
 
   @Post('subjects')
@@ -153,5 +165,62 @@ export class AcademicsController {
     const take = Number(query.take ?? 50);
     const items = await this.academicsService.listSubjectGroups(tenantId, schoolId, skip, take);
     return { success: true, data: items };
+  }
+
+  @Put('academic-years/:id')
+  async updateAcademicYear(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateAcademicYearDto,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.updateAcademicYear(tenantId, id, dto);
+  }
+
+  @Delete('academic-years/:id')
+  async deleteAcademicYear(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteAcademicYear(tenantId, id);
+  }
+
+  @Put('classes/:id')
+  async updateClass(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateClassDto,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.updateClass(tenantId, id, dto);
+  }
+
+  @Delete('classes/:id')
+  async deleteClass(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteClass(tenantId, id);
+  }
+
+  @Put('arms/:id')
+  async updateArm(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+    @Body() dto: UpdateArmDto,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.updateArm(tenantId, id, dto);
+  }
+
+  @Delete('arms/:id')
+  async deleteArm(
+    @Req() req: Request & { workspace: any },
+    @Param('id') id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.deleteArm(tenantId, id);
   }
 }

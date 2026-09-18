@@ -95,6 +95,19 @@ export default function AcademicsPage() {
   const [subjectGroupsList, setSubjectGroupsList] = useState<Record<string, unknown>[]>([]);
   const [subjectGroupsLoading, setSubjectGroupsLoading] = useState(false);
 
+  // Generic Edit Modal State
+  const [editItem, setEditItem] = useState<{ id: string, name: string, type: 'academic-years' | 'classes' | 'arms' } | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState(false);
+
+  // Generic Delete Modal State
+  const [deleteItem, setDeleteItem] = useState<{ id: string, name: string, type: 'academic-years' | 'classes' | 'arms' } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+
   const fetchTabData = useCallback(async (tab: TabType, page: number) => {
     setTabStates(prev => ({
       ...prev,
@@ -432,6 +445,65 @@ export default function AcademicsPage() {
     }
   };
 
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem || !editName.trim()) return;
+
+    setEditLoading(true);
+    setEditError(null);
+    setEditSuccess(false);
+
+    try {
+      await apiClient.put(`api/v1/academics/${editItem.type}/${editItem.id}`, {
+        name: editName.trim()
+      });
+
+      setEditSuccess(true);
+      setTimeout(() => {
+        setEditItem(null);
+        setEditSuccess(false);
+      }, 1500);
+
+      fetchTabData(editItem.type, 0);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setEditError(err.message || `Failed to update ${editItem.type}`);
+      } else {
+        setEditError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteSubmit = async () => {
+    if (!deleteItem) return;
+
+    setDeleteLoading(true);
+    setDeleteError(null);
+    setDeleteSuccess(false);
+
+    try {
+      await apiClient.delete(`api/v1/academics/${deleteItem.type}/${deleteItem.id}`);
+
+      setDeleteSuccess(true);
+      setTimeout(() => {
+        setDeleteItem(null);
+        setDeleteSuccess(false);
+      }, 1500);
+
+      fetchTabData(deleteItem.type, 0);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setDeleteError(err.message || `Failed to delete ${deleteItem.type}`);
+      } else {
+        setDeleteError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const currentState = tabStates[activeTab];
 
   // Define columns based on active tab
@@ -440,7 +512,31 @@ export default function AcademicsPage() {
   if (activeTab === 'academic-years') {
     columns = [
       { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' }
+      { header: 'Name', accessor: 'name' },
+      {
+        header: 'Actions',
+        accessor: (item: any) => (
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                setEditItem({ id: item.id, name: item.name, type: 'academic-years' });
+                setEditName(item.name);
+              }}
+              className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => {
+                setDeleteItem({ id: item.id, name: item.name, type: 'academic-years' });
+              }}
+              className="text-red-500 hover:text-red-700 font-medium transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        )
+      }
     ];
   } else if (activeTab === 'terms') {
     columns = [
@@ -450,12 +546,60 @@ export default function AcademicsPage() {
   } else if (activeTab === 'classes') {
     columns = [
       { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' }
+      { header: 'Name', accessor: 'name' },
+      {
+        header: 'Actions',
+        accessor: (item: any) => (
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                setEditItem({ id: item.id, name: item.name, type: 'classes' });
+                setEditName(item.name);
+              }}
+              className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => {
+                setDeleteItem({ id: item.id, name: item.name, type: 'classes' });
+              }}
+              className="text-red-500 hover:text-red-700 font-medium transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        )
+      }
     ];
   } else if (activeTab === 'arms') {
     columns = [
       { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { header: 'Name', accessor: 'name' }
+      { header: 'Name', accessor: 'name' },
+      {
+        header: 'Actions',
+        accessor: (item: any) => (
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                setEditItem({ id: item.id, name: item.name, type: 'arms' });
+                setEditName(item.name);
+              }}
+              className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => {
+                setDeleteItem({ id: item.id, name: item.name, type: 'arms' });
+              }}
+              className="text-red-500 hover:text-red-700 font-medium transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        )
+      }
     ];
   } else if (activeTab === 'subjects') {
     columns = [
@@ -1036,6 +1180,117 @@ export default function AcademicsPage() {
           </div>
         </div>
       )}
+
+      {editItem && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-brand-navy/80 backdrop-blur-sm transition-opacity" onClick={() => setEditItem(null)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-brand-navy-surface border border-gray-200 dark:border-brand-border-dark px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
+              <div>
+                <h3 className="text-lg font-semibold leading-6 text-brand-navy dark:text-brand-offwhite capitalize">Edit {editItem.type.replace('-', ' ')}</h3>
+                <form onSubmit={handleEditSubmit} className="mt-4">
+                  <div>
+                    <label htmlFor="editName" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                      Name
+                    </label>
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        name="editName"
+                        id="editName"
+                        required
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        disabled={editLoading}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                      />
+                    </div>
+                  </div>
+
+                  {editError && (
+                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      {editError}
+                    </div>
+                  )}
+                  {editSuccess && (
+                    <div className="mt-2 text-sm text-brand-teal">
+                      Updated successfully!
+                    </div>
+                  )}
+
+                  <div className="mt-5 sm:mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditItem(null)}
+                      disabled={editLoading}
+                      className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy-surface px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy sm:col-start-1 sm:mt-0 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={editLoading || !editName.trim() || editName === editItem.name}
+                      className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
+                    >
+                      {editLoading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteItem && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-brand-navy/80 backdrop-blur-sm transition-opacity" onClick={() => setDeleteItem(null)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-brand-navy-surface border border-gray-200 dark:border-brand-border-dark px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
+              <div>
+                <h3 className="text-lg font-semibold leading-6 text-brand-navy dark:text-brand-offwhite">Confirm Deletion</h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500 dark:text-brand-gray-text">
+                    Are you sure you want to delete the <span className="font-semibold text-gray-900 dark:text-brand-offwhite">{deleteItem.name}</span> {deleteItem.type.replace('-', ' ')}?
+                    This action cannot be undone.
+                  </p>
+                </div>
+
+                {deleteError && (
+                  <div className="mt-3 text-sm text-red-600 dark:text-red-400">
+                    {deleteError}
+                  </div>
+                )}
+                {deleteSuccess && (
+                  <div className="mt-3 text-sm text-brand-teal">
+                    Deleted successfully!
+                  </div>
+                )}
+
+                <div className="mt-5 sm:mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteItem(null)}
+                    disabled={deleteLoading}
+                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-brand-navy-surface px-3 py-2 text-sm font-semibold text-gray-900 dark:text-brand-offwhite shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark hover:bg-gray-50 dark:hover:bg-brand-navy sm:col-start-1 sm:mt-0 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteSubmit}
+                    disabled={deleteLoading}
+                    className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 sm:col-start-2 disabled:opacity-50 transition-colors"
+                  >
+                    {deleteLoading ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

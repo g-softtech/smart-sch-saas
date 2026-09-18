@@ -89,3 +89,21 @@ export class AcademicsPaginationQueryDto {
   @Min(1)
   take?: number = 50;
 }
+
+export class UpdateAcademicYearDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class UpdateClassDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class UpdateArmDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}

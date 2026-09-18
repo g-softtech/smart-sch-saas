@@ -123,4 +123,32 @@ export class AcademicsRepository {
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
   }
+
+  async updateAcademicYear(id: string, data: { name: string }) {
+    return kernel.db.academicYear.update({ where: { id }, data });
+  }
+
+  async deleteAcademicYear(id: string) {
+    return kernel.db.academicYear.delete({ where: { id } });
+  }
+
+  async updateClass(id: string, data: { name: string }) {
+    return kernel.db.class.update({ where: { id }, data });
+  }
+
+  async deleteClass(id: string) {
+    return kernel.db.class.delete({ where: { id } });
+  }
+
+  async updateArm(id: string, data: { name: string }) {
+    return kernel.db.arm.update({ where: { id }, data });
+  }
+
+  async deleteArm(id: string) {
+    return kernel.db.arm.delete({ where: { id } });
+  }
+
+  async findArm(id: string) {
+    return kernel.db.arm.findUnique({ where: { id } });
+  }
 }
