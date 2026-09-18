@@ -515,12 +515,12 @@ export default function AcademicsPage() {
       { header: 'Name', accessor: 'name' },
       {
         header: 'Actions',
-        accessor: (item: any) => (
+        accessor: (item: Record<string, unknown>) => (
           <div className="flex space-x-3">
             <button
               onClick={() => {
-                setEditItem({ id: item.id, name: item.name, type: 'academic-years' });
-                setEditName(item.name);
+                setEditItem({ id: item.id as string, name: item.name as string, type: 'academic-years' });
+                setEditName(item.name as string);
               }}
               className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
             >
@@ -528,7 +528,7 @@ export default function AcademicsPage() {
             </button>
             <button
               onClick={() => {
-                setDeleteItem({ id: item.id, name: item.name, type: 'academic-years' });
+                setDeleteItem({ id: item.id as string, name: item.name as string, type: 'academic-years' });
               }}
               className="text-red-500 hover:text-red-700 font-medium transition-colors"
             >
@@ -549,12 +549,12 @@ export default function AcademicsPage() {
       { header: 'Name', accessor: 'name' },
       {
         header: 'Actions',
-        accessor: (item: any) => (
+        accessor: (item: Record<string, unknown>) => (
           <div className="flex space-x-3">
             <button
               onClick={() => {
-                setEditItem({ id: item.id, name: item.name, type: 'classes' });
-                setEditName(item.name);
+                setEditItem({ id: item.id as string, name: item.name as string, type: 'classes' });
+                setEditName(item.name as string);
               }}
               className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
             >
@@ -562,7 +562,7 @@ export default function AcademicsPage() {
             </button>
             <button
               onClick={() => {
-                setDeleteItem({ id: item.id, name: item.name, type: 'classes' });
+                setDeleteItem({ id: item.id as string, name: item.name as string, type: 'classes' });
               }}
               className="text-red-500 hover:text-red-700 font-medium transition-colors"
             >
@@ -578,12 +578,12 @@ export default function AcademicsPage() {
       { header: 'Name', accessor: 'name' },
       {
         header: 'Actions',
-        accessor: (item: any) => (
+        accessor: (item: Record<string, unknown>) => (
           <div className="flex space-x-3">
             <button
               onClick={() => {
-                setEditItem({ id: item.id, name: item.name, type: 'arms' });
-                setEditName(item.name);
+                setEditItem({ id: item.id as string, name: item.name as string, type: 'arms' });
+                setEditName(item.name as string);
               }}
               className="text-brand-gold hover:text-brand-gold-hover font-medium transition-colors"
             >
@@ -591,7 +591,7 @@ export default function AcademicsPage() {
             </button>
             <button
               onClick={() => {
-                setDeleteItem({ id: item.id, name: item.name, type: 'arms' });
+                setDeleteItem({ id: item.id as string, name: item.name as string, type: 'arms' });
               }}
               className="text-red-500 hover:text-red-700 font-medium transition-colors"
             >
