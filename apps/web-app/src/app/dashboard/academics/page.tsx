@@ -74,7 +74,7 @@ export default function AcademicsPage() {
   const [createClassLoading, setCreateClassLoading] = useState(false);
   const [createClassError, setCreateClassError] = useState<string | null>(null);
   const [createClassSuccess, setCreateClassSuccess] = useState(false);
-  const [schoolsList, setSchoolsList] = useState<{schoolId: string, schoolName: string}[]>([]);
+  const [schoolsList, setSchoolsList] = useState<{id: string, name: string}[]>([]);
   const [schoolsLoading, setSchoolsLoading] = useState(false);
 
   // Create Arm Modal State
@@ -322,9 +322,9 @@ export default function AcademicsPage() {
     if (schoolsList.length === 0) {
       setSchoolsLoading(true);
       try {
-        const response = await apiClient.get('api/v1/auth/workspaces');
+        const response = await apiClient.get('api/v1/identity/me/workspaces');
         if (Array.isArray(response)) {
-          const workspace = response.find((w: { tenantId: string; schools: { schoolId: string; schoolName: string }[] }) => w.tenantId === tenantId);
+          const workspace = response.find((w: { tenantId: string; schools: { id: string; name: string }[] }) => w.tenantId === tenantId);
           if (workspace && Array.isArray(workspace.schools)) {
             setSchoolsList(workspace.schools);
           }
@@ -999,8 +999,8 @@ export default function AcademicsPage() {
                         >
                           <option value="">Select a School</option>
                           {schoolsList.map((s) => (
-                            <option key={s.schoolId} value={s.schoolId}>
-                              {s.schoolName}
+                            <option key={s.id} value={s.id}>
+                              {s.name}
                             </option>
                           ))}
                         </select>
