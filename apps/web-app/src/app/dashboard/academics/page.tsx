@@ -87,8 +87,6 @@ export default function AcademicsPage() {
   const [createArmSuccess, setCreateArmSuccess] = useState(false);
   const [campusesList, setCampusesList] = useState<Record<string, unknown>[]>([]);
   const [campusesLoading, setCampusesLoading] = useState(false);
-  const [classesList, setClassesList] = useState<Record<string, unknown>[]>([]);
-  const [classesLoading, setClassesLoading] = useState(false);
 
   // Create Subject Modal State
   const [isCreateSubjectModalOpen, setIsCreateSubjectModalOpen] = useState(false);
@@ -440,11 +438,11 @@ export default function AcademicsPage() {
     if (schoolsList.length === 0) {
       setSchoolsLoading(true);
       try {
-        const response = await apiClient.get('api/v1/auth/workspaces');
+        const response = await apiClient.get('api/v1/identity/me/workspaces');
         const resObj = response as { data?: unknown[] };
         const workspaceList = Array.isArray(response) ? response : resObj.data || [];
         if (Array.isArray(workspaceList)) {
-          const workspace = workspaceList.find((w: { tenantId: string; schools: { schoolId: string; schoolName: string }[] }) => w.tenantId === tenantId);
+          const workspace = workspaceList.find((w: { tenantId: string; schools: { id: string; name: string }[] }) => w.tenantId === tenantId);
           if (workspace && Array.isArray(workspace.schools)) {
             setSchoolsList(workspace.schools);
           }

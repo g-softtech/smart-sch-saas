@@ -89,6 +89,38 @@ export default function StudentsPage() {
   const [linkGuardianError, setLinkGuardianError] = useState<string | null>(null);
   const [linkGuardianSuccess, setLinkGuardianSuccess] = useState(false);
 
+  // Enroll Student Modal State
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
+  const [enrollStudentId, setEnrollStudentId] = useState<string | null>(null);
+  const [enrollYearId, setEnrollYearId] = useState('');
+  const [enrollClassId, setEnrollClassId] = useState('');
+  const [enrollArmId, setEnrollArmId] = useState('');
+  const [enrollLoading, setEnrollLoading] = useState(false);
+  const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [enrollSuccess, setEnrollSuccess] = useState(false);
+
+  const [academicYears, setAcademicYears] = useState<{id: string, name: string}[]>([]);
+  const [classes, setClasses] = useState<{id: string, name: string}[]>([]);
+  const [arms, setArms] = useState<{id: string, name: string, classId: string}[]>([]);
+  const [academicsError, setAcademicsError] = useState<string | null>(null);
+
+  const loadAcademicsForEnrollment = async () => {
+    try {
+      setAcademicsError(null);
+      const [ayRes, clsRes, armRes] = await Promise.all([
+        apiClient.get('api/v1/academics/academic-years?limit=100'),
+        apiClient.get('api/v1/academics/classes?limit=100'),
+        apiClient.get('api/v1/academics/arms?limit=100')
+      ]);
+      setAcademicYears(Array.isArray(ayRes) ? ayRes : (ayRes as { data?: {id: string, name: string}[] })?.data || []);
+      setClasses(Array.isArray(clsRes) ? clsRes : (clsRes as { data?: {id: string, name: string}[] })?.data || []);
+      setArms(Array.isArray(armRes) ? armRes : (armRes as { data?: {id: string, name: string, classId: string}[] })?.data || []);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) setAcademicsError(err.message);
+      else setAcademicsError('Failed to load academic data');
+    }
+  };
+
   const fetchTabData = useCallback(async (tab: TabType, pageIndex: number) => {
     setTabStates(prev => ({
       ...prev,
@@ -350,6 +382,40 @@ export default function StudentsPage() {
     }
   };
 
+  const handleEnrollSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!enrollStudentId || !enrollYearId || !enrollClassId) return;
+    setEnrollLoading(true);
+    setEnrollError(null);
+    setEnrollSuccess(false);
+
+    try {
+      const payload: Record<string, string> = {
+        academicYearId: enrollYearId,
+        classId: enrollClassId,
+      };
+      if (enrollArmId) payload.armId = enrollArmId;
+
+      await apiClient.post(`api/v1/students/${enrollStudentId}/enrollments`, payload);
+      setEnrollSuccess(true);
+      
+      setTimeout(() => {
+        setIsEnrollModalOpen(false);
+        setEnrollSuccess(false);
+        setEnrollStudentId(null);
+        setEnrollYearId('');
+        setEnrollClassId('');
+        setEnrollArmId('');
+      }, 1500);
+
+    } catch (err: unknown) {
+      if (err instanceof ApiError) setEnrollError(err.message);
+      else setEnrollError('Failed to enroll student');
+    } finally {
+      setEnrollLoading(false);
+    }
+  };
+
   const currentState = tabStates[activeTab];
 
   let columns: Column<Record<string, unknown>>[] = [];
@@ -390,6 +456,16 @@ export default function StudentsPage() {
               className="text-brand-teal hover:text-brand-navy dark:hover:text-brand-gold transition-colors font-medium"
             >
               Link Guardian
+            </button>
+            <button
+              onClick={() => {
+                setEnrollStudentId(item.id as string);
+                if (classes.length === 0) loadAcademicsForEnrollment();
+                setIsEnrollModalOpen(true);
+              }}
+              className="text-brand-gold hover:text-brand-navy dark:hover:text-white transition-colors font-medium"
+            >
+              Enroll
             </button>
           </div>
         )
@@ -980,6 +1056,101 @@ export default function StudentsPage() {
                 </form>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Enroll Student Modal */}
+      {isEnrollModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+              <h2 className="text-xl font-semibold text-brand-navy dark:text-white">Enroll Student</h2>
+            </div>
+            <form onSubmit={handleEnrollSubmit} className="p-6 space-y-4">
+              {academicsError && (
+                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
+                  {academicsError}
+                </div>
+              )}
+              {enrollError && (
+                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
+                  {enrollError}
+                </div>
+              )}
+              {enrollSuccess && (
+                <div className="p-3 rounded-lg bg-green-50 text-green-700 text-sm border border-green-200">
+                  Student enrolled successfully!
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Academic Year *</label>
+                <select
+                  value={enrollYearId}
+                  onChange={e => setEnrollYearId(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none dark:text-white transition-all"
+                  required
+                >
+                  <option value="">Select Academic Year</option>
+                  {academicYears.map(ay => (
+                    <option key={ay.id} value={ay.id}>{ay.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class *</label>
+                <select
+                  value={enrollClassId}
+                  onChange={e => {
+                    setEnrollClassId(e.target.value);
+                    setEnrollArmId('');
+                  }}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none dark:text-white transition-all"
+                  required
+                >
+                  <option value="">Select Class</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arm (Optional)</label>
+                <select
+                  value={enrollArmId}
+                  onChange={e => setEnrollArmId(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none dark:text-white transition-all"
+                >
+                  <option value="">Select Arm</option>
+                  {arms.filter(a => a.classId === enrollClassId).map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEnrollModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  disabled={enrollLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={enrollLoading || enrollSuccess || !enrollYearId || !enrollClassId}
+                  className="px-6 py-2 bg-brand-teal text-white font-medium rounded-lg hover:bg-brand-navy transition-colors disabled:opacity-50 flex items-center"
+                >
+                  {enrollLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  ) : null}
+                  Enroll Student
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
