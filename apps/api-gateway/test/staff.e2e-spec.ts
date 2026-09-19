@@ -65,7 +65,7 @@ describe('StaffController (e2e) - Final Verification Audit', () => {
     // 4. Setup User Memberships and Roles
     await tenantContext.run({ tenantId: tenantAId }, async () => {
       const roleId = 'role-ta-' + Date.now();
-      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantAId, name: 'Mock Role A' } });
+      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantAId, name: 'SUPER_ADMIN' } });
       await kernel.db.userTenantMembership.create({ data: { tenantId: tenantAId, userId: userAId, roleId } });
       
       const deptA = await kernel.db.department.create({ data: { tenantId: tenantAId, schoolId: schoolAId, name: 'Dept A' } });
@@ -74,7 +74,7 @@ describe('StaffController (e2e) - Final Verification Audit', () => {
 
     await tenantContext.run({ tenantId: tenantBId }, async () => {
       const roleId = 'role-tb-' + Date.now();
-      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantBId, name: 'Mock Role B' } });
+      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantBId, name: 'SUPER_ADMIN' } });
       await kernel.db.userTenantMembership.create({ data: { tenantId: tenantBId, userId: userBId, roleId } });
       
       const deptC = await kernel.db.department.create({ data: { tenantId: tenantBId, schoolId: schoolCId, name: 'Dept C' } });

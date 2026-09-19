@@ -56,7 +56,7 @@ describe('Academics Phase 3 (e2e)', () => {
     
     await tenantContext.run({ tenantId }, async () => {
       const role = await kernel.db.role.create({
-        data: { name: 'Admin', tenantId, isSystem: true }
+        data: { name: 'SUPER_ADMIN', tenantId, isSystem: true }
       });
 
       await kernel.db.userTenantMembership.create({

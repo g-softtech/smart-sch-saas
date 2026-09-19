@@ -55,7 +55,7 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
       const role = await kernel.db.role.create({
         data: {
           tenantId: tenantA_id,
-          name: 'Tenant Admin',
+          name: 'SUPER_ADMIN',
         }
       });
       roleId = role.id;
@@ -102,6 +102,9 @@ describe('StudentsController (Real PostgreSQL DB + HTTP/E2E)', () => {
           admissionDate: new Date().toISOString(),
         });
 
+      if (res.status === 403) {
+        console.log('403 Response:', res.body);
+      }
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.id).toBeDefined();

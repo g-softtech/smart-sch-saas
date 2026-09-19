@@ -96,13 +96,13 @@ describe('AttendanceController (e2e) - Final Verification Audit', () => {
 
     await tenantContext.run({ tenantId: tenantAId }, async () => {
       const roleId = 'role-ta-' + Date.now();
-      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantAId, name: 'Mock Role A' } });
+      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantAId, name: 'SUPER_ADMIN' } });
       await kernel.db.userTenantMembership.create({ data: { tenantId: tenantAId, userId: userAId, roleId } });
     });
 
     await tenantContext.run({ tenantId: tenantBId }, async () => {
       const roleId = 'role-tb-' + Date.now();
-      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantBId, name: 'Mock Role B' } });
+      await kernel.db.role.create({ data: { id: roleId, tenantId: tenantBId, name: 'SUPER_ADMIN' } });
       await kernel.db.userTenantMembership.create({ data: { tenantId: tenantBId, userId: userBId, roleId } });
     });
     

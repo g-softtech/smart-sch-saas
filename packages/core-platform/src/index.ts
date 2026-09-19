@@ -62,12 +62,13 @@ function buildScopedExtension(base: PrismaClient) {
 
             // For upsert, we must enforce it on both the where and the create/update branches
             if (isUpsert(operation, args)) {
-              args.where = args.where || {};
-              args.create = args.create || {};
-              args.update = args.update || {};
-              Object.assign(args.where, { tenantId: store.tenantId });
-              Object.assign(args.create, { tenantId: store.tenantId });
-              Object.assign(args.update, { tenantId: store.tenantId });
+              const anyArgs = args as any;
+              anyArgs.where = anyArgs.where || {};
+              anyArgs.create = anyArgs.create || {};
+              anyArgs.update = anyArgs.update || {};
+              Object.assign(anyArgs.where, { tenantId: store.tenantId });
+              Object.assign(anyArgs.create, { tenantId: store.tenantId });
+              Object.assign(anyArgs.update, { tenantId: store.tenantId });
             }
           }
           

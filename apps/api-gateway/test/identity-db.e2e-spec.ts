@@ -94,20 +94,20 @@ describe('Identity Workspaces (e2e) - Real DB', () => {
     // --- Create Memberships ---
     // User A: ACTIVE in T1 and T2; REVOKED (isRevoked=true) in T3; no membership in T4
     await tenantContext.run({ tenantId: tenant1Id }, async () => {
-      const role = await kernel.db.role.create({ data: { tenantId: tenant1Id, name: 'Admin' } });
+      const role = await kernel.db.role.create({ data: { tenantId: tenant1Id, name: 'SUPER_ADMIN' } });
       await kernel.db.userTenantMembership.create({
         data: { userId: userAId, tenantId: tenant1Id, roleId: role.id, state: IdentityState.ACTIVE }
       });
     });
     await tenantContext.run({ tenantId: tenant2Id }, async () => {
-      const role = await kernel.db.role.create({ data: { tenantId: tenant2Id, name: 'Teacher' } });
+      const role = await kernel.db.role.create({ data: { tenantId: tenant2Id, name: 'SUPER_ADMIN' } });
       await kernel.db.userTenantMembership.create({
         data: { userId: userAId, tenantId: tenant2Id, roleId: role.id, state: IdentityState.ACTIVE }
       });
     });
     // User A in T3: isRevoked=true — must not appear in workspace list
     await tenantContext.run({ tenantId: tenant3Id }, async () => {
-      const role = await kernel.db.role.create({ data: { tenantId: tenant3Id, name: 'Guest' } });
+      const role = await kernel.db.role.create({ data: { tenantId: tenant3Id, name: 'SUPER_ADMIN' } });
       await kernel.db.userTenantMembership.create({
         data: {
           userId: userAId,
@@ -188,13 +188,13 @@ describe('Identity Workspaces (e2e) - Real DB', () => {
 
     // Req 3: T1 has correct 2 schools
     expect(t1ws.schools.length).toBe(2);
-    const t1SchoolIds = t1ws.schools.map((s: any) => s.schoolId).sort();
+    const t1SchoolIds = t1ws.schools.map((s: any) => s.id).sort();
     expect(t1SchoolIds).toEqual([school1AId, school1BId].sort());
-    expect(t1ws.schools[0].schoolName).toBeDefined();
+    expect(t1ws.schools[0].name).toBeDefined();
 
     // Req 3: T2 has correct 1 school
     expect(t2ws.schools.length).toBe(1);
-    expect(t2ws.schools[0].schoolId).toBe(school2AId);
+    expect(t2ws.schools[0].id).toBe(school2AId);
   });
 
   // Req 5
@@ -208,7 +208,7 @@ describe('Identity Workspaces (e2e) - Real DB', () => {
 
     expect(workspaces.length).toBe(1);
     expect(workspaces[0].tenantId).toBe(tenant3Id);
-    expect(workspaces[0].schools[0].schoolId).toBe(school3AId);
+    expect(workspaces[0].schools[0].id).toBe(school3AId);
 
     // User A's tenants must be absent
     expect(workspaces.find(w => w.tenantId === tenant1Id)).toBeUndefined();
@@ -254,8 +254,8 @@ describe('Identity Workspaces (e2e) - Real DB', () => {
 
     // Schools: only public fields
     const school = workspace.schools[0];
-    expect(school.schoolId).toBeDefined();
-    expect(school.schoolName).toBeDefined();
+    expect(school.id).toBeDefined();
+    expect(school.name).toBeDefined();
     expect(school.tenantId).toBeUndefined(); // redundant and not needed
   });
 });

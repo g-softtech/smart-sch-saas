@@ -26,6 +26,7 @@ jest.mock('@saas/core-platform', () => {
     rolePermission: { findMany: jest.fn() },
     userTenantMembership: { findFirst: jest.fn(), findUnique: jest.fn() },
     school: { findUnique: jest.fn(), findFirst: jest.fn() },
+    userSchoolAccess: { findFirst: jest.fn() },
     student: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
     guardian: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
     studentGuardian: { create: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
@@ -64,7 +65,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
   const YEAR_ID = 'f0000000-0000-4000-8000-000000000001';
   const CLASS_ID = '10000000-0000-4000-8000-000000000001';
 
-  const testMembership = { id: 'm1', userId: 'u1', tenantId: TENANT_ID, roleId: 'r1' };
+  const testMembership = { id: 'm1', userId: 'u1', tenantId: TENANT_ID, roleId: 'r1', role: { name: 'SUPER_ADMIN' } };
 
   const mockSchool = { id: SCHOOL_ID, tenantId: TENANT_ID, name: 'Test School' };
   const mockStudent = {
@@ -449,6 +450,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
 
       const [res1, res2] = await Promise.all([req1, req2]);
 
+      if (res1.status === 500) console.log(res1.body);
       expect(res1.status).toBe(201);
       expect(res2.status).toBe(201);
 

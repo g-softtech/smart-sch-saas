@@ -23,6 +23,8 @@ jest.mock('@saas/core-platform', () => {
         permission: { findUnique: jest.fn() },
         rolePermission: { findMany: jest.fn() },
         userTenantMembership: { findFirst: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
+        school: { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn() },
+        userSchoolAccess: { findMany: jest.fn() },
       },
       // $queryRaw is used by workspace resolution (cross-tenant SQL query in repository)
       $queryRaw: jest.fn(),
@@ -160,6 +162,22 @@ describe('Identity & Security (e2e)', () => {
       },
     ]);
 
+    (kernel.db.userTenantMembership.findUnique as jest.Mock).mockResolvedValue({
+      tenantId: testTenant.id,
+      state: 'ACTIVE',
+      isRevoked: false,
+      role: { name: 'SUPER_ADMIN' },
+      tenant: { name: testTenant.name }
+    });
+
+    (kernel.db.school.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: 's1',
+        name: 'Test Campus',
+        campuses: []
+      }
+    ]);
+
     const res = await request(app.getHttpServer())
       .get('/api/v1/auth/workspaces')
       .set('Authorization', `Bearer ${validToken}`)
@@ -168,6 +186,6 @@ describe('Identity & Security (e2e)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.length).toBe(1);
     expect(res.body.data[0].tenantId).toBe(testTenant.id);
-    expect(res.body.data[0].schools[0].schoolId).toBe('s1');
+    expect(res.body.data[0].schools[0].id).toBe('s1');
   });
 });
