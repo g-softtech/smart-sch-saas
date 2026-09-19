@@ -435,7 +435,7 @@ model Arm {
   name     String
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
-  class  Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  class  Class  @relation(fields: [classId], references: [id], onDelete: Restrict)
   campus Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
 
   // Students (Batch 3B)

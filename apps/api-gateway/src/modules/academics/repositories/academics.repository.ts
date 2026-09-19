@@ -145,6 +145,10 @@ export class AcademicsRepository {
     return kernel.db.academicYear.delete({ where: { id } });
   }
 
+  async countArmsByClass(classId: string) {
+    return kernel.db.arm.count({ where: { classId } });
+  }
+
   async updateClass(id: string, data: { name: string }) {
     return kernel.db.class.update({ where: { id }, data });
   }

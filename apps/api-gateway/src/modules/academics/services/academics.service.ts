@@ -148,6 +148,14 @@ export class AcademicsService {
     const existing = await this.repo.findClass(id);
     if (!existing) throw new NotFoundException('Class not found');
     if (existing.tenantId !== tenantId) throw new BadRequestException('Class belongs to another tenant');
+    
+    const armCount = await this.repo.countArmsByClass(id);
+    if (armCount > 0) {
+      throw new ConflictException(
+        `Cannot delete this class because it has ${armCount} arm(s) linked to it. Remove or reassign the arms first.`
+      );
+    }
+    
     return this.repo.deleteClass(id);
   }
 
