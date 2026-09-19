@@ -126,10 +126,10 @@ export class AcademicsController {
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
   ) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listArms(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listArms(tenantId, schoolId, skip, take, campusId);
     return { success: true, data: items };
   }
 

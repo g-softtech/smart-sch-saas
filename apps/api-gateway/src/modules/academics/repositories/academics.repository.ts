@@ -85,12 +85,16 @@ export class AcademicsRepository {
     });
   }
 
-  async listArms(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listArms(tenantId: string, schoolId: string, skip: number, take: number, campusId?: string) {
+    const where: any = {
+      tenantId,
+      class: { schoolId }
+    };
+    if (campusId) {
+      where.campusId = campusId;
+    }
     return kernel.db.arm.findMany({
-      where: { 
-        tenantId,
-        class: { schoolId }
-      },
+      where,
       skip,
       take,
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
