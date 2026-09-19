@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, UseInterceptors, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, UseInterceptors, Req, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { AdmissionsService, PublishFormDto, SubmitReviewDto } from '../services/admissions.service';
 import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
 import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
@@ -10,8 +10,21 @@ export class AdmissionsController {
   constructor(private readonly service: AdmissionsService) {}
 
   @Post('forms/publish')
-  async publishForm(@Body() body: PublishFormDto) {
-    const form = await this.service.publishForm(body);
+  async publishForm(@Body() body: PublishFormDto, @Req() req: any) {
+    const authorizedSchoolId = req.workspace?.schoolId;
+
+    if (!authorizedSchoolId) {
+      throw new BadRequestException('A valid school workspace context is required to publish a form.');
+    }
+
+    if (body.schoolId && body.schoolId !== authorizedSchoolId) {
+      throw new ForbiddenException('You are not authorized to publish a form for the requested school.');
+    }
+
+    const form = await this.service.publishForm({
+      ...body,
+      schoolId: authorizedSchoolId,
+    });
     return { success: true, data: form };
   }
 
