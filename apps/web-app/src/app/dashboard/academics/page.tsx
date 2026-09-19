@@ -1205,8 +1205,8 @@ export default function AcademicsPage() {
                         >
                           <option value="">Select a School</option>
                           {schoolsList.map((s) => (
-                            <option key={s.schoolId} value={s.schoolId}>
-                              {s.schoolName}
+                            <option key={s.id} value={s.id}>
+                              {s.name}
                             </option>
                           ))}
                         </select>
