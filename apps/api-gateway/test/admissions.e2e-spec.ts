@@ -13,7 +13,7 @@ jest.mock('@saas/core-platform', () => {
       db: {
         userTenantMembership: { findUnique: jest.fn() },
         school: { findUnique: jest.fn(), findFirst: jest.fn() },
-        publishedAdmissionForm: { findUnique: jest.fn(), create: jest.fn() },
+        publishedAdmissionForm: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn() },
         applicant: { create: jest.fn() },
         admissionApplication: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
         admissionReview: { create: jest.fn() },
@@ -73,7 +73,8 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
 
   describe('Public Endpoints', () => {
     it('GET /public/admissions/forms/:publicToken - retrieves form data', async () => {
-      (kernel.db.publishedAdmissionForm.findUnique as jest.Mock).mockResolvedValue({
+      (kernel.$queryRaw as jest.Mock).mockResolvedValue([{ tenantId: TENANT_ID }]);
+      (kernel.db.publishedAdmissionForm.findFirst as jest.Mock).mockResolvedValue({
         id: FORM_ID,
         title: 'Form 1',
         fieldsSchema: {},
@@ -89,7 +90,8 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
     });
 
     it('POST /public/admissions/applications/:publicToken - submits application', async () => {
-      (kernel.db.publishedAdmissionForm.findUnique as jest.Mock).mockResolvedValue({
+      (kernel.$queryRaw as jest.Mock).mockResolvedValue([{ tenantId: TENANT_ID }]);
+      (kernel.db.publishedAdmissionForm.findFirst as jest.Mock).mockResolvedValue({
         id: FORM_ID, tenantId: TENANT_ID, schoolId: 's1', isActive: true,
         fieldsSchema: { custom: { type: 'string' } }
       });

@@ -14,7 +14,10 @@ export class FormValidator {
       throw new BadRequestException('formData must be a JSON object');
     }
 
-    const safeSchema = schema || {};
+    const safeSchema = (schema as any)?.type === 'object' && (schema as any)?.properties 
+      ? (schema as any).properties 
+      : (schema || {});
+      
     const schemaKeys = Object.keys(safeSchema);
     const dataKeys = Object.keys(formData);
 
@@ -30,7 +33,8 @@ export class FormValidator {
     }
 
     // Validate fields against schema
-    for (const [key, fieldDef] of Object.entries(safeSchema)) {
+    for (const [key, valueDef] of Object.entries(safeSchema)) {
+      const fieldDef = valueDef as FieldSchema;
       const value = formData[key];
 
       // 5. Reject missing required fields.
