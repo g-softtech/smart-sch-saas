@@ -75,6 +75,17 @@ export class AdmissionsRepository {
     });
   }
 
+  async listForms(schoolId: string) {
+    return kernel.db.publishedAdmissionForm.findMany({
+      where: { schoolId },
+      include: {
+        academicYear: true,
+        targetClass: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async createApplicant(input: CreateApplicantInput, tx?: typeof kernel.db) {
     const db = tx ?? kernel.db;
     return db.applicant.create({

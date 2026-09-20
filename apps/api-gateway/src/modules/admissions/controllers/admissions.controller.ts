@@ -29,6 +29,15 @@ export class AdmissionsController {
     return { success: true, data: form };
   }
 
+  @Get('forms')
+  async listForms(@Req() req: any) {
+    const authorizedSchoolId = req.workspace?.schoolId;
+    if (!authorizedSchoolId) throw new BadRequestException('A valid school workspace context is required.');
+
+    const forms = await this.service.listForms(authorizedSchoolId);
+    return { success: true, data: forms };
+  }
+
   @Get('applications')
   async listApplications(@Req() req: any, @Query('formId') formId?: string) {
     const authorizedSchoolId = req.workspace?.schoolId;

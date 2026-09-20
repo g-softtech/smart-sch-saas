@@ -57,6 +57,10 @@ export class AdmissionsService {
     return form;
   }
 
+  async listForms(schoolId: string) {
+    return this.repo.listForms(schoolId);
+  }
+
   async submitApplication(publicToken: string, input: SubmitApplicationDto) {
     const form = await this.getFormByPublicToken(publicToken);
 

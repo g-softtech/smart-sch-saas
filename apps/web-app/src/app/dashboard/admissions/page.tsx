@@ -159,20 +159,29 @@ export default function AdmissionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admissions</h1>
-          <p className="text-sm text-gray-500">Manage admission applications and forms.</p>
+        <div className="sm:flex sm:items-center sm:justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-brand-navy dark:text-brand-offwhite">Admissions</h1>
+            <p className="mt-2 text-sm text-gray-700 dark:text-brand-gray-text">
+              Manage admission applications and publish new admission forms.
+            </p>
+          </div>
+          <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none space-x-3">
+            <Link 
+              href="/dashboard/admissions/board"
+              className="inline-flex items-center justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm ring-1 ring-inset ring-brand-navy hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+            >
+              Review Board
+            </Link>
+            <button
+              type="button"
+              onClick={openPublishModal}
+              className="block rounded-md bg-brand-gold px-3 py-2 text-center text-sm font-semibold text-brand-navy shadow-sm hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+            >
+              Publish New Form
+            </button>
+          </div>
         </div>
-        <div className="mt-4 sm:mt-0">
-          <button
-            onClick={openPublishModal}
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
-          >
-            Publish Form
-          </button>
-        </div>
-      </div>
 
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
