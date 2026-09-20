@@ -114,7 +114,19 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
   });
 
   describe('Authenticated Endpoints', () => {
-    it('GET /api/v1/admissions/applications - lists applications', async () => {
+    it('GET /api/v1/admissions/applications - lists applications requires x-school-id', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/admissions/applications')
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .expect(400);
+
+      expect(res.body.message).toContain('school workspace context is required');
+    });
+
+    it('GET /api/v1/admissions/applications - lists applications with authorized school', async () => {
+      (kernel.db.school.findFirst as jest.Mock).mockResolvedValue({ id: 'school_A', tenantId: TENANT_ID });
+      (kernel.db.userSchoolAccess.findFirst as jest.Mock).mockResolvedValue({ userId: 'user_1', schoolId: 'school_A' });
       (kernel.db.admissionApplication.findMany as jest.Mock).mockResolvedValue([
         { id: APP_ID, status: ApplicationStatus.SUBMITTED }
       ]);
@@ -123,6 +135,7 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
         .get('/api/v1/admissions/applications')
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', 'school_A')
         .expect(200);
 
       expect(res.body.success).toBe(true);
@@ -151,7 +164,29 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
       expect(res.body.message).toContain('You are not authorized to publish a form for the requested school');
     });
 
-    it('POST /api/v1/admissions/forms/publish - succeeds with authorized x-school-id', async () => {
+    it('POST /api/v1/admissions/forms/publish - denies invalid fieldsSchema type', async () => {
+      (kernel.db.school.findFirst as jest.Mock).mockResolvedValue({ id: 'school_A', tenantId: TENANT_ID });
+      (kernel.db.userSchoolAccess.findFirst as jest.Mock).mockResolvedValue({ userId: 'user_1', schoolId: 'school_A' });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/admissions/forms/publish')
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', 'school_A')
+        .send({
+          title: 'Form',
+          schoolId: 'school_A',
+          academicYearId: 'ay_1',
+          targetClassId: 'tc_1',
+          fieldsSchema: { custom: { type: 'executable_code' } }, // INVALID
+          workflowStages: []
+        })
+        .expect(400);
+
+      expect(res.body.message).toEqual(expect.arrayContaining([expect.stringContaining('fieldsSchema must be a valid record of field definitions')]));
+    });
+
+    it('POST /api/v1/admissions/forms/publish - succeeds with authorized x-school-id and valid schema', async () => {
       (kernel.db.school.findFirst as jest.Mock).mockResolvedValue({ id: 'school_A', tenantId: TENANT_ID });
       (kernel.db.userSchoolAccess.findFirst as jest.Mock).mockResolvedValue({ userId: 'user_1', schoolId: 'school_A' });
       (kernel.db.publishedAdmissionForm.create as jest.Mock).mockResolvedValue({ id: 'form_123', publicToken: 'pub_abc' });
@@ -166,8 +201,11 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
           schoolId: 'school_A', // LEGITIMATE
           academicYearId: 'ay_1',
           targetClassId: 'tc_1',
-          fieldsSchema: {},
-          workflowStages: []
+          fieldsSchema: {
+            customText: { type: 'string', maxLength: 100 },
+            customSelect: { type: 'select', options: ['A', 'B'] }
+          },
+          workflowStages: [{ key: 'STAGE_1', label: 'Stage 1' }]
         })
         .expect(201);
       

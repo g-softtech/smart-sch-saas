@@ -89,10 +89,14 @@ export class AdmissionsRepository {
     });
   }
 
-  async findApplication(id: string, tx?: typeof kernel.db) {
+  async findApplication(id: string, schoolId?: string, tx?: typeof kernel.db) {
     const db = tx ?? kernel.db;
-    return db.admissionApplication.findUnique({
-      where: { id },
+    const where: any = { id };
+    if (schoolId) {
+      where.schoolId = schoolId;
+    }
+    return db.admissionApplication.findFirst({
+      where,
       include: {
         publishedForm: true,
         applicant: true,
@@ -100,8 +104,8 @@ export class AdmissionsRepository {
     });
   }
 
-  async listApplications(formId?: string) {
-    const where: any = {};
+  async listApplications(schoolId: string, formId?: string) {
+    const where: any = { schoolId };
     if (formId) {
       where.publishedFormId = formId;
     }

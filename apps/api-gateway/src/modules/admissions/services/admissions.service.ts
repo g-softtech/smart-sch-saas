@@ -11,29 +11,7 @@ import { AdmissionsRepository } from '../repositories/admissions.repository';
 import { StudentsService } from '../../students/services/students.service';
 import { FormValidator } from './form-validator';
 
-export interface PublishFormDto {
-  schoolId: string;
-  academicYearId: string;
-  targetClassId: string;
-  title: string;
-  fieldsSchema: any;
-  workflowStages: any[];
-}
-
-export interface SubmitApplicationDto {
-  applicant: {
-    firstName: string;
-    lastName: string;
-    dateOfBirth?: string;
-    gender?: GenderEnum;
-  };
-  formData: any;
-}
-
-export interface SubmitReviewDto {
-  decision: AdmissionReviewDecision;
-  comments?: string;
-}
+import { PublishFormDto, SubmitApplicationDto, SubmitReviewDto } from '../dto/admissions.dto';
 
 @Injectable()
 export class AdmissionsService {
@@ -65,6 +43,7 @@ export class AdmissionsService {
 
     return this.repo.publishForm({
       ...input,
+      schoolId: input.schoolId!,
       tenantId,
       publicToken,
     });
@@ -116,21 +95,21 @@ export class AdmissionsService {
     });
   }
 
-  async listApplications(formId?: string) {
-    return this.repo.listApplications(formId);
+  async listApplications(schoolId: string, formId?: string) {
+    return this.repo.listApplications(schoolId, formId);
   }
 
-  async getApplication(id: string) {
-    const application = await this.repo.findApplication(id);
+  async getApplication(id: string, schoolId?: string) {
+    const application = await this.repo.findApplication(id, schoolId);
     if (!application) {
       throw new NotFoundException('Application not found');
     }
     return application;
   }
 
-  async startReview(applicationId: string) {
+  async startReview(applicationId: string, schoolId: string) {
     const tenantId = this.getActiveTenantId();
-    const app = await this.getApplication(applicationId);
+    const app = await this.getApplication(applicationId, schoolId);
     
     if (app.status !== ApplicationStatus.SUBMITTED) {
       throw new ConflictException(`Cannot start review from status: ${app.status}`);
@@ -169,9 +148,9 @@ export class AdmissionsService {
     return { status: ApplicationStatus.UNDER_REVIEW, currentStageKey: firstStageKey };
   }
 
-  async submitReview(applicationId: string, reviewerId: string, input: SubmitReviewDto) {
+  async submitReview(applicationId: string, schoolId: string, reviewerId: string, input: SubmitReviewDto) {
     const tenantId = this.getActiveTenantId();
-    const app = await this.getApplication(applicationId);
+    const app = await this.getApplication(applicationId, schoolId);
 
     if (app.status !== ApplicationStatus.UNDER_REVIEW) {
       throw new ConflictException('Application is not under review');
@@ -251,9 +230,9 @@ export class AdmissionsService {
     });
   }
 
-  async enroll(applicationId: string) {
+  async enroll(applicationId: string, schoolId: string) {
     const tenantId = this.getActiveTenantId();
-    const app = await this.getApplication(applicationId);
+    const app = await this.getApplication(applicationId, schoolId);
 
     if (app.status !== ApplicationStatus.APPROVED) {
       throw new ConflictException(`Cannot enroll application in status ${app.status}. Must be APPROVED.`);
