@@ -15,7 +15,7 @@ jest.mock('@saas/core-platform', () => {
         school: { findUnique: jest.fn(), findFirst: jest.fn() },
         publishedAdmissionForm: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn() },
         applicant: { create: jest.fn() },
-        admissionApplication: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
+        admissionApplication: { findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
         admissionReview: { create: jest.fn() },
         userSchoolAccess: { findFirst: jest.fn() },
         campus: { findFirst: jest.fn() },
@@ -211,6 +211,163 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
       
       expect(res.body.success).toBe(true);
       expect(res.body.data.id).toBe('form_123');
+    });
+
+    describe('Tenant Administrator Operations', () => {
+      beforeEach(() => {
+        // Mock SUPER_ADMIN membership
+        (kernel.db.userTenantMembership.findUnique as jest.Mock).mockResolvedValue({ 
+          id: 'm1', userId: 'user_1', tenantId: TENANT_ID, role: { name: 'SUPER_ADMIN' } 
+        });
+      });
+
+      it('GET /api/v1/admissions/applications - succeeds for tenant admin requesting a valid school in tenant', async () => {
+        (kernel.db.school.findFirst as jest.Mock).mockResolvedValue({ id: 'school_A', tenantId: TENANT_ID });
+        (kernel.db.admissionApplication.findMany as jest.Mock).mockResolvedValue([
+          { id: APP_ID, status: ApplicationStatus.SUBMITTED }
+        ]);
+
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/admissions/applications')
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .expect(200);
+
+        expect(res.body.success).toBe(true);
+      });
+
+      it('GET /api/v1/admissions/applications - denies tenant admin requesting a school outside their tenant', async () => {
+        // findFirst for school returns null because tenantId doesn't match
+        (kernel.db.school.findFirst as jest.Mock).mockResolvedValue(null);
+
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/admissions/applications')
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_OTHER_TENANT')
+          .expect(403);
+
+        expect(res.body.message).toContain('Invalid or unauthorized school workspace');
+      });
+    });
+
+    describe('Application Operations & Lifecycle', () => {
+      beforeEach(() => {
+        (kernel.db.school.findFirst as jest.Mock).mockResolvedValue({ id: 'school_A', tenantId: TENANT_ID });
+        (kernel.db.userSchoolAccess.findFirst as jest.Mock).mockResolvedValue({ userId: 'user_1', schoolId: 'school_A' });
+      });
+
+      it('GET /api/v1/admissions/applications/:id - denies cross-school retrieval (404)', async () => {
+        // Mock findFirst returning null to simulate application belonging to another school
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue(null);
+
+        const res = await request(app.getHttpServer())
+          .get(`/api/v1/admissions/applications/${APP_ID}`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .expect(404);
+
+        expect(res.body.message).toContain('Application not found');
+      });
+
+      it('GET /api/v1/admissions/applications/:id - succeeds for legitimate school access', async () => {
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue({ id: APP_ID, schoolId: 'school_A' });
+
+        const res = await request(app.getHttpServer())
+          .get(`/api/v1/admissions/applications/${APP_ID}`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .expect(200);
+
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.id).toBe(APP_ID);
+      });
+
+      it('POST /api/v1/admissions/applications/:id/start-review - denies cross-school mutation', async () => {
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue(null);
+
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/admissions/applications/${APP_ID}/start-review`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .expect(404);
+      });
+
+      it('POST /api/v1/admissions/applications/:id/start-review - fails if not SUBMITTED', async () => {
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue({ 
+          id: APP_ID, schoolId: 'school_A', status: 'UNDER_REVIEW' 
+        });
+
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/admissions/applications/${APP_ID}/start-review`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .expect(409);
+        
+        expect(res.body.message).toContain('Cannot start review');
+      });
+
+      it('POST /api/v1/admissions/applications/:id/reviews - denies cross-school mutation', async () => {
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue(null);
+
+        await request(app.getHttpServer())
+          .post(`/api/v1/admissions/applications/${APP_ID}/reviews`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .send({ decision: 'STAGE_PASS' })
+          .expect(404);
+      });
+
+      it('POST /api/v1/admissions/applications/:id/reviews - succeeds for legitimate access', async () => {
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue({ 
+          id: APP_ID, schoolId: 'school_A', status: 'UNDER_REVIEW', currentStageKey: 'STAGE_1',
+          publishedForm: { workflowStages: [{ key: 'STAGE_1' }] }
+        });
+        (kernelMockTx.admissionReview.create as jest.Mock).mockResolvedValue({});
+        (kernelMockTx.$executeRaw as jest.Mock).mockResolvedValue(1);
+
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/admissions/applications/${APP_ID}/reviews`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .send({ decision: 'STAGE_PASS', comments: 'Looks good' })
+          .expect(201);
+        
+        expect(res.body.success).toBe(true);
+      });
+
+      it('POST /api/v1/admissions/applications/:id/enroll - denies cross-school mutation', async () => {
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue(null);
+
+        await request(app.getHttpServer())
+          .post(`/api/v1/admissions/applications/${APP_ID}/enroll`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .expect(404);
+      });
+
+      it('POST /api/v1/admissions/applications/:id/enroll - fails if not APPROVED', async () => {
+        (kernel.db.admissionApplication.findFirst as jest.Mock).mockResolvedValue({ 
+          id: APP_ID, schoolId: 'school_A', status: 'UNDER_REVIEW' 
+        });
+
+        const res = await request(app.getHttpServer())
+          .post(`/api/v1/admissions/applications/${APP_ID}/enroll`)
+          .set('Authorization', `Bearer ${validToken}`)
+          .set('x-tenant-id', TENANT_ID)
+          .set('x-school-id', 'school_A')
+          .expect(409);
+        
+        expect(res.body.message).toContain('Cannot enroll application');
+      });
     });
   });
 });
