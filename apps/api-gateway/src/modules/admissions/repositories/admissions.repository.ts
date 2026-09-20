@@ -48,7 +48,7 @@ export class AdmissionsRepository {
     // Requires bypassing the active tenant scope if accessed publicly.
     // 1. Raw SQL lookup to securely bypass Zero-Trust and identify the tenantId
     const rawResult = await kernel.$queryRaw<any[]>`
-      SELECT "tenantId" FROM "PublishedAdmissionForm"
+      SELECT "tenantId" FROM "adm_published_forms"
       WHERE "publicToken" = ${publicToken}
       LIMIT 1
     `;
