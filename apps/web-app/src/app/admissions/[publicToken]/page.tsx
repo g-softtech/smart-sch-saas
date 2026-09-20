@@ -8,9 +8,7 @@ interface FormConfig {
   title: string;
   academicYear?: string;
   targetClass?: string;
-  fieldsSchema?: {
-    properties: Record<string, { type: string; title: string }>;
-  };
+  fieldsSchema?: Record<string, { type: string; label?: string; required?: boolean; options?: string[]; maxLength?: number; minLength?: number }>;
 }
 
 export default function PublicAdmissionsPage() {
@@ -142,7 +140,7 @@ export default function PublicAdmissionsPage() {
     );
   }
 
-  const dynamicFields = formConfig.fieldsSchema?.properties || {};
+  const dynamicFields = formConfig.fieldsSchema || {};
 
   return (
     <div className="min-h-screen bg-[#0A192F] flex flex-col py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -256,17 +254,47 @@ export default function PublicAdmissionsPage() {
                   {Object.entries(dynamicFields).map(([key, config]) => (
                     <div key={key}>
                       <label htmlFor={key} className="block text-sm font-medium text-gray-700">
-                        {config.title || key}
+                        {config.label || key}
+                        {config.required && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       <div className="mt-1">
-                        <input
-                          id={key}
-                          type="text"
-                          required
-                          value={formData[key] || ''}
-                          onChange={e => handleDynamicChange(key, e.target.value)}
-                          className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#D4AF37] focus:border-[#D4AF37] sm:text-sm"
-                        />
+                        {config.type === 'select' ? (
+                          <select
+                            id={key}
+                            required={config.required}
+                            value={formData[key] || ''}
+                            onChange={e => handleDynamicChange(key, e.target.value)}
+                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-[#D4AF37] focus:border-[#D4AF37] sm:text-sm"
+                          >
+                            <option value="">Select an option</option>
+                            {config.options?.map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : config.type === 'boolean' ? (
+                          <div className="flex items-center h-full pt-2">
+                            <input
+                              id={key}
+                              type="checkbox"
+                              required={config.required}
+                              checked={formData[key] === 'true'}
+                              onChange={e => handleDynamicChange(key, e.target.checked ? 'true' : 'false')}
+                              className="h-4 w-4 text-[#D4AF37] focus:ring-[#D4AF37] border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-gray-500">Yes</span>
+                          </div>
+                        ) : (
+                          <input
+                            id={key}
+                            type={config.type === 'date' ? 'date' : config.type === 'number' ? 'number' : 'text'}
+                            required={config.required}
+                            maxLength={config.maxLength}
+                            minLength={config.minLength}
+                            value={formData[key] || ''}
+                            onChange={e => handleDynamicChange(key, e.target.value)}
+                            className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#D4AF37] focus:border-[#D4AF37] sm:text-sm"
+                          />
+                        )}
                       </div>
                     </div>
                   ))}

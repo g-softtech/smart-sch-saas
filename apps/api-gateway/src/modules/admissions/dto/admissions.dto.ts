@@ -12,6 +12,10 @@ export class FieldSchemaDto {
   required?: boolean;
 
   @IsOptional()
+  @IsString()
+  label?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   options?: string[];
@@ -32,12 +36,12 @@ export class IsFieldSchemaRecordConstraint implements ValidatorConstraintInterfa
       return false;
     }
 
-    const allowedFieldSchemaKeys = ['type', 'required', 'options', 'maxLength', 'minLength'];
+    const allowedFieldSchemaKeys = ['type', 'required', 'label', 'options', 'maxLength', 'minLength'];
 
     for (const [key, field] of Object.entries(value)) {
       if (typeof field !== 'object' || field === null) return false;
       
-      const { type, required, options, maxLength, minLength, ...rest } = field as any;
+      const { type, required, label, options, maxLength, minLength, ...rest } = field as any;
       
       // Reject unknown properties
       if (Object.keys(rest).length > 0) return false;
@@ -47,8 +51,9 @@ export class IsFieldSchemaRecordConstraint implements ValidatorConstraintInterfa
         return false;
       }
 
-      // Validate required
+      // Validate required and label
       if (required !== undefined && typeof required !== 'boolean') return false;
+      if (label !== undefined && typeof label !== 'string') return false;
 
       // Validate options
       if (options !== undefined) {
@@ -65,7 +70,7 @@ export class IsFieldSchemaRecordConstraint implements ValidatorConstraintInterfa
   }
 
   defaultMessage(args: ValidationArguments) {
-    return 'fieldsSchema must be a valid record of field definitions, containing only supported properties (type, required, options, maxLength, minLength) and correct types.';
+    return 'fieldsSchema must be a valid record of field definitions, containing only supported properties (type, required, label, options, maxLength, minLength) and correct types.';
   }
 }
 

@@ -95,16 +95,12 @@ export default function AdmissionsPage() {
     setPublishLoading(true);
     setPublishError(null);
     try {
-      // Create a default small schema as requested by the user
       const fieldsSchema = {
-        type: 'object',
-        properties: {
-          previousSchool: { type: 'string', title: 'Previous School' },
-          allergies: { type: 'string', title: 'Allergies / Medical Conditions' },
-          guardianName: { type: 'string', title: 'Primary Guardian Name' },
-          guardianPhone: { type: 'string', title: 'Guardian Phone Number' },
-          guardianEmail: { type: 'string', title: 'Guardian Email' }
-        }
+        previousSchool: { type: 'string', label: 'Previous School', required: false },
+        allergies: { type: 'string', label: 'Allergies / Medical Conditions', required: false },
+        guardianName: { type: 'string', label: 'Primary Guardian Name', required: true },
+        guardianPhone: { type: 'string', label: 'Guardian Phone Number', required: true },
+        guardianEmail: { type: 'string', label: 'Guardian Email', required: true }
       };
 
       const workflowStages = [
