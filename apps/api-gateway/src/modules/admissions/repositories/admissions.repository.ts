@@ -58,8 +58,8 @@ export class AdmissionsRepository {
     const tenantId = rawResult[0].tenantId;
 
     // 2. Run actual lookup inside the resolved tenant context
-    return tenantContext.run({ tenantId }, () => {
-      return kernel.db.publishedAdmissionForm.findUnique({
+    return tenantContext.run({ tenantId }, async () => {
+      return await kernel.db.publishedAdmissionForm.findFirst({
         where: { publicToken },
         include: {
           academicYear: true,
