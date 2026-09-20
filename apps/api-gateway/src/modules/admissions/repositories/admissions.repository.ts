@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   kernel,
+  tenantContext,
   ApplicationStatus,
   AdmissionReviewDecision,
   GenderEnum,
@@ -45,13 +46,26 @@ export class AdmissionsRepository {
 
   async findFormByToken(publicToken: string) {
     // Requires bypassing the active tenant scope if accessed publicly.
-    // However, since this is a public lookup, we'll query it specifically.
-    return kernel.db.publishedAdmissionForm.findUnique({
-      where: { publicToken },
-      include: {
-        academicYear: true,
-        targetClass: true,
-      },
+    // 1. Raw SQL lookup to securely bypass Zero-Trust and identify the tenantId
+    const rawResult = await kernel.$queryRaw<any[]>`
+      SELECT "tenantId" FROM "PublishedAdmissionForm"
+      WHERE "publicToken" = ${publicToken}
+      LIMIT 1
+    `;
+    
+    if (!rawResult || rawResult.length === 0) return null;
+    
+    const tenantId = rawResult[0].tenantId;
+
+    // 2. Run actual lookup inside the resolved tenant context
+    return tenantContext.run({ tenantId }, () => {
+      return kernel.db.publishedAdmissionForm.findUnique({
+        where: { publicToken },
+        include: {
+          academicYear: true,
+          targetClass: true,
+        },
+      });
     });
   }
 

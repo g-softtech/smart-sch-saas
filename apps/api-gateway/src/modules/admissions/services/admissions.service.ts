@@ -86,31 +86,33 @@ export class AdmissionsService {
 
     const trackingToken = this.generateSecureToken('trk');
 
-    // Use transaction for Applicant + Application
-    return kernel.$transaction(async (tx) => {
-      const applicant = await this.repo.createApplicant(
-        {
-          tenantId: form.tenantId,
-          schoolId: form.schoolId,
-          firstName: input.applicant.firstName,
-          lastName: input.applicant.lastName,
-          dateOfBirth: input.applicant.dateOfBirth ? new Date(input.applicant.dateOfBirth) : undefined,
-          gender: input.applicant.gender,
-        },
-        tx,
-      );
+    // Use transaction for Applicant + Application wrapped in tenantContext for public route
+    return tenantContext.run({ tenantId: form.tenantId }, () => {
+      return kernel.$transaction(async (tx) => {
+        const applicant = await this.repo.createApplicant(
+          {
+            tenantId: form.tenantId,
+            schoolId: form.schoolId,
+            firstName: input.applicant.firstName,
+            lastName: input.applicant.lastName,
+            dateOfBirth: input.applicant.dateOfBirth ? new Date(input.applicant.dateOfBirth) : undefined,
+            gender: input.applicant.gender,
+          },
+          tx,
+        );
 
-      return this.repo.createApplication(
-        {
-          tenantId: form.tenantId,
-          schoolId: form.schoolId,
-          applicantId: applicant.id,
-          publishedFormId: form.id,
-          formData: input.formData,
-          trackingToken,
-        },
-        tx,
-      );
+        return this.repo.createApplication(
+          {
+            tenantId: form.tenantId,
+            schoolId: form.schoolId,
+            applicantId: applicant.id,
+            publishedFormId: form.id,
+            formData: input.formData,
+            trackingToken,
+          },
+          tx,
+        );
+      });
     });
   }
 

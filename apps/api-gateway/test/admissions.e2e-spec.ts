@@ -17,6 +17,8 @@ jest.mock('@saas/core-platform', () => {
         applicant: { create: jest.fn() },
         admissionApplication: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
         admissionReview: { create: jest.fn() },
+        userSchoolAccess: { findFirst: jest.fn() },
+        campus: { findFirst: jest.fn() },
       },
       $queryRaw: jest.fn(),
       $executeRaw: jest.fn(),
@@ -123,6 +125,52 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
 
       expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.data)).toBe(true);
+    });
+
+    it('POST /api/v1/admissions/forms/publish - denies if body.schoolId differs from authorized x-school-id', async () => {
+      (kernel.db.school.findFirst as jest.Mock).mockResolvedValue({ id: 'school_A', tenantId: TENANT_ID });
+      (kernel.db.userSchoolAccess.findFirst as jest.Mock).mockResolvedValue({ userId: 'user_1', schoolId: 'school_A' });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/admissions/forms/publish')
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', 'school_A')
+        .send({
+          title: 'Form',
+          schoolId: 'school_B', // MALICIOUS
+          academicYearId: 'ay_1',
+          targetClassId: 'tc_1',
+          fieldsSchema: {},
+          workflowStages: []
+        })
+        .expect(403);
+      
+      expect(res.body.message).toContain('You are not authorized to publish a form for the requested school');
+    });
+
+    it('POST /api/v1/admissions/forms/publish - succeeds with authorized x-school-id', async () => {
+      (kernel.db.school.findFirst as jest.Mock).mockResolvedValue({ id: 'school_A', tenantId: TENANT_ID });
+      (kernel.db.userSchoolAccess.findFirst as jest.Mock).mockResolvedValue({ userId: 'user_1', schoolId: 'school_A' });
+      (kernel.db.publishedAdmissionForm.create as jest.Mock).mockResolvedValue({ id: 'form_123', publicToken: 'pub_abc' });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/admissions/forms/publish')
+        .set('Authorization', `Bearer ${validToken}`)
+        .set('x-tenant-id', TENANT_ID)
+        .set('x-school-id', 'school_A')
+        .send({
+          title: 'Form',
+          schoolId: 'school_A', // LEGITIMATE
+          academicYearId: 'ay_1',
+          targetClassId: 'tc_1',
+          fieldsSchema: {},
+          workflowStages: []
+        })
+        .expect(201);
+      
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toBe('form_123');
     });
   });
 });
