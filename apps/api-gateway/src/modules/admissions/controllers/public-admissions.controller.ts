@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, NotFoundException } from "@nestjs/common";
 import { AdmissionsService } from "../services/admissions.service";
 import { SubmitApplicationDto } from "../dto/admissions.dto";
 
@@ -56,6 +56,15 @@ export class PublicAdmissionsController {
       data: {
         status: result.application.status,
       },
+    };
+  }
+
+  @Get("tracking/:trackingToken")
+  async trackApplication(@Param("trackingToken") trackingToken: string) {
+    const result = await this.service.getApplicationByTrackingToken(trackingToken);
+    return {
+      success: true,
+      data: result,
     };
   }
 }

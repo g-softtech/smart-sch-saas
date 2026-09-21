@@ -32,6 +32,8 @@ interface Application {
   };
   formData: Record<string, unknown>;
   createdAt: string;
+  payments?: Array<{ status: string; amount: string | number; currency: string }>;
+  exam?: { status: string; examDate: string; venue: string; score: number | null } | null;
 }
 
   export default function AdmissionsReviewBoard() {
@@ -65,7 +67,7 @@ interface Application {
       try {
         const response = await apiClient.get('api/v1/admissions/forms');
         if (isMounted) {
-          const fetchedForms = Array.isArray(response) ? response : (response.data || []);
+          const fetchedForms = Array.isArray(response) ? response : [];
           setForms(fetchedForms);
           if (fetchedForms.length > 0) {
             setSelectedFormId(fetchedForms[0].id);
@@ -96,7 +98,7 @@ interface Application {
     setAppsLoading(true);
     try {
       const response = await apiClient.get(`api/v1/admissions/applications?formId=${formId}`);
-      setApplications(Array.isArray(response) ? response : (response.data || []));
+      setApplications(Array.isArray(response) ? response : []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load applications.');
     } finally {
@@ -251,8 +253,7 @@ interface Application {
                       <div className="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-md">Empty</div>
                     ) : (
                       colApps.map(app => (
-                        <div 
-                          key={app.id} 
+                        <div key={app.id}
                           onClick={() => setSelectedApp(app)}
                           className="bg-white dark:bg-brand-navy p-4 rounded-md shadow-sm border border-gray-200 dark:border-brand-border-dark cursor-pointer hover:border-brand-gold hover:shadow-md transition-all group"
                         >
@@ -261,9 +262,32 @@ interface Application {
                               {app.applicant?.firstName} {app.applicant?.lastName}
                             </h4>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-brand-gray-text font-mono truncate mb-3">
+                          <p className="text-xs text-gray-500 dark:text-brand-gray-text font-mono truncate mb-2">
                             Ref: {app.id.substring(0, 8).toUpperCase()}
                           </p>
+                          {/* Payment & Exam indicators */}
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {app.payments?.[0] && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                app.payments[0].status === 'SUCCESS'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                              }`}>
+                                💳 {app.payments[0].status}
+                              </span>
+                            )}
+                            {app.exam && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                app.exam.status === 'COMPLETED'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                              }`}>
+                                📝 {app.exam.status === 'COMPLETED' && app.exam.score !== null
+                                  ? `Score: ${app.exam.score}`
+                                  : app.exam.status}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-brand-border-dark">
                             <span className="text-xs text-gray-400 dark:text-gray-500">
                               {new Date(app.createdAt).toLocaleDateString()}

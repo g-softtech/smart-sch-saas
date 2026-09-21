@@ -92,10 +92,34 @@ export default function StaffPage() {
     }
   };
 
+  const MIN_STAFF_AGE = 18;
+
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !joiningDate || !staffType)
       return;
+
+    // ── Date Validation ────────────────────────────────────────────────
+    if (dateOfBirth) {
+      const dob = new Date(dateOfBirth);
+      const joining = new Date(joiningDate);
+
+      if (dob >= joining) {
+        setCreateError("Date of Birth must be before the Joining Date.");
+        return;
+      }
+
+      // Minimum age check: must be at least MIN_STAFF_AGE years old by joining date
+      const minBirthYear = new Date(joining);
+      minBirthYear.setFullYear(minBirthYear.getFullYear() - MIN_STAFF_AGE);
+      if (dob > minBirthYear) {
+        setCreateError(
+          `Staff member must be at least ${MIN_STAFF_AGE} years old on their joining date.`,
+        );
+        return;
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────
 
     setCreateLoading(true);
     setCreateError(null);

@@ -7,6 +7,7 @@ import {
   IsBoolean,
   IsNumber,
   IsIn,
+  Min,
   ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -136,6 +137,16 @@ export class PublishFormDto {
   @ValidateNested({ each: true })
   @Type(() => WorkflowStageDto)
   workflowStages: WorkflowStageDto[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  applicationFee?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(["NGN", "GHS", "USD", "ZAR"])
+  currency?: string;
 }
 
 export class ApplicantDto {

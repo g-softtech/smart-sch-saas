@@ -250,6 +250,43 @@ export class AdmissionsService {
     return application;
   }
 
+  async getApplicationByTrackingToken(trackingToken: string) {
+    const application = await this.repo.findApplicationByTrackingToken(trackingToken);
+    if (!application) {
+      throw new NotFoundException("Application not found for this tracking token");
+    }
+
+    // Return only applicant-safe information — no internal IDs, tenant/school IDs, or reviewer data
+    const latestPayment = (application.payments as any[])?.[0] ?? null;
+    const workflowStages = (application.publishedForm?.workflowStages as any[]) ?? [];
+    const currentStageLabel = application.currentStageKey
+      ? workflowStages.find((s: any) => s.key === application.currentStageKey)?.label ?? application.currentStageKey
+      : null;
+
+    return {
+      trackingToken: application.trackingToken,
+      status: application.status,
+      currentStageLabel,
+      formTitle: application.publishedForm?.title ?? null,
+      submittedAt: application.createdAt,
+      payment: latestPayment
+        ? {
+            status: latestPayment.status,
+            amount: latestPayment.amount,
+            currency: latestPayment.currency,
+          }
+        : null,
+      exam: application.exam
+        ? {
+            examDate: (application.exam as any).examDate,
+            venue: (application.exam as any).venue,
+            score: (application.exam as any).score,
+            status: (application.exam as any).status,
+          }
+        : null,
+    };
+  }
+
   async startReview(applicationId: string, schoolId: string) {
     const tenantId = this.getActiveTenantId();
     const app = await this.getApplication(applicationId, schoolId);

@@ -17,6 +17,8 @@ export interface PublishFormInput {
   fieldsSchema: any;
   workflowStages: any;
   publicToken: string;
+  applicationFee?: number;
+  currency?: string;
 }
 
 export interface CreateApplicantInput {
@@ -66,6 +68,54 @@ export class AdmissionsRepository {
         include: {
           academicYear: true,
           targetClass: true,
+        },
+      });
+    });
+  }
+
+  async findApplicationByTrackingToken(trackingToken: string) {
+    // 1. Raw SQL to locate tenantId without an active tenant context (public route)
+    const rawResult = await kernel.$queryRaw<any[]>`
+      SELECT "tenantId" FROM "adm_applications"
+      WHERE "trackingToken" = ${trackingToken}
+      LIMIT 1
+    `;
+
+    if (!rawResult || rawResult.length === 0) return null;
+
+    const tenantId = rawResult[0].tenantId;
+
+    // 2. Run lookup inside the resolved tenant context
+    return tenantContext.run({ tenantId }, async () => {
+      return kernel.db.admissionApplication.findUnique({
+        where: { trackingToken },
+        include: {
+          publishedForm: {
+            select: {
+              title: true,
+              workflowStages: true,
+              applicationFee: true,
+              currency: true,
+            },
+          },
+          payments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              status: true,
+              amount: true,
+              currency: true,
+              createdAt: true,
+            },
+          },
+          exam: {
+            select: {
+              examDate: true,
+              venue: true,
+              score: true,
+              status: true,
+            },
+          },
         },
       });
     });
@@ -179,6 +229,11 @@ export class AdmissionsRepository {
       include: {
         publishedForm: true,
         applicant: true,
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        exam: true,
       },
     });
   }
@@ -193,6 +248,11 @@ export class AdmissionsRepository {
       orderBy: { createdAt: "desc" },
       include: {
         applicant: true,
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        exam: true,
       },
     });
   }

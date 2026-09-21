@@ -13,6 +13,8 @@ export class StaffResponseDto {
   schoolId: string;
   tenantId: string;
   joiningDate: Date;
+  dateOfBirth: Date | null;
+  gender: string | null;
 
   constructor(partial: Partial<StaffProfile>) {
     Object.assign(this, partial);
@@ -20,8 +22,7 @@ export class StaffResponseDto {
   }
 
   static fromEntity(entity: StaffProfile): StaffResponseDto {
-    const { userId, createdAt, updatedAt, dateOfBirth, gender, ...safeFields } =
-      entity;
+    const { userId, createdAt, updatedAt, ...safeFields } = entity;
     return new StaffResponseDto(safeFields as any);
   }
 }

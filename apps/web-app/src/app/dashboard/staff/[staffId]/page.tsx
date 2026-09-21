@@ -280,13 +280,15 @@ export default function StaffProfilePage() {
                 </button>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className={`bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-4 ${staff.status !== 'ACTIVE' ? 'opacity-60' : ''}`}>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Access Credentials
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Issue a new QR code credential.
+                    {staff.status !== 'ACTIVE'
+                      ? `QR credentials cannot be issued for ${staff.status.toLowerCase()} staff.`
+                      : 'Issue a new QR code credential.'}
                   </p>
                 </div>
                 <button
@@ -295,7 +297,9 @@ export default function StaffProfilePage() {
                     setCredentialError(null);
                     setIsCredentialModalOpen(true);
                   }}
-                  className="px-4 py-2 bg-brand-gold text-brand-navy rounded-lg text-sm font-semibold hover:bg-brand-gold-hover transition-colors w-full sm:w-auto"
+                  disabled={staff.status !== 'ACTIVE'}
+                  title={staff.status !== 'ACTIVE' ? `Cannot issue credentials to ${staff.status.toLowerCase()} staff` : undefined}
+                  className="px-4 py-2 bg-brand-gold text-brand-navy rounded-lg text-sm font-semibold hover:bg-brand-gold-hover transition-colors w-full sm:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Issue QR Credential
                 </button>
