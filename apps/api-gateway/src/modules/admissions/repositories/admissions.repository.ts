@@ -87,7 +87,7 @@ export class AdmissionsRepository {
 
     // 2. Run lookup inside the resolved tenant context
     return tenantContext.run({ tenantId }, async () => {
-      return kernel.db.admissionApplication.findUnique({
+      return kernel.db.admissionApplication.findFirst({
         where: { trackingToken },
         include: {
           publishedForm: {
