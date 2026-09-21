@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { kernel } from '@saas/core-platform';
-import { Role } from '@saas/core-platform';
+import { Injectable } from "@nestjs/common";
+import { kernel } from "@saas/core-platform";
+import { Role } from "@saas/core-platform";
 
 @Injectable()
 export class RoleRepository {
@@ -13,10 +13,10 @@ export class RoleRepository {
       include: {
         permissions: {
           include: {
-            permission: true
-          }
-        }
-      }
+            permission: true,
+          },
+        },
+      },
     });
   }
 }

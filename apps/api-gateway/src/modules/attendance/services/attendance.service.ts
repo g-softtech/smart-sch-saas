@@ -1,13 +1,24 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { kernel, AttendanceStatus, AttendanceRegisterFinalizedEvent, StudentAbsentEvent, OutboxService } from '@saas/core-platform';
-import { AttendanceRepository } from '../repositories/attendance.repository';
-import { BulkCreateAttendanceRegisterDto } from '../dto/attendance.dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
+import {
+  kernel,
+  AttendanceStatus,
+  AttendanceRegisterFinalizedEvent,
+  StudentAbsentEvent,
+  OutboxService,
+} from "@saas/core-platform";
+import { AttendanceRepository } from "../repositories/attendance.repository";
+import { BulkCreateAttendanceRegisterDto } from "../dto/attendance.dto";
 
 @Injectable()
 export class AttendanceService {
   constructor(
     private repo: AttendanceRepository,
-    private outboxService: OutboxService
+    private outboxService: OutboxService,
   ) {}
 
   private parseDate(dateStr: string): Date {
@@ -19,27 +30,52 @@ export class AttendanceService {
     return d;
   }
 
-  async bulkCreateRegister(tenantId: string, schoolId: string, userId: string, dto: BulkCreateAttendanceRegisterDto) {
+  async bulkCreateRegister(
+    tenantId: string,
+    schoolId: string,
+    userId: string,
+    dto: BulkCreateAttendanceRegisterDto,
+  ) {
     const dateObj = this.parseDate(dto.date);
 
     // 1. Verify workspace relationships mechanically where possible and procedurally where required
-    const academicYear = await kernel.db.academicYear.findUnique({ where: { id: dto.academicYearId, tenantId, schoolId } });
-    if (!academicYear) throw new BadRequestException('Invalid AcademicYear for this workspace.');
+    const academicYear = await kernel.db.academicYear.findUnique({
+      where: { id: dto.academicYearId, tenantId, schoolId },
+    });
+    if (!academicYear)
+      throw new BadRequestException("Invalid AcademicYear for this workspace.");
 
-    const term = await kernel.db.term.findUnique({ where: { id: dto.termId, tenantId, academicYearId: dto.academicYearId } });
-    if (!term) throw new BadRequestException('Invalid Term for this workspace/academic year.');
+    const term = await kernel.db.term.findUnique({
+      where: { id: dto.termId, tenantId, academicYearId: dto.academicYearId },
+    });
+    if (!term)
+      throw new BadRequestException(
+        "Invalid Term for this workspace/academic year.",
+      );
 
-    const classEntity = await kernel.db.class.findUnique({ where: { id: dto.classId, tenantId, schoolId } });
-    if (!classEntity) throw new BadRequestException('Invalid Class for this workspace.');
+    const classEntity = await kernel.db.class.findUnique({
+      where: { id: dto.classId, tenantId, schoolId },
+    });
+    if (!classEntity)
+      throw new BadRequestException("Invalid Class for this workspace.");
 
     if (dto.armId) {
-      const arm = await kernel.db.arm.findUnique({ where: { id: dto.armId, tenantId, classId: dto.classId } });
-      if (!arm) throw new BadRequestException('Invalid Arm for this workspace/class.');
+      const arm = await kernel.db.arm.findUnique({
+        where: { id: dto.armId, tenantId, classId: dto.classId },
+      });
+      if (!arm)
+        throw new BadRequestException("Invalid Arm for this workspace/class.");
     }
 
     // 2. Derive eligible enrollments
-    const enrollments = await this.repo.getEligibleEnrollments(tenantId, schoolId, dto.classId, dto.armId || null, dateObj);
-    const enrollmentMap = new Map(enrollments.map(e => [e.studentId, e]));
+    const enrollments = await this.repo.getEligibleEnrollments(
+      tenantId,
+      schoolId,
+      dto.classId,
+      dto.armId || null,
+      dateObj,
+    );
+    const enrollmentMap = new Map(enrollments.map((e) => [e.studentId, e]));
 
     // 3. Validate submitted records against derived population
     const recordPayloads = [];
@@ -47,20 +83,26 @@ export class AttendanceService {
 
     for (const record of dto.records) {
       if (submittedStudentIds.has(record.studentId)) {
-        throw new BadRequestException(`Duplicate record submitted for student ${record.studentId}`);
+        throw new BadRequestException(
+          `Duplicate record submitted for student ${record.studentId}`,
+        );
       }
       submittedStudentIds.add(record.studentId);
 
       const enrollment = enrollmentMap.get(record.studentId);
       if (!enrollment) {
-        throw new BadRequestException(`Student ${record.studentId} is not in the derived eligible population.`);
+        throw new BadRequestException(
+          `Student ${record.studentId} is not in the derived eligible population.`,
+        );
       }
 
       if (record.status === AttendanceStatus.EXCUSED && !record.reason) {
-        throw new BadRequestException('EXCUSED status requires a reason.');
+        throw new BadRequestException("EXCUSED status requires a reason.");
       }
       if (record.status !== AttendanceStatus.EXCUSED && record.reason) {
-        throw new BadRequestException('non-EXCUSED status must not contain a reason.');
+        throw new BadRequestException(
+          "non-EXCUSED status must not contain a reason.",
+        );
       }
 
       recordPayloads.push({
@@ -76,20 +118,31 @@ export class AttendanceService {
       });
     }
 
-    return this.repo.upsertRegisterWithRecords(tenantId, schoolId, {
+    return this.repo.upsertRegisterWithRecords(
       tenantId,
       schoolId,
-      academicYearId: dto.academicYearId,
-      termId: dto.termId,
-      classId: dto.classId,
-      armId: dto.armId || null,
-      date: dateObj,
-      createdById: userId,
-      lastModifiedById: userId,
-    }, recordPayloads);
+      {
+        tenantId,
+        schoolId,
+        academicYearId: dto.academicYearId,
+        termId: dto.termId,
+        classId: dto.classId,
+        armId: dto.armId || null,
+        date: dateObj,
+        createdById: userId,
+        lastModifiedById: userId,
+      },
+      recordPayloads,
+    );
   }
 
-  async finalizeRegister(tenantId: string, schoolId: string, registerId: string, userId: string, correlationId: string) {
+  async finalizeRegister(
+    tenantId: string,
+    schoolId: string,
+    registerId: string,
+    userId: string,
+    correlationId: string,
+  ) {
     return kernel.db.$transaction(async (tx) => {
       // 1. Lock register
       const registers = await tx.$queryRaw<any[]>`
@@ -97,14 +150,15 @@ export class AttendanceService {
         WHERE "tenantId" = ${tenantId} AND "schoolId" = ${schoolId} AND "id" = ${registerId}
         FOR UPDATE;
       `;
-      if (!registers.length) throw new NotFoundException('Register not found');
-      
+      if (!registers.length) throw new NotFoundException("Register not found");
+
       const register = registers[0];
-      if (register.isFinalized) throw new ConflictException('Register is already finalized');
+      if (register.isFinalized)
+        throw new ConflictException("Register is already finalized");
 
       // 2. Fetch current records
       const records = await tx.attendanceRecord.findMany({
-        where: { registerId: register.id, tenantId, schoolId }
+        where: { registerId: register.id, tenantId, schoolId },
       });
 
       // 3. Derive eligible population again
@@ -114,19 +168,23 @@ export class AttendanceService {
           schoolId,
           classId: register.classId,
           ...(register.armId ? { armId: register.armId } : {}),
-          status: 'ACTIVE',
+          status: "ACTIVE",
           enrolledAt: { lte: register.date },
-        }
+        },
       });
 
       if (records.length !== enrollments.length) {
-        throw new BadRequestException('Register is incomplete. There must be exactly one record for every eligible student.');
+        throw new BadRequestException(
+          "Register is incomplete. There must be exactly one record for every eligible student.",
+        );
       }
 
-      const recordStudentIds = new Set(records.map(r => r.studentId));
+      const recordStudentIds = new Set(records.map((r) => r.studentId));
       for (const e of enrollments) {
         if (!recordStudentIds.has(e.studentId)) {
-          throw new BadRequestException(`Missing record for eligible student ${e.studentId}`);
+          throw new BadRequestException(
+            `Missing record for eligible student ${e.studentId}`,
+          );
         }
       }
 
@@ -153,14 +211,16 @@ export class AttendanceService {
           termId: updatedRegister.termId,
           classId: updatedRegister.classId,
           armId: updatedRegister.armId,
-          date: updatedRegister.date.toISOString().split('T')[0],
+          date: updatedRegister.date.toISOString().split("T")[0],
           finalizedById: userId,
-        }
+        },
       );
 
       await this.outboxService.appendEvent(tx as any, finalizedEvent);
-      
-      const absentRecords = records.filter(r => r.status === AttendanceStatus.ABSENT);
+
+      const absentRecords = records.filter(
+        (r) => r.status === AttendanceStatus.ABSENT,
+      );
       for (const record of absentRecords) {
         const absentEvent = new StudentAbsentEvent(
           record.id,
@@ -171,9 +231,9 @@ export class AttendanceService {
             schoolId: updatedRegister.schoolId,
             studentId: record.studentId,
             enrollmentId: record.enrollmentId,
-            date: updatedRegister.date.toISOString().split('T')[0],
-            reason: record.reason
-          }
+            date: updatedRegister.date.toISOString().split("T")[0],
+            reason: record.reason,
+          },
         );
         await this.outboxService.appendEvent(tx as any, absentEvent);
       }
@@ -182,29 +242,47 @@ export class AttendanceService {
     });
   }
 
-  async getRegisters(tenantId: string, schoolId: string, skip: number = 0, take: number = 50, startDate?: string, endDate?: string) {
+  async getRegisters(
+    tenantId: string,
+    schoolId: string,
+    skip: number = 0,
+    take: number = 50,
+    startDate?: string,
+    endDate?: string,
+  ) {
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-      throw new BadRequestException('startDate cannot be after endDate');
+      throw new BadRequestException("startDate cannot be after endDate");
     }
     const start = startDate ? this.parseDate(startDate) : undefined;
     const end = endDate ? this.parseDate(endDate) : undefined;
     return this.repo.getRegisters(tenantId, schoolId, skip, take, start, end);
   }
-  
-  async getRegisterById(tenantId: string, schoolId: string, registerId: string) {
-    const register = await this.repo.findRegisterById(tenantId, schoolId, registerId);
-    if (!register) throw new NotFoundException('Register not found');
+
+  async getRegisterById(
+    tenantId: string,
+    schoolId: string,
+    registerId: string,
+  ) {
+    const register = await this.repo.findRegisterById(
+      tenantId,
+      schoolId,
+      registerId,
+    );
+    if (!register) throw new NotFoundException("Register not found");
     return register;
   }
 
-  async getStudentAttendance(tenantId: string, schoolId: string, studentId: string, skip: number = 0, take: number = 50) {
+  async getStudentAttendance(
+    tenantId: string,
+    schoolId: string,
+    studentId: string,
+    skip: number = 0,
+    take: number = 50,
+  ) {
     return kernel.db.attendanceRecord.findMany({
       where: { tenantId, schoolId, studentId },
       include: { register: true },
-      orderBy: [
-        { register: { date: 'desc' } },
-        { id: 'asc' }
-      ],
+      orderBy: [{ register: { date: "desc" } }, { id: "asc" }],
       skip,
       take,
     });

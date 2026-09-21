@@ -1,5 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsEnum } from 'class-validator';
-import { GenderEnum, StaffType } from '@saas/core-platform';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsDateString,
+  IsEnum,
+} from "class-validator";
+import { GenderEnum, StaffType } from "@saas/core-platform";
 
 export class CreateStaffDto {
   @IsString()

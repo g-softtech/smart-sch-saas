@@ -1,4 +1,4 @@
-import { StaffProfile } from '@saas/core-platform';
+import { StaffProfile } from "@saas/core-platform";
 
 export class StaffResponseDto {
   id: string;
@@ -20,7 +20,8 @@ export class StaffResponseDto {
   }
 
   static fromEntity(entity: StaffProfile): StaffResponseDto {
-    const { userId, createdAt, updatedAt, dateOfBirth, gender, ...safeFields } = entity;
+    const { userId, createdAt, updatedAt, dateOfBirth, gender, ...safeFields } =
+      entity;
     return new StaffResponseDto(safeFields as any);
   }
 }

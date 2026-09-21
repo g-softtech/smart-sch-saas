@@ -1,10 +1,24 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsOptional, IsBoolean, IsNumber, IsIn, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface, Validate, IsEmail } from 'class-validator';
-import { Type } from 'class-transformer';
-import { AdmissionReviewDecision, GenderEnum } from '@saas/core-platform';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsIn,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  Validate,
+  IsEmail,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { AdmissionReviewDecision, GenderEnum } from "@saas/core-platform";
 
 export class FieldSchemaDto {
   @IsString()
-  @IsIn(['string', 'number', 'boolean', 'date', 'file', 'select'])
+  @IsIn(["string", "number", "boolean", "date", "file", "select"])
   type: string;
 
   @IsOptional()
@@ -29,48 +43,62 @@ export class FieldSchemaDto {
   minLength?: number;
 }
 
-@ValidatorConstraint({ name: 'isFieldSchemaRecord', async: false })
+@ValidatorConstraint({ name: "isFieldSchemaRecord", async: false })
 export class IsFieldSchemaRecordConstraint implements ValidatorConstraintInterface {
   validate(value: any, args: ValidationArguments) {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
       return false;
     }
 
-    const allowedFieldSchemaKeys = ['type', 'required', 'label', 'options', 'maxLength', 'minLength'];
+    const allowedFieldSchemaKeys = [
+      "type",
+      "required",
+      "label",
+      "options",
+      "maxLength",
+      "minLength",
+    ];
 
     for (const [key, field] of Object.entries(value)) {
-      if (typeof field !== 'object' || field === null) return false;
-      
-      const { type, required, label, options, maxLength, minLength, ...rest } = field as any;
-      
+      if (typeof field !== "object" || field === null) return false;
+
+      const { type, required, label, options, maxLength, minLength, ...rest } =
+        field as any;
+
       // Reject unknown properties
       if (Object.keys(rest).length > 0) return false;
 
       // Validate type
-      if (!['string', 'number', 'boolean', 'date', 'file', 'select'].includes(type)) {
+      if (
+        !["string", "number", "boolean", "date", "file", "select"].includes(
+          type,
+        )
+      ) {
         return false;
       }
 
       // Validate required and label
-      if (required !== undefined && typeof required !== 'boolean') return false;
-      if (label !== undefined && typeof label !== 'string') return false;
+      if (required !== undefined && typeof required !== "boolean") return false;
+      if (label !== undefined && typeof label !== "string") return false;
 
       // Validate options
       if (options !== undefined) {
         if (!Array.isArray(options)) return false;
-        if (!options.every(o => typeof o === 'string')) return false;
+        if (!options.every((o) => typeof o === "string")) return false;
       }
 
       // Validate maxLength and minLength
-      if (maxLength !== undefined && typeof maxLength !== 'number') return false;
-      if (minLength !== undefined && typeof minLength !== 'number') return false;
+      if (maxLength !== undefined && typeof maxLength !== "number")
+        return false;
+      if (minLength !== undefined && typeof minLength !== "number")
+        return false;
     }
 
     return true;
   }
 
   defaultMessage(args: ValidationArguments) {
-    return 'fieldsSchema must be a valid record of field definitions, containing only supported properties (type, required, label, options, maxLength, minLength) and correct types.';
+    return "fieldsSchema must be a valid record of field definitions, containing only supported properties (type, required, label, options, maxLength, minLength) and correct types.";
   }
 }
 
@@ -149,4 +177,32 @@ export class SubmitReviewDto {
   @IsOptional()
   @IsString()
   comments?: string;
+}
+
+export class ScheduleExamDto {
+  @IsString()
+  @IsNotEmpty()
+  examDate: string; // ISO String
+
+  @IsString()
+  @IsNotEmpty()
+  venue: string;
+}
+
+export class UpdateExamDto {
+  @IsOptional()
+  @IsString()
+  examDate?: string;
+
+  @IsOptional()
+  @IsString()
+  venue?: string;
+
+  @IsOptional()
+  @IsNumber()
+  score?: number;
+
+  @IsOptional()
+  @IsString()
+  status?: string; // SCHEDULED, COMPLETED, ABSENT, CANCELLED
 }

@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { kernel } from '@saas/core-platform';
+import { Injectable } from "@nestjs/common";
+import { kernel } from "@saas/core-platform";
 
 @Injectable()
 export class AcademicsRepository {
@@ -55,40 +55,61 @@ export class AcademicsRepository {
     return kernel.db.subject.create({ data });
   }
 
-  async listAcademicYears(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listAcademicYears(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ) {
     return kernel.db.academicYear.findMany({
       where: { tenantId, schoolId },
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listTerms(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listTerms(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ) {
     return kernel.db.term.findMany({
-      where: { 
-        tenantId, 
-        academicYear: { schoolId } 
+      where: {
+        tenantId,
+        academicYear: { schoolId },
       },
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listClasses(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listClasses(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ) {
     return kernel.db.class.findMany({
       where: { tenantId, schoolId },
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listArms(tenantId: string, schoolId: string, skip: number, take: number, campusId?: string) {
+  async listArms(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+    campusId?: string,
+  ) {
     const where: any = {
       tenantId,
-      class: { schoolId }
+      class: { schoolId },
     };
     if (campusId) {
       where.campusId = campusId;
@@ -97,43 +118,63 @@ export class AcademicsRepository {
       where,
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listSubjects(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listSubjects(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ) {
     return kernel.db.subject.findMany({
       where: { tenantId, schoolId },
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listCampuses(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listCampuses(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ) {
     return kernel.db.campus.findMany({
       where: { tenantId, schoolId },
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listDepartments(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listDepartments(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ) {
     return kernel.db.department.findMany({
       where: { tenantId, schoolId },
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listSubjectGroups(tenantId: string, schoolId: string, skip: number, take: number) {
+  async listSubjectGroups(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ) {
     return kernel.db.subjectGroup.findMany({
       where: { tenantId, schoolId },
       skip,
       take,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
@@ -212,7 +253,11 @@ export class AcademicsRepository {
     });
   }
 
-  async updateSubjectGroup(tenantId: string, id: string, data: { name: string }) {
+  async updateSubjectGroup(
+    tenantId: string,
+    id: string,
+    data: { name: string },
+  ) {
     return kernel.db.subjectGroup.updateMany({
       where: { id, tenantId },
       data,
@@ -225,7 +270,11 @@ export class AcademicsRepository {
     });
   }
 
-  async updateSubject(tenantId: string, id: string, data: { name: string; subjectGroupId?: string | null }) {
+  async updateSubject(
+    tenantId: string,
+    id: string,
+    data: { name: string; subjectGroupId?: string | null },
+  ) {
     return kernel.db.subject.updateMany({
       where: { id, tenantId },
       data,

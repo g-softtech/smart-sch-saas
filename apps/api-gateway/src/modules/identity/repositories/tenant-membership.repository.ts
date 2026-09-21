@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { kernel } from '@saas/core-platform';
-import { UserTenantMembership } from '@saas/core-platform';
+import { Injectable } from "@nestjs/common";
+import { kernel } from "@saas/core-platform";
+import { UserTenantMembership } from "@saas/core-platform";
 
 /**
  * Raw query result type for the workspace membership discovery query.

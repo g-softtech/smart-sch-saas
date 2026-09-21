@@ -1,12 +1,21 @@
 import {
-  Controller, Post, Get, Body, Param, Query,
-  UseGuards, UseInterceptors, HttpCode, Req, BadRequestException,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { StudentsService } from '../services/students.service';
-import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
-import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
-import { ApiResponseDto } from '../../identity/dto/auth.dto';
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  HttpCode,
+  Req,
+  BadRequestException,
+} from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { StudentsService } from "../services/students.service";
+import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
+import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
+import { ApiResponseDto } from "../../identity/dto/auth.dto";
 import {
   CreateStudentDto,
   CreateGuardianDto,
@@ -15,7 +24,7 @@ import {
   TransferEnrollmentDto,
   WithdrawStudentDto,
   PaginationQueryDto,
-} from '../dto/students.dto';
+} from "../dto/students.dto";
 
 // ─── AUTHORIZATION NOTE ─────────────────────────────────────────────────────
 // The permission catalog for this project has not yet defined domain-specific
@@ -32,8 +41,8 @@ import {
 // must be added here without changing the underlying service logic.
 // ─────────────────────────────────────────────────────────────────────────────
 
-@ApiTags('Students')
-@Controller('api/v1/students')
+@ApiTags("Students")
+@Controller("api/v1/students")
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
 export class StudentsController {
@@ -42,12 +51,15 @@ export class StudentsController {
   // ─── Students ──────────────────────────────────────────────────────────────
 
   @Post()
-  @ApiOperation({ summary: 'Create a new student (post-admission)' })
+  @ApiOperation({ summary: "Create a new student (post-admission)" })
   @ApiResponse({ status: 201 })
-  async createStudent(@Req() req: any, @Body() dto: CreateStudentDto): Promise<ApiResponseDto<any>> {
+  async createStudent(
+    @Req() req: any,
+    @Body() dto: CreateStudentDto,
+  ): Promise<ApiResponseDto<any>> {
     const { schoolId } = req.workspace;
     if (!schoolId) {
-      throw new BadRequestException('School context is required');
+      throw new BadRequestException("School context is required");
     }
 
     const student = await this.studentsService.createStudent({
@@ -64,8 +76,13 @@ export class StudentsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List students within the active tenant (optionally filtered by school)' })
-  async listStudents(@Query() query: PaginationQueryDto): Promise<ApiResponseDto<any>> {
+  @ApiOperation({
+    summary:
+      "List students within the active tenant (optionally filtered by school)",
+  })
+  async listStudents(
+    @Query() query: PaginationQueryDto,
+  ): Promise<ApiResponseDto<any>> {
     const students = await this.studentsService.listStudents(query.schoolId);
 
     // Simple offset pagination on the returned result set.
@@ -82,10 +99,10 @@ export class StudentsController {
     };
   }
 
-  @Get(':studentId')
-  @ApiOperation({ summary: 'Get a single student by ID' })
+  @Get(":studentId")
+  @ApiOperation({ summary: "Get a single student by ID" })
   async getStudent(
-    @Param('studentId') studentId: string,
+    @Param("studentId") studentId: string,
   ): Promise<ApiResponseDto<any>> {
     const student = await this.studentsService.getStudent(studentId);
     return { success: true, data: student };
@@ -93,19 +110,28 @@ export class StudentsController {
 
   // ─── Guardians ─────────────────────────────────────────────────────────────
 
-  @Post('guardians')
-  @ApiOperation({ summary: 'Create a new guardian within the active tenant' })
-  async createGuardian(@Body() dto: CreateGuardianDto): Promise<ApiResponseDto<any>> {
+  @Post("guardians")
+  @ApiOperation({ summary: "Create a new guardian within the active tenant" })
+  async createGuardian(
+    @Body() dto: CreateGuardianDto,
+  ): Promise<ApiResponseDto<any>> {
     const guardian = await this.studentsService.createGuardian(dto);
     return { success: true, data: guardian };
   }
 
-  @Get('guardians/list')
-  @ApiOperation({ summary: 'List all guardians within the active tenant' })
-  async listGuardians(@Req() req: any, @Query() query: PaginationQueryDto): Promise<ApiResponseDto<any>> {
+  @Get("guardians/list")
+  @ApiOperation({ summary: "List all guardians within the active tenant" })
+  async listGuardians(
+    @Req() req: any,
+    @Query() query: PaginationQueryDto,
+  ): Promise<ApiResponseDto<any>> {
     const schoolId = req.workspace?.schoolId;
     const roleId = req.workspace?.roleId;
-    const guardians = await this.studentsService.listGuardians(schoolId, roleId, query.search);
+    const guardians = await this.studentsService.listGuardians(
+      schoolId,
+      roleId,
+      query.search,
+    );
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const start = (page - 1) * limit;
@@ -117,11 +143,11 @@ export class StudentsController {
     };
   }
 
-  @Post(':studentId/guardians/link')
-  @ApiOperation({ summary: 'Link an existing guardian to a student' })
+  @Post(":studentId/guardians/link")
+  @ApiOperation({ summary: "Link an existing guardian to a student" })
   async linkGuardian(
     @Req() req: any,
-    @Param('studentId') studentId: string,
+    @Param("studentId") studentId: string,
     @Body() dto: LinkGuardianDto,
   ): Promise<ApiResponseDto<any>> {
     const schoolId = req.workspace?.schoolId;
@@ -138,21 +164,24 @@ export class StudentsController {
     return { success: true, data: link };
   }
 
-  @Get(':studentId/guardians')
+  @Get(":studentId/guardians")
   @ApiOperation({ summary: "List a student's linked guardians" })
   async listStudentGuardians(
-    @Param('studentId') studentId: string,
+    @Param("studentId") studentId: string,
   ): Promise<ApiResponseDto<any>> {
-    const guardians = await this.studentsService.listStudentGuardians(studentId);
+    const guardians =
+      await this.studentsService.listStudentGuardians(studentId);
     return { success: true, data: guardians };
   }
 
   // ─── Enrollments ───────────────────────────────────────────────────────────
 
-  @Post(':studentId/enrollments')
-  @ApiOperation({ summary: 'Enroll a student into a class for an academic year' })
+  @Post(":studentId/enrollments")
+  @ApiOperation({
+    summary: "Enroll a student into a class for an academic year",
+  })
   async createEnrollment(
-    @Param('studentId') studentId: string,
+    @Param("studentId") studentId: string,
     @Body() dto: CreateEnrollmentDto,
   ): Promise<ApiResponseDto<any>> {
     const enrollment = await this.studentsService.createEnrollment({
@@ -164,20 +193,25 @@ export class StudentsController {
     return { success: true, data: enrollment };
   }
 
-  @Get(':studentId/enrollments')
-  @ApiOperation({ summary: "List a student's enrollment history (all statuses)" })
+  @Get(":studentId/enrollments")
+  @ApiOperation({
+    summary: "List a student's enrollment history (all statuses)",
+  })
   async listEnrollments(
-    @Param('studentId') studentId: string,
+    @Param("studentId") studentId: string,
   ): Promise<ApiResponseDto<any>> {
     const enrollments = await this.studentsService.listEnrollments(studentId);
     return { success: true, data: enrollments };
   }
 
-  @Post(':studentId/enrollments/:enrollmentId/transfer')
-  @ApiOperation({ summary: 'Transfer student to a different class/arm (internal, preserves enrollment history)' })
+  @Post(":studentId/enrollments/:enrollmentId/transfer")
+  @ApiOperation({
+    summary:
+      "Transfer student to a different class/arm (internal, preserves enrollment history)",
+  })
   async transferEnrollment(
-    @Param('studentId') _studentId: string,
-    @Param('enrollmentId') enrollmentId: string,
+    @Param("studentId") _studentId: string,
+    @Param("enrollmentId") enrollmentId: string,
     @Body() dto: TransferEnrollmentDto,
   ): Promise<ApiResponseDto<any>> {
     const newEnrollment = await this.studentsService.transferEnrollment({
@@ -189,12 +223,14 @@ export class StudentsController {
     return { success: true, data: newEnrollment };
   }
 
-  @Post(':studentId/enrollments/:enrollmentId/withdraw')
+  @Post(":studentId/enrollments/:enrollmentId/withdraw")
   @HttpCode(200)
-  @ApiOperation({ summary: 'Withdraw student from their current active enrollment' })
+  @ApiOperation({
+    summary: "Withdraw student from their current active enrollment",
+  })
   async withdrawStudent(
-    @Param('studentId') studentId: string,
-    @Param('enrollmentId') enrollmentId: string,
+    @Param("studentId") studentId: string,
+    @Param("enrollmentId") enrollmentId: string,
     @Body() dto: WithdrawStudentDto,
   ): Promise<ApiResponseDto<any>> {
     const result = await this.studentsService.withdrawStudent({

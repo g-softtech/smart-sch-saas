@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { kernel, tenantContext, EnrollmentStatus } from '@saas/core-platform';
-import { Prisma } from '@saas/core-platform';
+import { Injectable } from "@nestjs/common";
+import { kernel, tenantContext, EnrollmentStatus } from "@saas/core-platform";
+import { Prisma } from "@saas/core-platform";
 
 export type CreateStudentInput = {
   schoolId: string;
@@ -8,7 +8,7 @@ export type CreateStudentInput = {
   lastName: string;
   middleName?: string;
   dateOfBirth?: Date;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  gender: "MALE" | "FEMALE" | "OTHER";
   nationality?: string;
   admissionDate: Date;
 };
@@ -25,7 +25,7 @@ export type CreateGuardianInput = {
 export type LinkGuardianInput = {
   studentId: string;
   guardianId: string;
-  relationship: 'FATHER' | 'MOTHER' | 'GUARDIAN' | 'OTHER';
+  relationship: "FATHER" | "MOTHER" | "GUARDIAN" | "OTHER";
   isPrimary?: boolean;
   isEmergencyContact?: boolean;
   schoolId?: string;
@@ -54,7 +54,6 @@ export type WithdrawStudentInput = {
 
 @Injectable()
 export class StudentsRepository {
-
   // ─── School lookup (not TENANT_SCOPED in kernel, but query scoped by tenantId field) ───
   async findSchool(schoolId: string, tx?: typeof kernel.db) {
     // School IS in tenantScopedModels — kernel appends tenantId automatically.
@@ -66,7 +65,9 @@ export class StudentsRepository {
     // AcademicYear is NOT in tenantScopedModels; tenantId filter applied explicitly.
     const db = tx ?? kernel.db;
     const tenantId = tenantContext.getStore()?.tenantId;
-    return db.academicYear.findFirst({ where: { id: academicYearId, tenantId } });
+    return db.academicYear.findFirst({
+      where: { id: academicYearId, tenantId },
+    });
   }
 
   async findClass(classId: string, tx?: typeof kernel.db) {
@@ -95,7 +96,11 @@ export class StudentsRepository {
     return db.guardian.findUnique({ where: { id: guardianId } });
   }
 
-  async findActiveEnrollment(studentId: string, academicYearId: string, tx?: typeof kernel.db) {
+  async findActiveEnrollment(
+    studentId: string,
+    academicYearId: string,
+    tx?: typeof kernel.db,
+  ) {
     const db = tx ?? kernel.db;
     return db.enrollment.findFirst({
       where: { studentId, academicYearId, status: EnrollmentStatus.ACTIVE },
@@ -107,7 +112,11 @@ export class StudentsRepository {
     return db.enrollment.findUnique({ where: { id: enrollmentId } });
   }
 
-  async findStudentGuardianLink(studentId: string, guardianId: string, tx?: typeof kernel.db) {
+  async findStudentGuardianLink(
+    studentId: string,
+    guardianId: string,
+    tx?: typeof kernel.db,
+  ) {
     // Also tenantScopedModels
     const db = tx ?? kernel.db;
     return db.studentGuardian.findUnique({
@@ -119,7 +128,9 @@ export class StudentsRepository {
 
   async findPrimaryGuardian(studentId: string, tx?: typeof kernel.db) {
     const db = tx ?? kernel.db;
-    return db.studentGuardian.findFirst({ where: { studentId, isPrimary: true } });
+    return db.studentGuardian.findFirst({
+      where: { studentId, isPrimary: true },
+    });
   }
 
   /**
@@ -128,7 +139,11 @@ export class StudentsRepository {
    * Two simultaneous first-time requests cannot both insert lastNumber=1;
    * the UPSERT serialises them on the unique constraint.
    */
-  async mintStudentNumber(tenantId: string, schoolId: string, tx?: typeof kernel.db): Promise<string> {
+  async mintStudentNumber(
+    tenantId: string,
+    schoolId: string,
+    tx?: typeof kernel.db,
+  ): Promise<string> {
     const db = tx ?? kernel.db;
     const result = await db.$queryRaw<Array<{ lastNumber: number }>>`
       INSERT INTO stud_student_number_sequences ("tenantId", "schoolId", "lastNumber")
@@ -138,10 +153,13 @@ export class StudentsRepository {
       RETURNING "lastNumber"
     `;
     const seq = result[0].lastNumber;
-    return `STU-${seq.toString().padStart(4, '0')}`;
+    return `STU-${seq.toString().padStart(4, "0")}`;
   }
 
-  async createStudent(data: CreateStudentInput & { studentNumber: string; tenantId: string }, tx?: typeof kernel.db) {
+  async createStudent(
+    data: CreateStudentInput & { studentNumber: string; tenantId: string },
+    tx?: typeof kernel.db,
+  ) {
     // tenantId injected by kernel from context; also passed explicitly to student-number sequence.
     // The kernel will overwrite any tenantId in data.data with the context value, which is correct.
     const db = tx ?? kernel.db;
@@ -175,7 +193,10 @@ export class StudentsRepository {
     });
   }
 
-  async createStudentGuardianLink(data: LinkGuardianInput & { tenantId: string }, tx?: typeof kernel.db) {
+  async createStudentGuardianLink(
+    data: LinkGuardianInput & { tenantId: string },
+    tx?: typeof kernel.db,
+  ) {
     const db = tx ?? kernel.db;
     return db.studentGuardian.create({
       data: {
@@ -198,14 +219,17 @@ export class StudentsRepository {
     });
   }
 
-  async createEnrollment(data: {
-    tenantId: string;
-    studentId: string;
-    schoolId: string;
-    academicYearId: string;
-    classId: string;
-    armId?: string;
-  }, tx?: typeof kernel.db) {
+  async createEnrollment(
+    data: {
+      tenantId: string;
+      studentId: string;
+      schoolId: string;
+      academicYearId: string;
+      classId: string;
+      armId?: string;
+    },
+    tx?: typeof kernel.db,
+  ) {
     const db = tx ?? kernel.db;
     return db.enrollment.create({
       data: {
@@ -264,7 +288,10 @@ export class StudentsRepository {
     });
   }
 
-  async setStudentStatus(studentId: string, status: 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'WITHDRAWN' | 'TRANSFERRED') {
+  async setStudentStatus(
+    studentId: string,
+    status: "ACTIVE" | "SUSPENDED" | "GRADUATED" | "WITHDRAWN" | "TRANSFERRED",
+  ) {
     return kernel.db.student.update({
       where: { id: studentId },
       data: { status },
@@ -284,7 +311,7 @@ export class StudentsRepository {
         class: true,
         arm: true,
       },
-      orderBy: { enrolledAt: 'desc' },
+      orderBy: { enrolledAt: "desc" },
     });
   }
 
@@ -306,10 +333,10 @@ export class StudentsRepository {
 
     if (search) {
       where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
       ];
     }
 

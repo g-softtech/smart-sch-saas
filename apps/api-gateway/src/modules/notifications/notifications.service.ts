@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { EmailProvider } from './providers/email.provider';
-import { ResendEmailAdapter } from './providers/resend-email.adapter';
+import { Injectable, Logger } from "@nestjs/common";
+import { EmailProvider } from "./providers/email.provider";
+import { ResendEmailAdapter } from "./providers/resend-email.adapter";
 
 @Injectable()
 export class NotificationsService {
@@ -8,7 +8,11 @@ export class NotificationsService {
 
   constructor(private readonly emailProvider: ResendEmailAdapter) {}
 
-  async sendTransactionalEmail(to: string, subject: string, html: string): Promise<void> {
+  async sendTransactionalEmail(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<void> {
     try {
       await this.emailProvider.sendEmail({
         to,

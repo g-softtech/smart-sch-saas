@@ -1,11 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   kernel,
   tenantContext,
   ApplicationStatus,
   AdmissionReviewDecision,
   GenderEnum,
-} from '@saas/core-platform';
+  ExamStatus,
+} from "@saas/core-platform";
 
 export interface PublishFormInput {
   tenantId: string;
@@ -34,6 +35,7 @@ export interface CreateApplicationInput {
   publishedFormId: string;
   formData: any;
   trackingToken: string;
+  status?: ApplicationStatus;
 }
 
 @Injectable()
@@ -52,9 +54,9 @@ export class AdmissionsRepository {
       WHERE "publicToken" = ${publicToken}
       LIMIT 1
     `;
-    
+
     if (!rawResult || rawResult.length === 0) return null;
-    
+
     const tenantId = rawResult[0].tenantId;
 
     // 2. Run actual lookup inside the resolved tenant context
@@ -82,7 +84,7 @@ export class AdmissionsRepository {
         academicYear: true,
         targetClass: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -93,11 +95,77 @@ export class AdmissionsRepository {
     });
   }
 
-  async createApplication(input: CreateApplicationInput, tx?: typeof kernel.db) {
+  async createApplication(
+    input: CreateApplicationInput,
+    tx?: typeof kernel.db,
+  ) {
     const db = tx ?? kernel.db;
     return db.admissionApplication.create({
-      data: input,
+      data: {
+        ...input,
+        status: input.status || ApplicationStatus.SUBMITTED,
+      },
     });
+  }
+
+  async createPaymentTransaction(
+    tenantId: string,
+    schoolId: string,
+    applicationId: string,
+    reference: string,
+    amount: number,
+    currency: string,
+    tx?: typeof kernel.db,
+  ) {
+    const db = tx ?? kernel.db;
+    return db.paymentTransaction.create({
+      data: {
+        tenantId,
+        schoolId,
+        applicationId,
+        reference,
+        amount,
+        currency,
+        status: 'PENDING',
+      },
+    });
+  }
+
+  async findPaymentByReference(reference: string, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    return db.paymentTransaction.findUnique({
+      where: { reference },
+      include: { application: true },
+    });
+  }
+
+  async updatePaymentAndApplication(
+    transactionId: string,
+    applicationId: string,
+    tx?: typeof kernel.db,
+  ) {
+    const db = tx ?? kernel.db;
+    // We update payment to SUCCESS and application to SUBMITTED
+    await db.paymentTransaction.update({
+      where: { id: transactionId },
+      data: { status: 'SUCCESS' },
+    });
+
+    const app = await db.admissionApplication.findUnique({
+      where: { id: applicationId },
+      include: { applicant: true },
+    });
+
+    if (app && app.status === ApplicationStatus.PENDING_PAYMENT) {
+      const updatedApp = await db.admissionApplication.update({
+        where: { id: applicationId },
+        data: { status: ApplicationStatus.SUBMITTED },
+        include: { applicant: true },
+      });
+      return { transitioned: true, application: updatedApp };
+    }
+
+    return { transitioned: false, application: app };
   }
 
   async findApplication(id: string, schoolId?: string, tx?: typeof kernel.db) {
@@ -122,7 +190,7 @@ export class AdmissionsRepository {
     }
     return kernel.db.admissionApplication.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         applicant: true,
       },
@@ -140,10 +208,10 @@ export class AdmissionsRepository {
     nextStatus: ApplicationStatus,
     nextStageKey: string | null,
     expectedStageKey: string | null = null,
-    tx?: typeof kernel.db
+    tx?: typeof kernel.db,
   ): Promise<boolean> {
     const db = tx ?? kernel.db;
-    
+
     // We use raw SQL to do an atomic compare-and-set
     let updatedRows: number;
 
@@ -179,10 +247,10 @@ export class AdmissionsRepository {
     expectedStatus: ApplicationStatus,
     nextStatus: ApplicationStatus,
     expectedStageKey: string | null = null,
-    tx?: typeof kernel.db
+    tx?: typeof kernel.db,
   ): Promise<boolean> {
     const db = tx ?? kernel.db;
-    
+
     let updatedRows: number;
     if (expectedStageKey === null) {
       updatedRows = await db.$executeRaw`
@@ -214,7 +282,7 @@ export class AdmissionsRepository {
     stageKey: string,
     decision: AdmissionReviewDecision,
     comments?: string,
-    tx?: typeof kernel.db
+    tx?: typeof kernel.db,
   ) {
     const db = tx ?? kernel.db;
     return db.admissionReview.create({
@@ -232,7 +300,11 @@ export class AdmissionsRepository {
   /**
    * Enrollment Concurrency Lock
    */
-  async claimApplicationForEnrollment(tenantId: string, applicationId: string, tx: typeof kernel.db): Promise<boolean> {
+  async claimApplicationForEnrollment(
+    tenantId: string,
+    applicationId: string,
+    tx: typeof kernel.db,
+  ): Promise<boolean> {
     const updatedRows = await tx.$executeRaw`
       UPDATE "adm_applications" 
       SET status = 'ENROLLED'::"ApplicationStatus", "updatedAt" = NOW()
@@ -244,10 +316,61 @@ export class AdmissionsRepository {
     return updatedRows > 0;
   }
 
-  async linkStudentToApplication(applicationId: string, studentId: string, tx: typeof kernel.db) {
+  async linkStudentToApplication(
+    applicationId: string,
+    studentId: string,
+    tx: typeof kernel.db,
+  ) {
     return tx.admissionApplication.update({
       where: { id: applicationId },
       data: { studentId },
+    });
+  }
+
+  async scheduleExam(
+    tenantId: string,
+    schoolId: string,
+    applicationId: string,
+    examDate: Date,
+    venue: string,
+    tx?: typeof kernel.db,
+  ) {
+    const db = tx ?? kernel.db;
+    return db.admissionExam.create({
+      data: {
+        tenantId,
+        schoolId,
+        applicationId,
+        examDate,
+        venue,
+        status: ExamStatus.SCHEDULED,
+      },
+    });
+  }
+
+  async findExam(applicationId: string, schoolId: string, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    return db.admissionExam.findUnique({
+      where: { applicationId, schoolId },
+      include: { application: { include: { applicant: true } } },
+    });
+  }
+
+  async updateExam(
+    applicationId: string,
+    schoolId: string,
+    data: {
+      examDate?: Date;
+      venue?: string;
+      score?: number;
+      status?: ExamStatus;
+    },
+    tx?: typeof kernel.db,
+  ) {
+    const db = tx ?? kernel.db;
+    return db.admissionExam.update({
+      where: { applicationId, schoolId },
+      data,
     });
   }
 }

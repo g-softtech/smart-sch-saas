@@ -1,25 +1,41 @@
-import { Controller, Get, Post, Body, Param, UseGuards, UseInterceptors, Req, ForbiddenException, BadRequestException, Query } from '@nestjs/common';
-import { AdmissionsService } from '../services/admissions.service';
-import { PublishFormDto, SubmitReviewDto } from '../dto/admissions.dto';
-import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
-import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  UseInterceptors,
+  Req,
+  ForbiddenException,
+  BadRequestException,
+  Query,
+} from "@nestjs/common";
+import { AdmissionsService } from "../services/admissions.service";
+import { PublishFormDto, SubmitReviewDto, ScheduleExamDto, UpdateExamDto } from "../dto/admissions.dto";
+import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
+import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
 
-@Controller('api/v1/admissions')
+@Controller("api/v1/admissions")
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
 export class AdmissionsController {
   constructor(private readonly service: AdmissionsService) {}
 
-  @Post('forms/publish')
+  @Post("forms/publish")
   async publishForm(@Body() body: PublishFormDto, @Req() req: any) {
     const authorizedSchoolId = req.workspace?.schoolId;
 
     if (!authorizedSchoolId) {
-      throw new BadRequestException('A valid school workspace context is required to publish a form.');
+      throw new BadRequestException(
+        "A valid school workspace context is required to publish a form.",
+      );
     }
 
     if (body.schoolId && body.schoolId !== authorizedSchoolId) {
-      throw new ForbiddenException('You are not authorized to publish a form for the requested school.');
+      throw new ForbiddenException(
+        "You are not authorized to publish a form for the requested school.",
+      );
     }
 
     const form = await this.service.publishForm({
@@ -29,62 +45,126 @@ export class AdmissionsController {
     return { success: true, data: form };
   }
 
-  @Get('forms')
+  @Get("forms")
   async listForms(@Req() req: any) {
     const authorizedSchoolId = req.workspace?.schoolId;
-    if (!authorizedSchoolId) throw new BadRequestException('A valid school workspace context is required.');
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
 
     const forms = await this.service.listForms(authorizedSchoolId);
     return { success: true, data: forms };
   }
 
-  @Get('applications')
-  async listApplications(@Req() req: any, @Query('formId') formId?: string) {
+  @Get("applications")
+  async listApplications(@Req() req: any, @Query("formId") formId?: string) {
     const authorizedSchoolId = req.workspace?.schoolId;
-    if (!authorizedSchoolId) throw new BadRequestException('A valid school workspace context is required.');
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
 
-    const applications = await this.service.listApplications(authorizedSchoolId, formId);
+    const applications = await this.service.listApplications(
+      authorizedSchoolId,
+      formId,
+    );
     return { success: true, data: applications };
   }
 
-  @Get('applications/:id')
-  async getApplication(@Param('id') id: string, @Req() req: any) {
+  @Get("applications/:id")
+  async getApplication(@Param("id") id: string, @Req() req: any) {
     const authorizedSchoolId = req.workspace?.schoolId;
-    if (!authorizedSchoolId) throw new BadRequestException('A valid school workspace context is required.');
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
 
-    const application = await this.service.getApplication(id, authorizedSchoolId);
+    const application = await this.service.getApplication(
+      id,
+      authorizedSchoolId,
+    );
     return { success: true, data: application };
   }
 
-  @Post('applications/:id/start-review')
-  async startReview(@Param('id') id: string, @Req() req: any) {
+  @Post("applications/:id/start-review")
+  async startReview(@Param("id") id: string, @Req() req: any) {
     const authorizedSchoolId = req.workspace?.schoolId;
-    if (!authorizedSchoolId) throw new BadRequestException('A valid school workspace context is required.');
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
 
     const result = await this.service.startReview(id, authorizedSchoolId);
     return { success: true, data: result };
   }
 
-  @Post('applications/:id/reviews')
-  async submitReview(@Param('id') id: string, @Body() body: SubmitReviewDto, @Req() req: any) {
+  @Post("applications/:id/reviews")
+  async submitReview(
+    @Param("id") id: string,
+    @Body() body: SubmitReviewDto,
+    @Req() req: any,
+  ) {
     const authorizedSchoolId = req.workspace?.schoolId;
-    if (!authorizedSchoolId) throw new BadRequestException('A valid school workspace context is required.');
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
 
     // Reviewer identity comes from the authenticated workspace context
     const reviewerId = req.user?.sub;
-    if (!reviewerId) throw new Error('Unauthenticated');
+    if (!reviewerId) throw new Error("Unauthenticated");
 
-    const result = await this.service.submitReview(id, authorizedSchoolId, reviewerId, body);
+    const result = await this.service.submitReview(
+      id,
+      authorizedSchoolId,
+      reviewerId,
+      body,
+    );
     return { success: true, data: result };
   }
 
-  @Post('applications/:id/enroll')
-  async enrollApplication(@Param('id') id: string, @Req() req: any) {
+  @Post("applications/:id/enroll")
+  async enrollApplication(@Param("id") id: string, @Req() req: any) {
     const authorizedSchoolId = req.workspace?.schoolId;
-    if (!authorizedSchoolId) throw new BadRequestException('A valid school workspace context is required.');
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
 
     const result = await this.service.enroll(id, authorizedSchoolId);
     return { success: true, data: result };
   }
-}
 
+  @Post("applications/:id/exam")
+  async scheduleExam(
+    @Param("id") id: string,
+    @Body() body: ScheduleExamDto,
+    @Req() req: any,
+  ) {
+    const authorizedSchoolId = req.workspace?.schoolId;
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
+
+    const result = await this.service.scheduleExam(id, authorizedSchoolId, body.examDate, body.venue);
+    return { success: true, data: result };
+  }
+
+  @Post("applications/:id/exam/update")
+  async updateExam(
+    @Param("id") id: string,
+    @Body() body: UpdateExamDto,
+    @Req() req: any,
+  ) {
+    const authorizedSchoolId = req.workspace?.schoolId;
+    if (!authorizedSchoolId)
+      throw new BadRequestException(
+        "A valid school workspace context is required.",
+      );
+
+    const result = await this.service.updateExam(id, authorizedSchoolId, body);
+    return { success: true, data: result };
+  }
+}

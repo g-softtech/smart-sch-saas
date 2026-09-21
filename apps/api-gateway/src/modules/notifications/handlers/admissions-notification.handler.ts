@@ -127,4 +127,48 @@ export class AdmissionsNotificationHandler {
       },
     );
   }
+
+  @OnEvent("Admissions.ExamScheduled", { async: true })
+  async handleExamScheduled(event: DomainEvent) {
+    this.logger.log(
+      `Handling ExamScheduled for aggregate: ${event.aggregateId}`,
+    );
+
+    await this.idempotencyService.withIdempotency(
+      kernel.db as any,
+      AdmissionsNotificationHandler.name,
+      event.eventId,
+      async () => {
+        const payload = event.payload as any;
+
+        if (!payload.applicantEmail) {
+          this.logger.warn(`No email found for applicant in exam ${event.aggregateId}`);
+          return;
+        }
+
+        const examDate = new Date(payload.examDate).toLocaleDateString();
+        const examTime = new Date(payload.examDate).toLocaleTimeString();
+
+        const html = `
+          <div style="font-family: sans-serif; color: #0A192E; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #D2AD36;">Admissions Exam Scheduled</h2>
+            <p>Dear ${payload.applicantName || "Applicant"},</p>
+            <p>An entrance exam has been scheduled for your application.</p>
+            <p><strong>Date:</strong> ${examDate}</p>
+            <p><strong>Time:</strong> ${examTime}</p>
+            <p><strong>Venue:</strong> ${payload.venue}</p>
+            <p>Please arrive at least 30 minutes early.</p>
+            <br/>
+            <p style="color: #039771; font-weight: bold;">SchoolOS Admissions</p>
+          </div>
+        `;
+
+        await this.notificationsService.sendTransactionalEmail(
+          payload.applicantEmail,
+          "Admissions Exam Scheduled",
+          html,
+        );
+      },
+    );
+  }
 }

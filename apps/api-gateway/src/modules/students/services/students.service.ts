@@ -1,6 +1,24 @@
-import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { tenantContext, EnrollmentStatus, StudentStatus, kernel } from '@saas/core-platform';
-import { StudentsRepository, CreateStudentInput, CreateGuardianInput, LinkGuardianInput, CreateEnrollmentInput, TransferEnrollmentInput, WithdrawStudentInput } from '../repositories/students.repository';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from "@nestjs/common";
+import {
+  tenantContext,
+  EnrollmentStatus,
+  StudentStatus,
+  kernel,
+} from "@saas/core-platform";
+import {
+  StudentsRepository,
+  CreateStudentInput,
+  CreateGuardianInput,
+  LinkGuardianInput,
+  CreateEnrollmentInput,
+  TransferEnrollmentInput,
+  WithdrawStudentInput,
+} from "../repositories/students.repository";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TENANT/SCHOOL CONSISTENCY ENFORCEMENT
@@ -20,7 +38,7 @@ export class StudentsService {
   private getActiveTenantId(): string {
     const store = tenantContext.getStore();
     if (!store?.tenantId) {
-      throw new BadRequestException('No active tenant context');
+      throw new BadRequestException("No active tenant context");
     }
     return store.tenantId;
   }
@@ -40,16 +58,24 @@ export class StudentsService {
     // kernel.db.school is TENANT_SCOPED; it returns null if school.tenantId != context.tenantId.
     const school = await this.repo.findSchool(input.schoolId, tx);
     if (!school) {
-      throw new BadRequestException('School not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "School not found or does not belong to the active tenant",
+      );
     }
 
     // Confirm school.tenantId === WorkspaceContext.tenantId (belt-and-suspenders).
     if (school.tenantId !== tenantId) {
-      throw new BadRequestException('School does not belong to the active tenant');
+      throw new BadRequestException(
+        "School does not belong to the active tenant",
+      );
     }
 
     // Atomically allocate the next student number for this school.
-    const studentNumber = await this.repo.mintStudentNumber(tenantId, input.schoolId, tx);
+    const studentNumber = await this.repo.mintStudentNumber(
+      tenantId,
+      input.schoolId,
+      tx,
+    );
 
     return this.repo.createStudent({ ...input, studentNumber, tenantId }, tx);
   }
@@ -79,54 +105,83 @@ export class StudentsService {
 
     if (!input.schoolId) {
       if (!input.roleId) {
-        throw new ForbiddenException('Tenant-wide linking requires explicitly authorized role');
+        throw new ForbiddenException(
+          "Tenant-wide linking requires explicitly authorized role",
+        );
       }
-      const role = await require('@saas/core-platform').kernel.db.role.findUnique({ where: { id: input.roleId } });
-      if (!role || role.name !== 'SUPER_ADMIN' || role.tenantId !== tenantId) {
-        throw new ForbiddenException('Tenant-wide linking requires SUPER_ADMIN role');
+      const role =
+        await require("@saas/core-platform").kernel.db.role.findUnique({
+          where: { id: input.roleId },
+        });
+      if (!role || role.name !== "SUPER_ADMIN" || role.tenantId !== tenantId) {
+        throw new ForbiddenException(
+          "Tenant-wide linking requires SUPER_ADMIN role",
+        );
       }
     }
 
-    return require('@saas/core-platform').kernel.db.$transaction(async (tx: any) => {
-      // 1. Acquire row-level lock on the Student record to serialize concurrent requests.
-      const locked = await tx.$queryRaw`SELECT id FROM "stud_students" WHERE id = ${input.studentId} FOR UPDATE`;
-      if (!locked || locked.length === 0) {
-        throw new BadRequestException('Student not found or does not belong to the active tenant');
-      }
+    return require("@saas/core-platform").kernel.db.$transaction(
+      async (tx: any) => {
+        // 1. Acquire row-level lock on the Student record to serialize concurrent requests.
+        const locked =
+          await tx.$queryRaw`SELECT id FROM "stud_students" WHERE id = ${input.studentId} FOR UPDATE`;
+        if (!locked || locked.length === 0) {
+          throw new BadRequestException(
+            "Student not found or does not belong to the active tenant",
+          );
+        }
 
-      const student = await this.repo.findStudent(input.studentId, tx);
-      if (!student) {
-        throw new BadRequestException('Student not found or does not belong to the active tenant');
-      }
+        const student = await this.repo.findStudent(input.studentId, tx);
+        if (!student) {
+          throw new BadRequestException(
+            "Student not found or does not belong to the active tenant",
+          );
+        }
 
-      if (input.schoolId && student.schoolId !== input.schoolId) {
-        throw new BadRequestException('Student does not belong to the active school');
-      }
+        if (input.schoolId && student.schoolId !== input.schoolId) {
+          throw new BadRequestException(
+            "Student does not belong to the active school",
+          );
+        }
 
-      const guardian = await this.repo.findGuardian(input.guardianId, tx);
-      if (!guardian) {
-        throw new BadRequestException('Guardian not found or does not belong to the active tenant');
-      }
+        const guardian = await this.repo.findGuardian(input.guardianId, tx);
+        if (!guardian) {
+          throw new BadRequestException(
+            "Guardian not found or does not belong to the active tenant",
+          );
+        }
 
-      // Guardian and student must share the same tenant (both fetched via kernel, so this holds,
-      // but we validate explicitly to document the invariant clearly).
-      if (guardian.tenantId !== student.tenantId || student.tenantId !== tenantId) {
-        throw new BadRequestException('Student and Guardian must belong to the same tenant');
-      }
+        // Guardian and student must share the same tenant (both fetched via kernel, so this holds,
+        // but we validate explicitly to document the invariant clearly).
+        if (
+          guardian.tenantId !== student.tenantId ||
+          student.tenantId !== tenantId
+        ) {
+          throw new BadRequestException(
+            "Student and Guardian must belong to the same tenant",
+          );
+        }
 
-      // Check for duplicate link.
-      const existingLink = await this.repo.findStudentGuardianLink(input.studentId, input.guardianId, tx);
-      if (existingLink) {
-        throw new ConflictException('Guardian is already linked to this student');
-      }
+        // Check for duplicate link.
+        const existingLink = await this.repo.findStudentGuardianLink(
+          input.studentId,
+          input.guardianId,
+          tx,
+        );
+        if (existingLink) {
+          throw new ConflictException(
+            "Guardian is already linked to this student",
+          );
+        }
 
-      // If setting as primary: clear any existing primary first (zero or one).
-      if (input.isPrimary) {
-        await this.repo.clearPrimaryGuardian(input.studentId, tx);
-      }
+        // If setting as primary: clear any existing primary first (zero or one).
+        if (input.isPrimary) {
+          await this.repo.clearPrimaryGuardian(input.studentId, tx);
+        }
 
-      return this.repo.createStudentGuardianLink({ ...input, tenantId }, tx);
-    });
+        return this.repo.createStudentGuardianLink({ ...input, tenantId }, tx);
+      },
+    );
   }
 
   // ─── Enrollment Management ─────────────────────────────────────────────────
@@ -147,64 +202,94 @@ export class StudentsService {
 
     const student = await this.repo.findStudent(input.studentId, tx);
     if (!student) {
-      throw new BadRequestException('Student not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Student not found or does not belong to the active tenant",
+      );
     }
     if (student.status !== StudentStatus.ACTIVE) {
-      throw new BadRequestException(`Cannot enroll a student with status '${student.status}'`);
+      throw new BadRequestException(
+        `Cannot enroll a student with status '${student.status}'`,
+      );
     }
 
     // AcademicYear: explicit tenantId filter (not in tenantScopedModels yet).
-    const academicYear = await this.repo.findAcademicYear(input.academicYearId, tx);
+    const academicYear = await this.repo.findAcademicYear(
+      input.academicYearId,
+      tx,
+    );
     if (!academicYear) {
-      throw new BadRequestException('AcademicYear not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "AcademicYear not found or does not belong to the active tenant",
+      );
     }
     if (academicYear.schoolId !== student.schoolId) {
-      throw new BadRequestException('AcademicYear does not belong to the student\'s school');
+      throw new BadRequestException(
+        "AcademicYear does not belong to the student's school",
+      );
     }
 
     // Class: explicit tenantId filter.
     const classEntity = await this.repo.findClass(input.classId, tx);
     if (!classEntity) {
-      throw new BadRequestException('Class not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Class not found or does not belong to the active tenant",
+      );
     }
     if (classEntity.schoolId !== student.schoolId) {
-      throw new BadRequestException('Class does not belong to the student\'s school');
+      throw new BadRequestException(
+        "Class does not belong to the student's school",
+      );
     }
 
     // Arm (optional): validate class and school/campus consistency.
     if (input.armId) {
       const arm = await this.repo.findArm(input.armId, tx);
       if (!arm) {
-        throw new BadRequestException('Arm not found or does not belong to the active tenant');
+        throw new BadRequestException(
+          "Arm not found or does not belong to the active tenant",
+        );
       }
       if (arm.classId !== input.classId) {
-        throw new BadRequestException('Arm does not belong to the specified Class');
+        throw new BadRequestException(
+          "Arm does not belong to the specified Class",
+        );
       }
       // arm.campusId → campus.schoolId == student.schoolId checked via class.schoolId === arm's class.schoolId;
       // arm.classId === classId already verified, and classEntity.schoolId === student.schoolId already verified.
     }
 
     // Friendly pre-check before hitting the DB partial index.
-    const existingActive = await this.repo.findActiveEnrollment(input.studentId, input.academicYearId, tx);
+    const existingActive = await this.repo.findActiveEnrollment(
+      input.studentId,
+      input.academicYearId,
+      tx,
+    );
     if (existingActive) {
-      throw new ConflictException('Student already has an ACTIVE enrollment for this academic year');
+      throw new ConflictException(
+        "Student already has an ACTIVE enrollment for this academic year",
+      );
     }
 
     // Create enrollment — DB partial index enforces uniqueness against races.
     try {
-      return await this.repo.createEnrollment({
-        tenantId,
-        studentId: input.studentId,
-        schoolId: student.schoolId,
-        academicYearId: input.academicYearId,
-        classId: input.classId,
-        armId: input.armId,
-      }, tx);
+      return await this.repo.createEnrollment(
+        {
+          tenantId,
+          studentId: input.studentId,
+          schoolId: student.schoolId,
+          academicYearId: input.academicYearId,
+          classId: input.classId,
+          armId: input.armId,
+        },
+        tx,
+      );
     } catch (err: unknown) {
       // PostgreSQL unique_violation on the partial index (race condition).
       const code = (err as { code?: string })?.code;
-      if (code === 'P2002') {
-        throw new ConflictException('Student already has an ACTIVE enrollment for this academic year (concurrent request)');
+      if (code === "P2002") {
+        throw new ConflictException(
+          "Student already has an ACTIVE enrollment for this academic year (concurrent request)",
+        );
       }
       throw err;
     }
@@ -226,27 +311,39 @@ export class StudentsService {
 
     const enrollment = await this.repo.findEnrollment(input.enrollmentId);
     if (!enrollment) {
-      throw new BadRequestException('Enrollment not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Enrollment not found or does not belong to the active tenant",
+      );
     }
     if (enrollment.status !== EnrollmentStatus.ACTIVE) {
-      throw new BadRequestException('Only ACTIVE enrollments can be transferred');
+      throw new BadRequestException(
+        "Only ACTIVE enrollments can be transferred",
+      );
     }
 
     const newClass = await this.repo.findClass(input.newClassId);
     if (!newClass) {
-      throw new BadRequestException('Target Class not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Target Class not found or does not belong to the active tenant",
+      );
     }
     if (newClass.schoolId !== enrollment.schoolId) {
-      throw new BadRequestException('Target Class does not belong to the enrollment\'s school');
+      throw new BadRequestException(
+        "Target Class does not belong to the enrollment's school",
+      );
     }
 
     if (input.newArmId) {
       const arm = await this.repo.findArm(input.newArmId);
       if (!arm) {
-        throw new BadRequestException('Target Arm not found or does not belong to the active tenant');
+        throw new BadRequestException(
+          "Target Arm not found or does not belong to the active tenant",
+        );
       }
       if (arm.classId !== input.newClassId) {
-        throw new BadRequestException('Target Arm does not belong to the target Class');
+        throw new BadRequestException(
+          "Target Arm does not belong to the target Class",
+        );
       }
     }
 
@@ -272,24 +369,30 @@ export class StudentsService {
   async withdrawStudent(input: WithdrawStudentInput) {
     const enrollment = await this.repo.findEnrollment(input.enrollmentId);
     if (!enrollment) {
-      throw new BadRequestException('Enrollment not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Enrollment not found or does not belong to the active tenant",
+      );
     }
     if (enrollment.status !== EnrollmentStatus.ACTIVE) {
-      throw new BadRequestException('Only ACTIVE enrollments can be withdrawn');
+      throw new BadRequestException("Only ACTIVE enrollments can be withdrawn");
     }
 
     const student = await this.repo.findStudent(input.studentId);
     if (!student) {
-      throw new BadRequestException('Student not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Student not found or does not belong to the active tenant",
+      );
     }
     if (enrollment.studentId !== input.studentId) {
-      throw new BadRequestException('Enrollment does not belong to the specified student');
+      throw new BadRequestException(
+        "Enrollment does not belong to the specified student",
+      );
     }
 
     await this.repo.withdrawEnrollment(input.enrollmentId, input.notes);
-    await this.repo.setStudentStatus(input.studentId, 'WITHDRAWN');
+    await this.repo.setStudentStatus(input.studentId, "WITHDRAWN");
 
-    return { message: 'Student withdrawn successfully' };
+    return { message: "Student withdrawn successfully" };
   }
 
   // ─── Read Operations ───────────────────────────────────────────────────────
@@ -301,7 +404,9 @@ export class StudentsService {
   async getStudent(studentId: string) {
     const student = await this.repo.findStudent(studentId);
     if (!student) {
-      throw new BadRequestException('Student not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Student not found or does not belong to the active tenant",
+      );
     }
     return student;
   }
@@ -310,7 +415,9 @@ export class StudentsService {
     // Verify student belongs to active tenant before listing enrollments.
     const student = await this.repo.findStudent(studentId);
     if (!student) {
-      throw new BadRequestException('Student not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Student not found or does not belong to the active tenant",
+      );
     }
     return this.repo.listEnrollments(studentId);
   }
@@ -318,7 +425,9 @@ export class StudentsService {
   async listStudentGuardians(studentId: string) {
     const student = await this.repo.findStudent(studentId);
     if (!student) {
-      throw new BadRequestException('Student not found or does not belong to the active tenant');
+      throw new BadRequestException(
+        "Student not found or does not belong to the active tenant",
+      );
     }
     return this.repo.listStudentGuardians(studentId);
   }
@@ -328,11 +437,18 @@ export class StudentsService {
 
     if (!schoolId) {
       if (!roleId) {
-        throw new ForbiddenException('Tenant-wide listing requires explicitly authorized role');
+        throw new ForbiddenException(
+          "Tenant-wide listing requires explicitly authorized role",
+        );
       }
-      const role = await require('@saas/core-platform').kernel.db.role.findUnique({ where: { id: roleId } });
-      if (!role || role.name !== 'SUPER_ADMIN' || role.tenantId !== tenantId) {
-        throw new ForbiddenException('Tenant-wide listing requires SUPER_ADMIN role');
+      const role =
+        await require("@saas/core-platform").kernel.db.role.findUnique({
+          where: { id: roleId },
+        });
+      if (!role || role.name !== "SUPER_ADMIN" || role.tenantId !== tenantId) {
+        throw new ForbiddenException(
+          "Tenant-wide listing requires SUPER_ADMIN role",
+        );
       }
     }
 

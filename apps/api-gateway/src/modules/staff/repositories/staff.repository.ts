@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma, StaffProfile, StaffStatus, StaffCredential } from '@saas/core-platform';
-import { kernel } from '@saas/core-platform';
+import { Injectable } from "@nestjs/common";
+import {
+  Prisma,
+  StaffProfile,
+  StaffStatus,
+  StaffCredential,
+} from "@saas/core-platform";
+import { kernel } from "@saas/core-platform";
 
 @Injectable()
 export class StaffRepository {
@@ -11,7 +16,10 @@ export class StaffRepository {
   async createStaffWithAtomicNumber(
     tenantId: string,
     schoolId: string,
-    data: Omit<Prisma.StaffProfileUncheckedCreateInput, 'tenantId' | 'schoolId' | 'staffNumber'>,
+    data: Omit<
+      Prisma.StaffProfileUncheckedCreateInput,
+      "tenantId" | "schoolId" | "staffNumber"
+    >,
   ): Promise<StaffProfile> {
     return kernel.db.$transaction(async (tx) => {
       // 1. Ensure the sequence row exists (upsert)
@@ -30,13 +38,13 @@ export class StaffRepository {
       `;
 
       if (!sequenceResult || sequenceResult.length === 0) {
-        throw new Error('Failed to allocate staff number');
+        throw new Error("Failed to allocate staff number");
       }
 
       const nextNumber = sequenceResult[0].lastNumber;
-      
+
       // 3. Format the staff number (e.g., STF-000001)
-      const formattedStaffNumber = `STF-${String(nextNumber).padStart(6, '0')}`;
+      const formattedStaffNumber = `STF-${String(nextNumber).padStart(6, "0")}`;
 
       // 4. Create the Staff Profile in the exact same transaction
       return tx.staffProfile.create({
@@ -83,12 +91,17 @@ export class StaffRepository {
     });
   }
 
-  async getStaffList(tenantId: string, schoolId: string, skip: number, take: number): Promise<StaffProfile[]> {
+  async getStaffList(
+    tenantId: string,
+    schoolId: string,
+    skip: number,
+    take: number,
+  ): Promise<StaffProfile[]> {
     return kernel.db.staffProfile.findMany({
       where: { tenantId, schoolId },
       skip,
       take,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 

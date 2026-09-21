@@ -1,16 +1,16 @@
-import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus } from "@nestjs/common";
 
-@Controller('health')
+@Controller("health")
 export class AppController {
-  @Get('liveness')
+  @Get("liveness")
   @HttpCode(HttpStatus.OK)
   checkLiveness() {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    return { status: "ok", timestamp: new Date().toISOString() };
   }
 
-  @Get('readiness')
+  @Get("readiness")
   @HttpCode(HttpStatus.OK)
   checkReadiness() {
-    return { status: 'ready', timestamp: new Date().toISOString() };
+    return { status: "ready", timestamp: new Date().toISOString() };
   }
 }

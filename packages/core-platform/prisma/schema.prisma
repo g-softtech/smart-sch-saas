@@ -51,11 +51,11 @@ model Tenant {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  users     UserTenantMembership[]
+  users        UserTenantMembership[]
   schoolAccess UserSchoolAccess[]
-  roles     Role[]
-  auditLogs AuditLog[]
-  schools   School[] // TENANT_SCOPED
+  roles        Role[]
+  auditLogs    AuditLog[]
+  schools      School[] // TENANT_SCOPED
 
   // Academics (Batch 3A)
   campuses      Campus[]
@@ -84,6 +84,8 @@ model Tenant {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
   attendanceRecords   AttendanceRecord[]
+  PaymentTransaction  PaymentTransaction[]
+  AdmissionExam       AdmissionExam[]
 
   @@map("plt_tenants")
 }
@@ -99,9 +101,9 @@ model User {
   updatedAt         DateTime   @updatedAt
   deletedAt         DateTime?
 
-  memberships UserTenantMembership[]
+  memberships  UserTenantMembership[]
   schoolAccess UserSchoolAccess[]
-  auditLogs   AuditLog[]
+  auditLogs    AuditLog[]
 
   // Admissions (Batch 3C)
   admissionReviews AdmissionReview[]
@@ -207,7 +209,7 @@ model School {
   tenantId String
   name     String
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant     Tenant             @relation(fields: [tenantId], references: [id])
   userAccess UserSchoolAccess[]
 
   // Academics (Batch 3A)
@@ -233,6 +235,8 @@ model School {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
   attendanceRecords   AttendanceRecord[]
+  PaymentTransaction  PaymentTransaction[]
+  AdmissionExam       AdmissionExam[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -320,9 +324,9 @@ model Campus {
   schoolId String
   name     String
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  arms   Arm[]
+  tenant     Tenant             @relation(fields: [tenantId], references: [id])
+  school     School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  arms       Arm[]
   userAccess UserSchoolAccess[]
 
   createdAt DateTime @default(now())
@@ -548,8 +552,8 @@ model Student {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
 
-  guardians   StudentGuardian[]
-  enrollments Enrollment[]
+  guardians            StudentGuardian[]
+  enrollments          Enrollment[]
   admissionApplication AdmissionApplication?
 
   // Attendance (Batch 5)
@@ -645,6 +649,7 @@ model Enrollment {
 // ================= ADMISSIONS MODELS (Batch 3C) =================
 
 enum ApplicationStatus {
+  PENDING_PAYMENT
   SUBMITTED
   UNDER_REVIEW
   APPROVED
@@ -659,16 +664,31 @@ enum AdmissionReviewDecision {
   WAITLIST
 }
 
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum ExamStatus {
+  SCHEDULED
+  COMPLETED
+  ABSENT
+  CANCELLED
+}
+
 model PublishedAdmissionForm {
   id             String   @id @default(uuid())
   publicToken    String   @unique // Cryptographically secure opaque token
   tenantId       String
   schoolId       String
   academicYearId String
-  targetClassId  String   
+  targetClassId  String
   title          String
-  fieldsSchema   Json     
-  workflowStages Json     
+  fieldsSchema   Json
+  workflowStages Json
+  applicationFee Decimal  @default(0.00) @db.Decimal(10, 2)
+  currency       String   @default("NGN")
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
@@ -684,7 +704,7 @@ model PublishedAdmissionForm {
 }
 
 model Applicant {
-  id          String     @id @default(uuid())
+  id          String      @id @default(uuid())
   tenantId    String
   schoolId    String
   firstName   String
@@ -722,6 +742,8 @@ model AdmissionApplication {
   publishedForm PublishedAdmissionForm @relation(fields: [publishedFormId], references: [id], onDelete: Restrict)
   student       Student?               @relation(fields: [studentId], references: [id], onDelete: Restrict)
   reviews       AdmissionReview[]
+  payments      PaymentTransaction[]
+  exam          AdmissionExam?
 
   @@index([tenantId])
   @@index([schoolId])
@@ -745,6 +767,51 @@ model AdmissionReview {
   @@index([tenantId])
   @@index([applicationId])
   @@map("adm_reviews")
+}
+
+model PaymentTransaction {
+  id            String        @id @default(uuid())
+  tenantId      String
+  schoolId      String
+  applicationId String
+  reference     String        @unique // Paystack reference
+  amount        Decimal       @db.Decimal(10, 2)
+  currency      String        @default("NGN")
+  status        PaymentStatus @default(PENDING)
+  provider      String        @default("PAYSTACK")
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school      School               @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  application AdmissionApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([schoolId])
+  @@index([applicationId])
+  @@map("adm_payment_transactions")
+}
+
+model AdmissionExam {
+  id            String     @id @default(uuid())
+  tenantId      String
+  schoolId      String
+  applicationId String     @unique
+  examDate      DateTime
+  venue         String
+  score         Float?
+  status        ExamStatus @default(SCHEDULED)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school      School               @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  application AdmissionApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([schoolId])
+  @@map("adm_exams")
 }
 
 // ================= STAFF & HR MODELS (Batch 4) =================
@@ -780,26 +847,26 @@ model StaffNumberSequence {
 }
 
 model StaffProfile {
-  id            String      @id @default(uuid())
-  tenantId      String
-  schoolId      String
-  userId        String?     // Nullable link to idm_users
-  departmentId  String?
-  staffNumber   String
-  firstName     String
-  lastName      String
-  middleName    String?
-  dateOfBirth   DateTime?
-  gender        GenderEnum?
-  joiningDate   DateTime
-  designation   String?
-  type          StaffType
-  status        StaffStatus @default(ACTIVE)
+  id           String      @id @default(uuid())
+  tenantId     String
+  schoolId     String
+  userId       String? // Nullable link to idm_users
+  departmentId String?
+  staffNumber  String
+  firstName    String
+  lastName     String
+  middleName   String?
+  dateOfBirth  DateTime?
+  gender       GenderEnum?
+  joiningDate  DateTime
+  designation  String?
+  type         StaffType
+  status       StaffStatus @default(ACTIVE)
 
-  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  school     School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  user       User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  department Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school      School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  department  Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   credentials StaffCredential[]
 
   createdAt DateTime @default(now())
@@ -812,16 +879,16 @@ model StaffProfile {
 }
 
 model StaffCredential {
-  id              String         @id @default(uuid())
-  tenantId        String
-  schoolId        String
-  staffId         String
-  credentialType  CredentialType
-  credentialHash  String         // HMAC-SHA-256 digest
-  isActive        Boolean        @default(true)
-  issuedAt        DateTime       @default(now())
-  expiresAt       DateTime?
-  revokedAt       DateTime?
+  id             String         @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  staffId        String
+  credentialType CredentialType
+  credentialHash String // HMAC-SHA-256 digest
+  isActive       Boolean        @default(true)
+  issuedAt       DateTime       @default(now())
+  expiresAt      DateTime?
+  revokedAt      DateTime?
 
   tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   school School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
@@ -850,18 +917,18 @@ model AttendanceRegister {
   classId        String
   armId          String?
   date           DateTime @db.Date
-  
+
   createdById      String
   lastModifiedById String
   finalizedById    String?
-  isFinalized      Boolean  @default(false)
+  isFinalized      Boolean   @default(false)
   finalizedAt      DateTime?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   records AttendanceRecord[]
-  
+
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   school       School       @relation(fields: [schoolId], references: [id])
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
@@ -875,21 +942,21 @@ model AttendanceRegister {
 }
 
 model AttendanceRecord {
-  id             String           @id @default(uuid())
-  tenantId       String
-  schoolId       String
-  registerId     String
-  studentId      String
-  enrollmentId   String
-  status         AttendanceStatus
-  reason         String?          
-  notes          String?
-  
+  id           String           @id @default(uuid())
+  tenantId     String
+  schoolId     String
+  registerId   String
+  studentId    String
+  enrollmentId String
+  status       AttendanceStatus
+  reason       String?
+  notes        String?
+
   createdById      String
   lastModifiedById String
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   register   AttendanceRegister @relation(fields: [tenantId, schoolId, registerId], references: [tenantId, schoolId, id], onDelete: Restrict)
   tenant     Tenant             @relation(fields: [tenantId], references: [id])

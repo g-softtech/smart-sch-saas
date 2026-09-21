@@ -1,23 +1,37 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
-import { Prisma, kernel } from '@saas/core-platform';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import { Prisma, kernel } from "@saas/core-platform";
 
 @Injectable()
 export class AttendanceRepository {
-  async findRegisterById(tenantId: string, schoolId: string, registerId: string) {
+  async findRegisterById(
+    tenantId: string,
+    schoolId: string,
+    registerId: string,
+  ) {
     return kernel.db.attendanceRegister.findUnique({
       where: { id: registerId, tenantId, schoolId },
       include: { records: true },
     });
   }
 
-  async getEligibleEnrollments(tenantId: string, schoolId: string, classId: string, armId: string | null, date: Date) {
+  async getEligibleEnrollments(
+    tenantId: string,
+    schoolId: string,
+    classId: string,
+    armId: string | null,
+    date: Date,
+  ) {
     return kernel.db.enrollment.findMany({
       where: {
         tenantId,
         schoolId,
         classId,
         ...(armId ? { armId } : {}),
-        status: 'ACTIVE',
+        status: "ACTIVE",
         enrolledAt: { lte: date },
       },
     });
@@ -26,8 +40,11 @@ export class AttendanceRepository {
   async upsertRegisterWithRecords(
     tenantId: string,
     schoolId: string,
-    registerData: Omit<Prisma.AttendanceRegisterUncheckedCreateInput, 'id' | 'createdAt' | 'updatedAt'>,
-    records: Omit<Prisma.AttendanceRecordUncheckedCreateInput, 'registerId'>[]
+    registerData: Omit<
+      Prisma.AttendanceRegisterUncheckedCreateInput,
+      "id" | "createdAt" | "updatedAt"
+    >,
+    records: Omit<Prisma.AttendanceRecordUncheckedCreateInput, "registerId">[],
   ) {
     return await kernel.db.$transaction(async (tx) => {
       const existing = await tx.attendanceRegister.findFirst({
@@ -44,7 +61,7 @@ export class AttendanceRepository {
 
       if (existing) {
         if (existing.isFinalized) {
-          throw new ConflictException('Register is already finalized');
+          throw new ConflictException("Register is already finalized");
         }
         registerId = existing.id;
         await tx.attendanceRegister.update({
@@ -58,8 +75,10 @@ export class AttendanceRepository {
           });
           registerId = newRegister.id;
         } catch (e: any) {
-          if (e.code === 'P2002') {
-            throw new ConflictException('Register already exists or is being created concurrently.');
+          if (e.code === "P2002") {
+            throw new ConflictException(
+              "Register already exists or is being created concurrently.",
+            );
           }
           throw e;
         }
@@ -88,9 +107,16 @@ export class AttendanceRepository {
     });
   }
 
-  async getRegisters(tenantId: string, schoolId: string, skip: number = 0, take: number = 50, startDate?: Date, endDate?: Date) {
+  async getRegisters(
+    tenantId: string,
+    schoolId: string,
+    skip: number = 0,
+    take: number = 50,
+    startDate?: Date,
+    endDate?: Date,
+  ) {
     const where: Prisma.AttendanceRegisterWhereInput = { tenantId, schoolId };
-    
+
     if (startDate || endDate) {
       where.date = {};
       if (startDate) where.date.gte = startDate;
@@ -102,10 +128,10 @@ export class AttendanceRepository {
       skip,
       take,
       orderBy: [
-        { date: 'desc' },
-        { classId: 'asc' },
-        { armId: 'asc' },
-        { id: 'asc' }
+        { date: "desc" },
+        { classId: "asc" },
+        { armId: "asc" },
+        { id: "asc" },
       ],
     });
   }

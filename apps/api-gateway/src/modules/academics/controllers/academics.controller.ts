@@ -1,41 +1,68 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Req, Query, UseGuards, UseInterceptors, UseFilters } from '@nestjs/common';
-import { AcademicsService } from '../services/academics.service';
-import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
-import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
-import { AcademicsPrismaExceptionFilter } from '../filters/prisma-exception.filter';
-import { 
-  CreateCampusDto, CreateAcademicYearDto, CreateTermDto, 
-  CreateDepartmentDto, CreateClassDto, CreateArmDto, 
-  CreateSubjectGroupDto, CreateSubjectDto, AcademicsPaginationQueryDto,
-  UpdateAcademicYearDto, UpdateClassDto, UpdateArmDto,
-  UpdateTermDto, UpdateCampusDto, UpdateDepartmentDto,
-  UpdateSubjectGroupDto, UpdateSubjectDto
-} from '../dto/academics.dto';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Req,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  UseFilters,
+} from "@nestjs/common";
+import { AcademicsService } from "../services/academics.service";
+import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
+import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
+import { AcademicsPrismaExceptionFilter } from "../filters/prisma-exception.filter";
+import {
+  CreateCampusDto,
+  CreateAcademicYearDto,
+  CreateTermDto,
+  CreateDepartmentDto,
+  CreateClassDto,
+  CreateArmDto,
+  CreateSubjectGroupDto,
+  CreateSubjectDto,
+  AcademicsPaginationQueryDto,
+  UpdateAcademicYearDto,
+  UpdateClassDto,
+  UpdateArmDto,
+  UpdateTermDto,
+  UpdateCampusDto,
+  UpdateDepartmentDto,
+  UpdateSubjectGroupDto,
+  UpdateSubjectDto,
+} from "../dto/academics.dto";
 
-@Controller('api/v1/academics')
+@Controller("api/v1/academics")
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
 @UseFilters(AcademicsPrismaExceptionFilter)
 export class AcademicsController {
   constructor(private readonly academicsService: AcademicsService) {}
 
-  @Post('campuses')
+  @Post("campuses")
   async createCampus(
     @Req() req: Request & { workspace: any },
-    @Body() dto: CreateCampusDto
+    @Body() dto: CreateCampusDto,
   ) {
     return this.academicsService.createCampus(req.workspace.tenantId, dto);
   }
 
-  @Post('academic-years')
+  @Post("academic-years")
   async createAcademicYear(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateAcademicYearDto,
   ) {
-    return this.academicsService.createAcademicYear(req.workspace.tenantId, dto);
+    return this.academicsService.createAcademicYear(
+      req.workspace.tenantId,
+      dto,
+    );
   }
 
-  @Post('terms')
+  @Post("terms")
   async createTerm(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateTermDto,
@@ -43,15 +70,15 @@ export class AcademicsController {
     return this.academicsService.createTerm(req.workspace.tenantId, dto);
   }
 
-  @Post('departments')
+  @Post("departments")
   async createDepartment(
     @Req() req: Request & { workspace: any },
-    @Body() dto: CreateDepartmentDto
+    @Body() dto: CreateDepartmentDto,
   ) {
     return this.academicsService.createDepartment(req.workspace.tenantId, dto);
   }
 
-  @Post('classes')
+  @Post("classes")
   async createClass(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateClassDto,
@@ -59,7 +86,7 @@ export class AcademicsController {
     return this.academicsService.createClass(req.workspace.tenantId, dto);
   }
 
-  @Post('arms')
+  @Post("arms")
   async createArm(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateArmDto,
@@ -68,15 +95,18 @@ export class AcademicsController {
     return this.academicsService.createArm(tenantId, dto);
   }
 
-  @Post('subject-groups')
+  @Post("subject-groups")
   async createSubjectGroup(
     @Req() req: Request & { workspace: any },
-    @Body() dto: CreateSubjectGroupDto
+    @Body() dto: CreateSubjectGroupDto,
   ) {
-    return this.academicsService.createSubjectGroup(req.workspace.tenantId, dto);
+    return this.academicsService.createSubjectGroup(
+      req.workspace.tenantId,
+      dto,
+    );
   }
 
-  @Post('subjects')
+  @Post("subjects")
   async createSubject(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateSubjectDto,
@@ -85,7 +115,7 @@ export class AcademicsController {
     return this.academicsService.createSubject(tenantId, dto);
   }
 
-  @Get('academic-years')
+  @Get("academic-years")
   async listAcademicYears(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -93,11 +123,16 @@ export class AcademicsController {
     const { tenantId, schoolId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listAcademicYears(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listAcademicYears(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+    );
     return { success: true, data: items };
   }
 
-  @Get('terms')
+  @Get("terms")
   async listTerms(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -105,11 +140,16 @@ export class AcademicsController {
     const { tenantId, schoolId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listTerms(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listTerms(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+    );
     return { success: true, data: items };
   }
 
-  @Get('classes')
+  @Get("classes")
   async listClasses(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -117,11 +157,16 @@ export class AcademicsController {
     const { tenantId, schoolId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listClasses(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listClasses(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+    );
     return { success: true, data: items };
   }
 
-  @Get('arms')
+  @Get("arms")
   async listArms(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -129,11 +174,17 @@ export class AcademicsController {
     const { tenantId, schoolId, campusId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listArms(tenantId, schoolId, skip, take, campusId);
+    const items = await this.academicsService.listArms(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+      campusId,
+    );
     return { success: true, data: items };
   }
 
-  @Get('subjects')
+  @Get("subjects")
   async listSubjects(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -141,11 +192,16 @@ export class AcademicsController {
     const { tenantId, schoolId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listSubjects(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listSubjects(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+    );
     return { success: true, data: items };
   }
 
-  @Get('campuses')
+  @Get("campuses")
   async listCampuses(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -153,11 +209,16 @@ export class AcademicsController {
     const { tenantId, schoolId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listCampuses(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listCampuses(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+    );
     return { success: true, data: items };
   }
 
-  @Get('departments')
+  @Get("departments")
   async listDepartments(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -165,11 +226,16 @@ export class AcademicsController {
     const { tenantId, schoolId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listDepartments(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listDepartments(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+    );
     return { success: true, data: items };
   }
 
-  @Get('subject-groups')
+  @Get("subject-groups")
   async listSubjectGroups(
     @Req() req: Request & { workspace: any },
     @Query() query: AcademicsPaginationQueryDto,
@@ -177,157 +243,162 @@ export class AcademicsController {
     const { tenantId, schoolId } = req.workspace;
     const skip = Number(query.skip ?? 0);
     const take = Number(query.take ?? 50);
-    const items = await this.academicsService.listSubjectGroups(tenantId, schoolId, skip, take);
+    const items = await this.academicsService.listSubjectGroups(
+      tenantId,
+      schoolId,
+      skip,
+      take,
+    );
     return { success: true, data: items };
   }
 
-  @Put('academic-years/:id')
+  @Put("academic-years/:id")
   async updateAcademicYear(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateAcademicYearDto,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.updateAcademicYear(tenantId, id, dto);
   }
 
-  @Delete('academic-years/:id')
+  @Delete("academic-years/:id")
   async deleteAcademicYear(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteAcademicYear(tenantId, id);
   }
 
-  @Put('classes/:id')
+  @Put("classes/:id")
   async updateClass(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateClassDto,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.updateClass(tenantId, id, dto);
   }
 
-  @Delete('classes/:id')
+  @Delete("classes/:id")
   async deleteClass(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteClass(tenantId, id);
   }
 
-  @Put('arms/:id')
+  @Put("arms/:id")
   async updateArm(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateArmDto,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.updateArm(tenantId, id, dto);
   }
 
-  @Delete('arms/:id')
+  @Delete("arms/:id")
   async deleteArm(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteArm(tenantId, id);
   }
 
-  @Put('terms/:id')
+  @Put("terms/:id")
   async updateTerm(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateTermDto,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.updateTerm(tenantId, id, dto);
   }
 
-  @Delete('terms/:id')
+  @Delete("terms/:id")
   async deleteTerm(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteTerm(tenantId, id);
   }
 
-  @Put('campuses/:id')
+  @Put("campuses/:id")
   async updateCampus(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateCampusDto,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.updateCampus(tenantId, id, dto);
   }
 
-  @Delete('campuses/:id')
+  @Delete("campuses/:id")
   async deleteCampus(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteCampus(tenantId, id);
   }
 
-  @Put('departments/:id')
+  @Put("departments/:id")
   async updateDepartment(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateDepartmentDto,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.updateDepartment(tenantId, id, dto);
   }
 
-  @Delete('departments/:id')
+  @Delete("departments/:id")
   async deleteDepartment(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteDepartment(tenantId, id);
   }
 
-  @Put('subject-groups/:id')
+  @Put("subject-groups/:id")
   async updateSubjectGroup(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateSubjectGroupDto,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.updateSubjectGroup(tenantId, id, dto);
   }
 
-  @Delete('subject-groups/:id')
+  @Delete("subject-groups/:id")
   async deleteSubjectGroup(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteSubjectGroup(tenantId, id);
   }
 
-  @Put('subjects/:id')
+  @Put("subjects/:id")
   async updateSubject(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateSubjectDto,
   ) {
     const { tenantId, schoolId } = req.workspace;
     return this.academicsService.updateSubject(tenantId, schoolId, id, dto);
   }
 
-  @Delete('subjects/:id')
+  @Delete("subjects/:id")
   async deleteSubject(
     @Req() req: Request & { workspace: any },
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const { tenantId } = req.workspace;
     return this.academicsService.deleteSubject(tenantId, id);

@@ -1,7 +1,7 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { UserRepository } from '../repositories/user.repository';
-import * as argon2 from 'argon2';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, BadRequestException } from "@nestjs/common";
+import { UserRepository } from "../repositories/user.repository";
+import * as argon2 from "argon2";
+import { JwtService } from "@nestjs/jwt";
 
 export interface RegisterDto {
   email: string;
@@ -14,25 +14,27 @@ export interface RegisterDto {
 export class RegistrationService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<{ user: any, accessToken: string }> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ user: any; accessToken: string }> {
     return this.userRepository.transaction(async (repo) => {
       const existing = await repo.findByEmail(dto.email);
       if (existing) {
-        throw new BadRequestException('User already exists');
+        throw new BadRequestException("User already exists");
       }
 
       let passwordHash = undefined;
       if (dto.password) {
-         passwordHash = await argon2.hash(dto.password);
+        passwordHash = await argon2.hash(dto.password);
       }
 
       const user = await repo.create({
         email: dto.email,
         passwordHash,
-        globalRole: 'USER'
+        globalRole: "USER",
       });
 
       // Access-Token-Only contract with stateless JWT
