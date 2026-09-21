@@ -103,13 +103,25 @@ describe('AdmissionsController & PublicAdmissionsController (HTTP E2E)', () => {
       const res = await request(app.getHttpServer())
         .post(`/public/admissions/applications/${PUBLIC_TOKEN}`)
         .send({
-          applicant: { firstName: 'Test', lastName: 'App', gender: 'MALE' },
+          applicant: { firstName: 'Test', lastName: 'App', email: 'test@example.com', gender: 'MALE' },
           formData: { custom: 'value' }
         })
         .expect(201);
 
       expect(res.body.success).toBe(true);
       expect(res.body.data.trackingToken).toBe('trk_123');
+    });
+
+    it('POST /public/admissions/applications/:publicToken - fails with missing email', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/public/admissions/applications/${PUBLIC_TOKEN}`)
+        .send({
+          applicant: { firstName: 'Test', lastName: 'App', gender: 'MALE' },
+          formData: { custom: 'value' }
+        })
+        .expect(400);
+
+      expect(res.body.success).toBe(false);
     });
   });
 
