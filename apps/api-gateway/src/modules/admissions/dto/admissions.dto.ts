@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsOptional, IsBoolean, IsNumber, IsIn, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface, Validate } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, ValidateNested, IsOptional, IsBoolean, IsNumber, IsIn, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface, Validate, IsEmail } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AdmissionReviewDecision, GenderEnum } from '@saas/core-platform';
 
@@ -118,6 +118,10 @@ export class ApplicantDto {
   @IsString()
   @IsNotEmpty()
   lastName: string;
+
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
 
   @IsOptional()
   @IsString()

@@ -689,6 +689,7 @@ model Applicant {
   schoolId    String
   firstName   String
   lastName    String
+  email       String?
   dateOfBirth DateTime?
   gender      GenderEnum?
 

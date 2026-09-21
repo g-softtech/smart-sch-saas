@@ -6,6 +6,7 @@ import {
   ApplicationStatus,
   AdmissionReviewDecision,
   GenderEnum,
+  OutboxService,
 } from '@saas/core-platform';
 import { AdmissionsRepository } from '../repositories/admissions.repository';
 import { StudentsService } from '../../students/services/students.service';
@@ -18,6 +19,7 @@ export class AdmissionsService {
   constructor(
     private readonly repo: AdmissionsRepository,
     private readonly studentsService: StudentsService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   private getActiveTenantId(): string {
@@ -84,7 +86,7 @@ export class AdmissionsService {
           tx,
         );
 
-        return this.repo.createApplication(
+        const application = await this.repo.createApplication(
           {
             tenantId: form.tenantId,
             schoolId: form.schoolId,
@@ -95,6 +97,23 @@ export class AdmissionsService {
           },
           tx,
         );
+
+        await this.outboxService.appendEvent(tx as any, {
+          eventType: 'Admissions.ApplicationSubmitted',
+          aggregateId: application.id,
+          aggregateType: 'AdmissionApplication',
+          version: 1,
+          tenantId: application.tenantId,
+          payload: {
+            applicationId: application.id,
+            applicantId: applicant.id,
+            firstName: applicant.firstName,
+            email: applicant.email,
+            trackingToken: application.trackingToken,
+          }
+        });
+
+        return application;
       });
     });
   }
@@ -230,6 +249,74 @@ export class AdmissionsService {
         throw new ConflictException('Stale decision: the stage was already progressed by another reviewer');
       }
 
+      // Dispatch appropriate notification events
+      if (input.decision === AdmissionReviewDecision.STAGE_PASS) {
+        if (stageIndex === stages.length - 1) {
+          // Final stage -> APPROVED
+          await this.outboxService.appendEvent(tx as any, {
+            eventType: 'Admissions.ApplicationDecisionMade',
+            aggregateId: app.id,
+            aggregateType: 'AdmissionApplication',
+            version: 1,
+            tenantId: app.tenantId,
+            payload: {
+              applicationId: app.id,
+              applicantId: app.applicant.id,
+              firstName: app.applicant.firstName,
+              email: app.applicant.email,
+              decision: ApplicationStatus.APPROVED,
+            }
+          });
+        } else {
+          // Next stage
+          const nextStageKey = stages[stageIndex + 1].key;
+          await this.outboxService.appendEvent(tx as any, {
+            eventType: 'Admissions.ApplicationStageChanged',
+            aggregateId: app.id,
+            aggregateType: 'AdmissionApplication',
+            version: 1,
+            tenantId: app.tenantId,
+            payload: {
+              applicationId: app.id,
+              applicantId: app.applicant.id,
+              firstName: app.applicant.firstName,
+              email: app.applicant.email,
+              newStage: nextStageKey,
+            }
+          });
+        }
+      } else if (input.decision === AdmissionReviewDecision.STAGE_FAIL) {
+        await this.outboxService.appendEvent(tx as any, {
+          eventType: 'Admissions.ApplicationDecisionMade',
+          aggregateId: app.id,
+          aggregateType: 'AdmissionApplication',
+          version: 1,
+          tenantId: app.tenantId,
+          payload: {
+            applicationId: app.id,
+            applicantId: app.applicant.id,
+            firstName: app.applicant.firstName,
+            email: app.applicant.email,
+            decision: ApplicationStatus.REJECTED,
+          }
+        });
+      } else if (input.decision === AdmissionReviewDecision.WAITLIST) {
+        await this.outboxService.appendEvent(tx as any, {
+          eventType: 'Admissions.ApplicationDecisionMade',
+          aggregateId: app.id,
+          aggregateType: 'AdmissionApplication',
+          version: 1,
+          tenantId: app.tenantId,
+          payload: {
+            applicationId: app.id,
+            applicantId: app.applicant.id,
+            firstName: app.applicant.firstName,
+            email: app.applicant.email,
+            decision: ApplicationStatus.WAITLISTED,
+          }
+        });
+      }
+
       return { success: true };
     });
   }
@@ -277,6 +364,22 @@ export class AdmissionsService {
 
       // 4. Update the Application with the linked studentId
       await this.repo.linkStudentToApplication(app.id, student.id, tx);
+
+      // 5. Dispatch notification event
+      await this.outboxService.appendEvent(tx as any, {
+        eventType: 'Admissions.ApplicationDecisionMade',
+        aggregateId: app.id,
+        aggregateType: 'AdmissionApplication',
+        version: 1,
+        tenantId: app.tenantId,
+        payload: {
+          applicationId: app.id,
+          applicantId: app.applicant.id,
+          firstName: app.applicant.firstName,
+          email: app.applicant.email,
+          decision: ApplicationStatus.ENROLLED,
+        }
+      });
 
       return { student, enrollment };
     });
