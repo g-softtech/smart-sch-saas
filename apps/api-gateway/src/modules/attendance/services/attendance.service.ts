@@ -287,4 +287,29 @@ export class AttendanceService {
       take,
     });
   }
+
+  async getEligibleStudents(
+    tenantId: string,
+    schoolId: string,
+    classId: string,
+    armId: string | null,
+    dateStr: string,
+  ) {
+    const dateObj = this.parseDate(dateStr);
+    const enrollments = await this.repo.getEligibleEnrollments(
+      tenantId,
+      schoolId,
+      classId,
+      armId,
+      dateObj,
+    );
+
+    return enrollments.map((e: any) => ({
+      studentId: e.studentId,
+      enrollmentId: e.id,
+      firstName: e.student.firstName,
+      lastName: e.student.lastName,
+      studentNumber: e.student.studentNumber,
+    }));
+  }
 }

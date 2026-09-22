@@ -26,6 +26,8 @@ import {
   AttendanceFilterQueryDto,
   AttendanceRegisterResponseDto,
   AttendanceRecordResponseDto,
+  GetEligibleStudentsQueryDto,
+  EligibleStudentResponseDto,
 } from "../dto/attendance.dto";
 import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
 import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
@@ -60,6 +62,28 @@ export class AttendanceController {
       dto,
     );
     return AttendanceRegisterResponseDto.fromEntity(register);
+  }
+
+  @Get("eligible-students")
+  @ApiOperation({
+    summary:
+      "Get authoritative list of eligible students for a register on a specific date",
+  })
+  @ApiResponse({ status: 200, type: [EligibleStudentResponseDto] })
+  async getEligibleStudents(
+    @Req() req: any,
+    @Query() query: GetEligibleStudentsQueryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    if (!schoolId) throw new BadRequestException("School context is required");
+
+    return this.attendanceService.getEligibleStudents(
+      tenantId,
+      schoolId,
+      query.classId,
+      query.armId || null,
+      query.date,
+    );
   }
 
   @Get("registers")

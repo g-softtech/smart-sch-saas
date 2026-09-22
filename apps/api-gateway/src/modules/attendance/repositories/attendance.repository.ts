@@ -34,6 +34,9 @@ export class AttendanceRepository {
         status: "ACTIVE",
         enrolledAt: { lte: date },
       },
+      include: {
+        student: true,
+      },
     });
   }
 

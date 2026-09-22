@@ -113,6 +113,43 @@ export class AttendanceFilterQueryDto extends AttendancePaginationQueryDto {
   endDate?: string;
 }
 
+export class GetEligibleStudentsQueryDto {
+  @ApiProperty({ example: "uuid-class" })
+  @IsString()
+  @IsNotEmpty()
+  classId: string;
+
+  @ApiPropertyOptional({ example: "uuid-arm" })
+  @IsString()
+  @IsOptional()
+  armId?: string;
+
+  @ApiProperty({ example: "2026-09-01", description: "Format: YYYY-MM-DD" })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "date must be in strictly YYYY-MM-DD format",
+  })
+  date: string;
+}
+
+export class EligibleStudentResponseDto {
+  @ApiProperty({ example: "uuid-student" })
+  studentId: string;
+
+  @ApiProperty({ example: "uuid-enrollment" })
+  enrollmentId: string;
+
+  @ApiProperty({ example: "John" })
+  firstName: string;
+
+  @ApiProperty({ example: "Doe" })
+  lastName: string;
+
+  @ApiProperty({ example: "STU-0001" })
+  studentNumber: string;
+}
+
 export class AttendanceRecordResponseDto {
   @ApiProperty({ example: "uuid-record-1" })
   id: string;

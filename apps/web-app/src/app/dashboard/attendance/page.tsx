@@ -26,7 +26,10 @@ interface AttendanceRegister {
   records?: AttendanceRecord[];
 }
 
+import { useRouter } from 'next/navigation';
+
 export default function AttendancePage() {
+  const router = useRouter();
   const [data, setData] = useState<AttendanceRegister[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,20 +104,45 @@ export default function AttendancePage() {
     { header: 'Class ID', accessor: 'classId' },
     { header: 'Term ID', accessor: 'termId' },
     { 
-      header: 'Status', 
-      accessor: (item) => item.isFinalized ? 'Finalized' : 'Draft' 
+      header: 'Status',
+      accessor: (item) => item.isFinalized ? (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Finalized</span>
+      ) : (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Draft</span>
+      )
     },
     { 
       header: 'Records', 
       accessor: (item) => item.records ? item.records.length.toString() : '0' 
+    },
+    {
+      header: 'Action',
+      accessor: (item) => (
+        <button
+          onClick={() => router.push(`/dashboard/attendance/${item.id}`)}
+          className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
+        >
+          View
+        </button>
+      )
     }
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Attendance</h1>
-        <p className="text-sm text-gray-500">View attendance registers (read-only verification).</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Attendance</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage and verify daily attendance registers.</p>
+        </div>
+        <div>
+          <button
+            onClick={() => router.push('/dashboard/attendance/new')}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Create Register
+          </button>
+        </div>
       </div>
 
       <div className="border-b border-gray-200">
