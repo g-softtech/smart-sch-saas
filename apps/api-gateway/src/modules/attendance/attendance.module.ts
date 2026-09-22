@@ -6,11 +6,13 @@ import { ArrivalController } from "./controllers/arrival.controller";
 import { ArrivalService } from "./services/arrival.service";
 import { IdCardsModule } from "../id-cards/id-cards.module";
 import { OutboxService } from "@saas/core-platform";
+import { AttendanceIntegrationService } from "./services/attendance-integration.service";
+import { AcademicsModule } from "../academics/academics.module";
 
 @Module({
-  imports: [IdCardsModule],
+  imports: [IdCardsModule, AcademicsModule],
   controllers: [AttendanceController, ArrivalController],
-  providers: [AttendanceService, AttendanceRepository, ArrivalService, OutboxService],
+  providers: [AttendanceService, AttendanceRepository, ArrivalService, OutboxService, AttendanceIntegrationService],
   exports: [AttendanceService, ArrivalService],
 })
 export class AttendanceModule {}

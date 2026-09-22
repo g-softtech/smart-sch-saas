@@ -398,4 +398,28 @@ export class AcademicsService {
     if (result.count === 0) throw new NotFoundException("Subject not found");
     return { success: true };
   }
+
+  async resolveAcademicPeriod(
+    tenantId: string,
+    schoolId: string,
+    studentId: string,
+    operationalDate: Date
+  ) {
+    const academicYear = await this.repo.findActiveAcademicYear(tenantId, schoolId, operationalDate);
+    if (!academicYear) {
+      return { skip: true, reason: 'No active academic year found for date' };
+    }
+
+    const term = await this.repo.findActiveTerm(tenantId, academicYear.id, operationalDate);
+    if (!term) {
+      return { skip: true, reason: 'No active term found for date' };
+    }
+
+    const enrollment = await this.repo.findActiveEnrollment(tenantId, studentId, academicYear.id);
+    if (!enrollment) {
+      return { skip: true, reason: 'No active enrollment found for student in academic year' };
+    }
+
+    return { skip: false, academicYear, term, enrollment };
+  }
 }
