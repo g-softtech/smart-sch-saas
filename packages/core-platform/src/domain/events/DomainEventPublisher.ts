@@ -13,6 +13,6 @@ export class EventEmitterPublisher extends DomainEventPublisher {
   }
 
   async publish(event: DomainEvent): Promise<void> {
-    this.eventEmitter.emit(event.eventType, event);
+    await this.eventEmitter.emitAsync(event.eventType, event);
   }
 }
