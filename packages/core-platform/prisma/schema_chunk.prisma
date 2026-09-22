@@ -1,0 +1,17 @@
+model StudentArrival {
+  id              String   @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  studentId       String
+  operationalDate String   // e.g. "2026-09-22" derived from school timezone
+  timestamp       DateTime @default(now())
+  scannedById     String
+  source          String   // "CAMERA" or "EXTERNAL"
+
+  student Student @relation(fields: [studentId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  school  School  @relation(fields: [schoolId], references: [id])
+
+  @@unique([tenantId, schoolId, studentId, operationalDate])
+  @@index([tenantId, schoolId, operationalDate])
+}

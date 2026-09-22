@@ -87,6 +87,7 @@ model Tenant {
   PaymentTransaction  PaymentTransaction[]
   AdmissionExam       AdmissionExam[]
   StudentCredential   StudentCredential[]
+  StudentArrival      StudentArrival[]
 
   @@map("plt_tenants")
 }
@@ -239,6 +240,7 @@ model School {
   PaymentTransaction  PaymentTransaction[]
   AdmissionExam       AdmissionExam[]
   StudentCredential   StudentCredential[]
+  StudentArrival      StudentArrival[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -564,8 +566,9 @@ model Student {
   // Credentials (Phase 16)
   credentials StudentCredential[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  StudentArrival StudentArrival[]
 
   @@unique([tenantId, schoolId, studentNumber])
   @@index([tenantId])
@@ -1005,4 +1008,22 @@ model AttendanceRecord {
   @@unique([registerId, studentId])
   @@index([tenantId, studentId])
   @@map("att_records")
+}
+
+model StudentArrival {
+  id              String   @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  studentId       String
+  operationalDate String // e.g. "2026-09-22" derived from school timezone
+  timestamp       DateTime @default(now())
+  scannedById     String
+  source          String // "CAMERA" or "EXTERNAL"
+
+  student Student @relation(fields: [studentId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  school  School  @relation(fields: [schoolId], references: [id])
+
+  @@unique([tenantId, schoolId, studentId, operationalDate])
+  @@index([tenantId, schoolId, operationalDate])
 }

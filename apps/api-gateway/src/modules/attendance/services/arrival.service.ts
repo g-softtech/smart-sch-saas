@@ -45,7 +45,6 @@ export class ArrivalService {
     try {
       await kernel.db.$transaction(async (tx) => {
         // a) Create StudentArrival
-        // @ts-ignore: Prisma client extension type inference issue
         const arrival = await tx.studentArrival.create({
           data: {
             tenantId,
