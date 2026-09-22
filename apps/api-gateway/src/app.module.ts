@@ -13,6 +13,8 @@ import { IdCardsModule } from "./modules/id-cards/id-cards.module";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { OutboxWorkerModule } from "./modules/outbox-worker/outbox-worker.module";
 
+import { MovementModule } from "./modules/movement/movement.module";
+
 @Module({
   imports: [
     IdentityModule,
@@ -25,6 +27,7 @@ import { OutboxWorkerModule } from "./modules/outbox-worker/outbox-worker.module
     NotificationsModule,
     IdCardsModule,
     OutboxWorkerModule,
+    MovementModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

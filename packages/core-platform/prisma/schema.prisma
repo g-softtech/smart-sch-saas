@@ -83,12 +83,15 @@ model Tenant {
   staffCredentials StaffCredential[]
 
   // Attendance (Batch 5)
-  attendanceRegisters AttendanceRegister[]
-  attendanceRecords   AttendanceRecord[]
-  PaymentTransaction  PaymentTransaction[]
-  AdmissionExam       AdmissionExam[]
-  StudentCredential   StudentCredential[]
-  StudentArrival      StudentArrival[]
+  attendanceRegisters  AttendanceRegister[]
+  attendanceRecords    AttendanceRecord[]
+  PaymentTransaction   PaymentTransaction[]
+  AdmissionExam        AdmissionExam[]
+  StudentCredential    StudentCredential[]
+  StudentArrival       StudentArrival[]
+  guardianCredentials  GuardianCredential[]
+  pickupAuthorizations PickupAuthorization[]
+  departures           StudentDeparture[]
 
   @@map("plt_tenants")
 }
@@ -236,12 +239,14 @@ model School {
   staffCredentials StaffCredential[]
 
   // Attendance (Batch 5)
-  attendanceRegisters AttendanceRegister[]
-  attendanceRecords   AttendanceRecord[]
-  PaymentTransaction  PaymentTransaction[]
-  AdmissionExam       AdmissionExam[]
-  StudentCredential   StudentCredential[]
-  StudentArrival      StudentArrival[]
+  attendanceRegisters  AttendanceRegister[]
+  attendanceRecords    AttendanceRecord[]
+  PaymentTransaction   PaymentTransaction[]
+  AdmissionExam        AdmissionExam[]
+  StudentCredential    StudentCredential[]
+  StudentArrival       StudentArrival[]
+  pickupAuthorizations PickupAuthorization[]
+  departures           StudentDeparture[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -343,10 +348,10 @@ model Campus {
 }
 
 model AcademicYear {
-  id       String   @id @default(uuid())
-  tenantId String
-  schoolId String
-  name     String
+  id        String   @id @default(uuid())
+  tenantId  String
+  schoolId  String
+  name      String
   startDate DateTime @db.Date
   endDate   DateTime @db.Date
 
@@ -571,9 +576,11 @@ model Student {
   // Credentials (Phase 16)
   credentials StudentCredential[]
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  StudentArrival StudentArrival[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  StudentArrival       StudentArrival[]
+  pickupAuthorizations PickupAuthorization[]
+  departures           StudentDeparture[]
 
   @@unique([tenantId, schoolId, studentNumber])
   @@index([tenantId])
@@ -593,7 +600,10 @@ model Guardian {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
-  students StudentGuardian[]
+  students             StudentGuardian[]
+  credentials          GuardianCredential[]
+  pickupAuthorizations PickupAuthorization[]
+  departures           StudentDeparture[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1028,6 +1038,88 @@ model StudentArrival {
   student Student @relation(fields: [studentId], references: [id])
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   school  School  @relation(fields: [schoolId], references: [id])
+
+  @@unique([tenantId, schoolId, studentId, operationalDate])
+  @@index([tenantId, schoolId, operationalDate])
+}
+
+model GuardianCredential {
+  id         String @id @default(uuid())
+  tenantId   String
+  guardianId String
+
+  credentialType CredentialType
+  credentialHash String // HMAC-SHA-256 digest of the opaque token
+  status         CredentialStatus @default(ISSUED)
+
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime?
+  revokedAt DateTime?
+
+  guardian         Guardian           @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  tenant           Tenant             @relation(fields: [tenantId], references: [id])
+  StudentDeparture StudentDeparture[]
+
+  @@unique([tenantId, credentialHash])
+  @@index([tenantId, guardianId, status])
+  @@map("grd_credentials")
+}
+
+enum AuthorizationStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model PickupAuthorization {
+  id         String @id @default(uuid())
+  tenantId   String
+  schoolId   String
+  studentId  String
+  guardianId String
+
+  status     AuthorizationStatus @default(ACTIVE)
+  validFrom  DateTime            @default(now())
+  validUntil DateTime?
+  notes      String?
+
+  createdById String
+  revokedById String?
+  revokedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student          Student            @relation(fields: [studentId], references: [id])
+  guardian         Guardian           @relation(fields: [guardianId], references: [id])
+  tenant           Tenant             @relation(fields: [tenantId], references: [id])
+  school           School             @relation(fields: [schoolId], references: [id])
+  StudentDeparture StudentDeparture[]
+
+  @@index([tenantId, schoolId, studentId, status])
+  @@index([tenantId, guardianId])
+}
+
+model StudentDeparture {
+  id              String   @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  studentId       String
+  operationalDate String // e.g. "2026-09-22"
+  timestamp       DateTime @default(now())
+  scannedById     String
+  source          String
+
+  authorizedPersonId String
+  authorizationId    String
+  credentialId       String
+
+  student          Student             @relation(fields: [studentId], references: [id])
+  tenant           Tenant              @relation(fields: [tenantId], references: [id])
+  school           School              @relation(fields: [schoolId], references: [id])
+  authorizedPerson Guardian            @relation(fields: [authorizedPersonId], references: [id])
+  authorization    PickupAuthorization @relation(fields: [authorizationId], references: [id])
+  credential       GuardianCredential  @relation(fields: [credentialId], references: [id])
 
   @@unique([tenantId, schoolId, studentId, operationalDate])
   @@index([tenantId, schoolId, operationalDate])
