@@ -9,6 +9,7 @@ import { StaffModule } from "./modules/staff/staff.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { AppController } from "./app.controller";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { IdCardsModule } from "./modules/id-cards/id-cards.module";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 
 @Module({
@@ -21,6 +22,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
     StaffModule,
     AttendanceModule,
     NotificationsModule,
+    IdCardsModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

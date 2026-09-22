@@ -86,6 +86,7 @@ model Tenant {
   attendanceRecords   AttendanceRecord[]
   PaymentTransaction  PaymentTransaction[]
   AdmissionExam       AdmissionExam[]
+  StudentCredential   StudentCredential[]
 
   @@map("plt_tenants")
 }
@@ -237,6 +238,7 @@ model School {
   attendanceRecords   AttendanceRecord[]
   PaymentTransaction  PaymentTransaction[]
   AdmissionExam       AdmissionExam[]
+  StudentCredential   StudentCredential[]
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -559,6 +561,9 @@ model Student {
   // Attendance (Batch 5)
   attendanceRecords AttendanceRecord[]
 
+  // Credentials (Phase 16)
+  credentials StudentCredential[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -607,6 +612,32 @@ model StudentGuardian {
   @@unique([studentId, guardianId])
   @@index([tenantId])
   @@map("stud_student_guardians")
+}
+
+model StudentCredential {
+  id               String           @id @default(uuid())
+  tenantId         String
+  schoolId         String
+  studentId        String
+  credentialType   CredentialType
+  credentialHash   String // HMAC-SHA-256 digest of the opaque token
+  status           CredentialStatus @default(ISSUED)
+  revocationReason String?
+  issuedAt         DateTime         @default(now())
+  expiresAt        DateTime?
+  revokedAt        DateTime?
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, credentialHash])
+  @@index([tenantId, schoolId])
+  @@index([studentId])
+  @@map("stud_credentials")
 }
 
 // ACTIVE uniqueness per (tenantId, studentId, academicYearId) is enforced by a
@@ -835,6 +866,13 @@ enum CredentialType {
   QR
   RFID
   BIOMETRIC
+}
+
+enum CredentialStatus {
+  ISSUED
+  ACTIVE
+  REVOKED
+  REPLACED
 }
 
 model StaffNumberSequence {
