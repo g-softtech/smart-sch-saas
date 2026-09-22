@@ -6,6 +6,7 @@ import { apiClient, ApiError } from "@/lib/api-client";
 
 type ScanSource = "EXTERNAL" | "CAMERA";
 type OperationMode = "ARRIVAL" | "DEPARTURE";
+type DepartureStep = "STUDENT" | "GUARDIAN";
 
 interface VerifiedStudent {
   id: string;
@@ -18,6 +19,10 @@ interface VerifiedStudent {
 export default function ScannerPage() {
   const [source, setSource] = useState<ScanSource>("EXTERNAL");
   const [operationMode, setOperationMode] = useState<OperationMode>("ARRIVAL");
+
+  // Departure specific state
+  const [departureStep, setDepartureStep] = useState<DepartureStep>("STUDENT");
+  const [pendingStudentToken, setPendingStudentToken] = useState<string | null>(null);
 
   // Results & Loading
   const [loading, setLoading] = useState(false);
@@ -34,7 +39,7 @@ export default function ScannerPage() {
     if (source === "EXTERNAL" && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [source]);
+  }, [source, operationMode, departureStep]);
 
   const maintainFocus = () => {
     if (source === "EXTERNAL" && inputRef.current) {
@@ -42,26 +47,31 @@ export default function ScannerPage() {
     }
   };
 
-  const processScan = useCallback(async (rawToken: string, scanSource: ScanSource) => {
-    if (operationMode === "DEPARTURE") return; // Disabled in Phase 3
+  const resetState = () => {
+    setSuccessResult(null);
+    setWarningResult(null);
+    setErrorResult(null);
+  };
 
+  const handleModeChange = (mode: OperationMode) => {
+    setOperationMode(mode);
+    setDepartureStep("STUDENT");
+    setPendingStudentToken(null);
+    resetState();
+  };
+
+  const processArrival = async (rawToken: string, scanSource: ScanSource) => {
     try {
       setLoading(true);
-      setSuccessResult(null);
-      setWarningResult(null);
-      setErrorResult(null);
+      resetState();
 
-      const endpoint = "/api/v1/attendance/arrival";
-      const response = (await apiClient.post(endpoint, {
+      const response = (await apiClient.post("/api/v1/attendance/arrival", {
         token: rawToken,
         source: scanSource,
       })) as { success: boolean; student: VerifiedStudent; message: string };
 
       setSuccessResult(response.student);
-
-      // Clear success message after 5 seconds to get ready for next scan
       setTimeout(() => setSuccessResult(null), 5000);
-
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.message === "Already Arrived") {
@@ -72,8 +82,6 @@ export default function ScannerPage() {
       } else {
         setErrorResult("System error");
       }
-
-      // Clear error/warning after 5 seconds
       setTimeout(() => {
         setWarningResult(null);
         setErrorResult(null);
@@ -81,15 +89,61 @@ export default function ScannerPage() {
     } finally {
       setLoading(false);
     }
-  }, [operationMode]);
+  };
+
+  const processDeparture = async (rawToken: string, scanSource: ScanSource) => {
+    if (departureStep === "STUDENT") {
+      // Step 1: Capture student token, move to guardian step
+      setPendingStudentToken(rawToken);
+      setDepartureStep("GUARDIAN");
+      resetState(); // Clear previous results
+      return;
+    }
+
+    if (departureStep === "GUARDIAN") {
+      // Step 2: We have both tokens, submit to backend
+      try {
+        setLoading(true);
+        resetState();
+
+        const response = (await apiClient.post("/api/v1/movement/departure", {
+          studentToken: pendingStudentToken,
+          guardianToken: rawToken,
+          source: scanSource,
+        })) as { success: boolean; student: VerifiedStudent; message: string };
+
+        setSuccessResult(response.student);
+        setTimeout(() => setSuccessResult(null), 5000);
+      } catch (err: unknown) {
+        if (err instanceof ApiError) {
+          setErrorResult(err.message);
+        } else {
+          setErrorResult("System error during departure");
+        }
+        setTimeout(() => setErrorResult(null), 5000);
+      } finally {
+        setLoading(false);
+        // Reset state machine back to start
+        setDepartureStep("STUDENT");
+        setPendingStudentToken(null);
+      }
+    }
+  };
+
+  const processScan = useCallback(async (rawToken: string, scanSource: ScanSource) => {
+    if (operationMode === "ARRIVAL") {
+      await processArrival(rawToken, scanSource);
+    } else {
+      await processDeparture(rawToken, scanSource);
+    }
+  }, [operationMode, departureStep, pendingStudentToken]);
 
   // External Scanner Handlers
   const handleExternalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      e.preventDefault(); // Prevent form submission
-
+      e.preventDefault();
       const tokenToProcess = externalInput.trim();
-      setExternalInput(""); // Clear immediately for security and next scan
+      setExternalInput("");
 
       if (tokenToProcess) {
         processScan(tokenToProcess, "EXTERNAL");
@@ -102,7 +156,6 @@ export default function ScannerPage() {
     let scanner: Html5QrcodeScanner | null = null;
 
     if (source === "CAMERA") {
-      // Small delay to ensure the DOM element exists
       const timer = setTimeout(() => {
         scanner = new Html5QrcodeScanner(
           "camera-reader",
@@ -112,16 +165,12 @@ export default function ScannerPage() {
 
         scanner.render(
           (decodedText) => {
-            // Once a scan is successful, pause scanning briefly
             scanner?.pause(true);
             processScan(decodedText, "CAMERA").then(() => {
-              // Resume after processing
               setTimeout(() => scanner?.resume(), 2000);
             });
           },
-          (errorMessage) => {
-            // Ignore ongoing scan failures
-          }
+          (errorMessage) => {}
         );
       }, 100);
 
@@ -139,12 +188,12 @@ export default function ScannerPage() {
       <div className="mb-8 flex justify-between items-end border-b border-gray-200 dark:border-gray-700 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-brand-navy dark:text-white">ID Verification Scanner</h1>
-          <p className="text-gray-500 mt-2 text-lg">Securely scan and verify student ID cards</p>
+          <p className="text-gray-500 mt-2 text-lg">Securely scan and verify student and guardian credentials</p>
         </div>
 
         <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl shadow-inner">
           <button
-            onClick={() => setOperationMode("ARRIVAL")}
+            onClick={() => handleModeChange("ARRIVAL")}
             className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
               operationMode === "ARRIVAL"
                 ? "bg-white text-brand-navy dark:bg-gray-700 dark:text-brand-offwhite shadow-sm"
@@ -154,14 +203,31 @@ export default function ScannerPage() {
             Arrival Mode
           </button>
           <button
-            disabled
-            className="px-6 py-2.5 rounded-lg font-semibold text-sm text-gray-400 dark:text-gray-600 cursor-not-allowed transition-all"
-            title="Departure mode will be available in the next phase"
+            onClick={() => handleModeChange("DEPARTURE")}
+            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+              operationMode === "DEPARTURE"
+                ? "bg-white text-brand-navy dark:bg-gray-700 dark:text-brand-offwhite shadow-sm"
+                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            }`}
           >
             Departure Mode
           </button>
         </div>
       </div>
+
+      {operationMode === "DEPARTURE" && (
+        <div className="mb-8 p-4 bg-brand-teal/10 border border-brand-teal/20 rounded-xl flex items-center justify-center gap-4">
+          <div className={`flex flex-col items-center ${departureStep === "STUDENT" ? "opacity-100" : "opacity-40"}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold mb-2 ${departureStep === "STUDENT" ? "bg-brand-teal text-white" : "bg-gray-300 text-gray-600"}`}>1</div>
+            <span className="text-sm font-semibold dark:text-gray-200">Scan Student ID</span>
+          </div>
+          <div className="w-16 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
+          <div className={`flex flex-col items-center ${departureStep === "GUARDIAN" ? "opacity-100" : "opacity-40"}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold mb-2 ${departureStep === "GUARDIAN" ? "bg-brand-navy text-white" : "bg-gray-300 text-gray-600"}`}>2</div>
+            <span className="text-sm font-semibold dark:text-gray-200">Scan Guardian ID</span>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4 mb-8">
         <button
@@ -194,9 +260,7 @@ export default function ScannerPage() {
       </div>
 
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left Side: Scanner Input Area */}
         <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center min-h-[400px]">
-
           {source === "EXTERNAL" ? (
             <div className="w-full max-w-sm text-center">
               <div className="mb-6 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-full inline-block">
@@ -205,33 +269,53 @@ export default function ScannerPage() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold mb-2 dark:text-white">Ready to Scan</h3>
-              <p className="text-sm text-gray-500 mb-8">Ensure your cursor is in the field below and scan the ID card.</p>
+              <p className="text-sm text-gray-500 mb-8">
+                {operationMode === "DEPARTURE" && departureStep === "GUARDIAN"
+                  ? "Student scanned. Now scan the Guardian ID Card."
+                  : "Ensure your cursor is in the field below and scan the ID card."}
+              </p>
 
               <input
                 ref={inputRef}
-                type="text" // Explicitly NOT password, just standard text input
+                type="text"
                 className="w-full px-4 py-3 text-center bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 rounded-lg outline-none transition-all dark:text-white"
-                placeholder="Scan Barcode / QR Here..."
+                placeholder={operationMode === "DEPARTURE" && departureStep === "GUARDIAN" ? "Scan Guardian ID..." : "Scan Barcode / QR Here..."}
                 value={externalInput}
                 onChange={(e) => setExternalInput(e.target.value)}
                 onKeyDown={handleExternalKeyDown}
-                onBlur={() => {
-                  // Wait slightly to prevent race conditions during rapid scanning
-                  setTimeout(() => inputRef.current?.focus(), 10);
-                }}
+                onBlur={() => setTimeout(() => inputRef.current?.focus(), 10)}
                 autoFocus
               />
+
+              {operationMode === "DEPARTURE" && departureStep === "GUARDIAN" && (
+                <button
+                  onClick={() => { setDepartureStep("STUDENT"); setPendingStudentToken(null); }}
+                  className="mt-6 text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  Cancel Departure
+                </button>
+              )}
             </div>
           ) : (
-            <div className="w-full max-w-sm">
+            <div className="w-full max-w-sm text-center">
               <div id="camera-reader" className="w-full rounded-xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600"></div>
-              <p className="text-center text-sm text-gray-500 mt-4">Position the QR code within the frame.</p>
+              <p className="text-center text-sm text-gray-500 mt-4">
+                {operationMode === "DEPARTURE" && departureStep === "GUARDIAN"
+                  ? "Scan the Guardian QR code."
+                  : "Position the QR code within the frame."}
+              </p>
+              {operationMode === "DEPARTURE" && departureStep === "GUARDIAN" && (
+                <button
+                  onClick={() => { setDepartureStep("STUDENT"); setPendingStudentToken(null); }}
+                  className="mt-6 text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  Cancel Departure
+                </button>
+              )}
             </div>
           )}
-
         </div>
 
-        {/* Right Side: Scan Results */}
         <div className="flex flex-col justify-center">
           {loading ? (
             <div className="animate-pulse flex flex-col items-center">
@@ -246,7 +330,9 @@ export default function ScannerPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-green-800 dark:text-green-400 mb-2">Arrival Recorded</h2>
+              <h2 className="text-3xl font-bold text-green-800 dark:text-green-400 mb-2">
+                {operationMode === "ARRIVAL" ? "Arrival Recorded" : "Departure Recorded"}
+              </h2>
               <p className="text-xl font-medium text-gray-900 dark:text-white mb-1">
                 {successResult.firstName} {successResult.lastName}
               </p>
@@ -259,8 +345,8 @@ export default function ScannerPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-brand-gold mb-2">Already Arrived</h2>
-              <p className="text-lg text-brand-gold/80">This student has already been recorded today.</p>
+              <h2 className="text-3xl font-bold text-brand-gold mb-2">Notice</h2>
+              <p className="text-lg text-brand-gold/80">{warningResult}</p>
             </div>
           ) : errorResult ? (
             <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-2xl p-8 text-center animate-in shake duration-300">
@@ -277,7 +363,11 @@ export default function ScannerPage() {
               <svg className="mx-auto h-24 w-24 text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              <h3 className="text-xl font-medium text-gray-400 dark:text-gray-500">Waiting for Scan...</h3>
+              <h3 className="text-xl font-medium text-gray-400 dark:text-gray-500">
+                {operationMode === "DEPARTURE" && departureStep === "GUARDIAN"
+                  ? "Waiting for Guardian ID..."
+                  : "Waiting for Scan..."}
+              </h3>
             </div>
           )}
         </div>

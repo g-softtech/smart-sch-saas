@@ -378,9 +378,17 @@ export default function StudentProfilePage() {
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{link.relationship.toLowerCase()}</p>
                     </div>
-                    <div className="mt-3 sm:mt-0 sm:text-right text-sm text-gray-600 dark:text-gray-300">
-                      {link.guardian.phone && <p>{link.guardian.phone}</p>}
-                      {link.guardian.email && <p>{link.guardian.email}</p>}
+                    <div className="mt-3 sm:mt-0 sm:text-right text-sm text-gray-600 dark:text-gray-300 flex flex-col justify-between h-full">
+                      <div>
+                        {link.guardian.phone && <p>{link.guardian.phone}</p>}
+                        {link.guardian.email && <p>{link.guardian.email}</p>}
+                      </div>
+                      <Link
+                        href={`/dashboard/students/${studentId}/guardians/${link.guardian.id}`}
+                        className="mt-3 inline-block text-brand-teal hover:text-brand-navy dark:hover:text-white font-medium text-xs bg-brand-teal/10 hover:bg-brand-teal/20 px-3 py-1.5 rounded transition-colors"
+                      >
+                        Manage Authorizations &rarr;
+                      </Link>
                     </div>
                   </div>
                 ))}
