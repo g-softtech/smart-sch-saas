@@ -25,7 +25,7 @@ export class AcademicsService {
 
   async createAcademicYear(
     tenantId: string,
-    data: { schoolId: string; name: string },
+    data: { schoolId: string; name: string; startDate: string; endDate: string },
   ) {
     const school = await this.repo.findSchool(data.schoolId);
     if (!school || school.tenantId !== tenantId) {
@@ -33,12 +33,24 @@ export class AcademicsService {
         "School not found or belongs to another tenant",
       );
     }
-    return this.repo.createAcademicYear({ ...data, tenantId });
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (start >= end) {
+      throw new BadRequestException("startDate must be strictly before endDate");
+    }
+
+    const overlaps = await this.repo.findOverlappingAcademicYears(tenantId, data.schoolId, start, end);
+    if (overlaps.length > 0) {
+      throw new ConflictException("Academic year date range overlaps with an existing academic year");
+    }
+
+    return this.repo.createAcademicYear({ ...data, tenantId, startDate: start, endDate: end });
   }
 
   async createTerm(
     tenantId: string,
-    data: { academicYearId: string; name: string },
+    data: { academicYearId: string; name: string; startDate: string; endDate: string },
   ) {
     const academicYear = await this.repo.findAcademicYear(data.academicYearId);
     if (!academicYear || academicYear.tenantId !== tenantId) {
@@ -46,7 +58,23 @@ export class AcademicsService {
         "Academic Year not found or belongs to another tenant",
       );
     }
-    return this.repo.createTerm({ ...data, tenantId });
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (start >= end) {
+      throw new BadRequestException("startDate must be strictly before endDate");
+    }
+
+    if (start < academicYear.startDate || end > academicYear.endDate) {
+      throw new BadRequestException("Term dates must be strictly within the boundaries of the parent Academic Year");
+    }
+
+    const overlaps = await this.repo.findOverlappingTerms(tenantId, data.academicYearId, start, end);
+    if (overlaps.length > 0) {
+      throw new ConflictException("Term date range overlaps with an existing term in this academic year");
+    }
+
+    return this.repo.createTerm({ ...data, tenantId, startDate: start, endDate: end });
   }
 
   async createDepartment(

@@ -11,6 +11,7 @@ import { AppController } from "./app.controller";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { IdCardsModule } from "./modules/id-cards/id-cards.module";
 import { EventEmitterModule } from "@nestjs/event-emitter";
+import { OutboxWorkerModule } from "./modules/outbox-worker/outbox-worker.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
     AttendanceModule,
     NotificationsModule,
     IdCardsModule,
+    OutboxWorkerModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

@@ -23,6 +23,63 @@ export class AcademicsRepository {
     return kernel.db.subjectGroup.findUnique({ where: { id } });
   }
 
+  async findOverlappingAcademicYears(tenantId: string, schoolId: string, startDate: Date, endDate: Date, excludeId?: string) {
+    return kernel.db.academicYear.findMany({
+      where: {
+        tenantId,
+        schoolId,
+        id: excludeId ? { not: excludeId } : undefined,
+        startDate: { lt: endDate },
+        endDate: { gt: startDate },
+      },
+    });
+  }
+
+  async findOverlappingTerms(tenantId: string, academicYearId: string, startDate: Date, endDate: Date, excludeId?: string) {
+    return kernel.db.term.findMany({
+      where: {
+        tenantId,
+        academicYearId,
+        id: excludeId ? { not: excludeId } : undefined,
+        startDate: { lt: endDate },
+        endDate: { gt: startDate },
+      },
+    });
+  }
+
+  async findActiveAcademicYear(tenantId: string, schoolId: string, date: Date) {
+    return kernel.db.academicYear.findFirst({
+      where: {
+        tenantId,
+        schoolId,
+        startDate: { lte: date },
+        endDate: { gt: date }
+      }
+    });
+  }
+
+  async findActiveTerm(tenantId: string, academicYearId: string, date: Date) {
+    return kernel.db.term.findFirst({
+      where: {
+        tenantId,
+        academicYearId,
+        startDate: { lte: date },
+        endDate: { gt: date }
+      }
+    });
+  }
+
+  async findActiveEnrollment(tenantId: string, studentId: string, academicYearId: string) {
+    return kernel.db.enrollment.findFirst({
+      where: {
+        tenantId,
+        studentId,
+        academicYearId,
+        status: 'ACTIVE'
+      }
+    });
+  }
+
   async createCampus(data: any) {
     return kernel.db.campus.create({ data });
   }

@@ -19,19 +19,40 @@ export class EventDispatcher {
   async dispatchPending(batchSize = 100): Promise<number> {
     let processedCount = 0;
 
-    const pendingMessages = await this.prisma.outboxQueue.findMany({
-      where: { 
-        OR: [
-          { status: 'PENDING' },
-          { status: 'FAILED', nextAttemptAt: { lte: new Date() } }
-        ]
-      },
-      orderBy: [
-        { aggregateId: 'asc' },
-        { nextAttemptAt: 'asc' }
-      ],
-      take: batchSize
-    });
+    // Atomic claim of pending, due-for-retry, or abandoned processing events
+    const claimedRows = await this.prisma.$queryRaw<any[]>`
+      UPDATE "OutboxQueue"
+      SET
+        status = 'PROCESSING'::"OutboxStatus",
+        "lastAttemptAt" = NOW()
+      WHERE id IN (
+        SELECT id
+        FROM "OutboxQueue"
+        WHERE status = 'PENDING'::"OutboxStatus"
+           OR (status = 'FAILED'::"OutboxStatus" AND "nextAttemptAt" <= NOW())
+           OR (status = 'PROCESSING'::"OutboxStatus" AND "lastAttemptAt" <= NOW() - INTERVAL '5 minutes')
+        ORDER BY "aggregateId" ASC, "nextAttemptAt" ASC
+        LIMIT ${batchSize}
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING *;
+    `;
+
+    if (!claimedRows || claimedRows.length === 0) {
+      return 0;
+    }
+
+    const pendingMessages = claimedRows.map(row => ({
+      id: row.id,
+      eventId: row.eventId,
+      status: row.status,
+      attempts: row.attempts,
+      lastAttemptAt: row.lastAttemptAt,
+      nextAttemptAt: row.nextAttemptAt,
+      errorMessage: row.errorMessage,
+      aggregateId: row.aggregateId,
+      tenantId: row.tenantId
+    }));
 
     for (const msg of pendingMessages) {
       try {

@@ -18,6 +18,8 @@ describe("AcademicsService (Unit / Mocked)", () => {
       findClass: jest.fn(),
       findCampus: jest.fn(),
       findSubjectGroup: jest.fn(),
+      findOverlappingAcademicYears: jest.fn(),
+      findOverlappingTerms: jest.fn(),
       createCampus: jest.fn(),
       createAcademicYear: jest.fn(),
       createTerm: jest.fn(),
@@ -80,6 +82,8 @@ describe("AcademicsService (Unit / Mocked)", () => {
       const result = await service.createAcademicYear("tenant-1", {
         schoolId: "school-1",
         name: "2026/2027",
+        startDate: "2026-09-01",
+        endDate: "2027-09-01",
       });
       expect(result.id).toBe("year-1");
     });
@@ -91,6 +95,8 @@ describe("AcademicsService (Unit / Mocked)", () => {
         service.createAcademicYear("tenant-1", {
           schoolId: "school-1",
           name: "2026/2027",
+          startDate: "2026-09-01",
+          endDate: "2027-09-01",
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -101,18 +107,24 @@ describe("AcademicsService (Unit / Mocked)", () => {
       repo.findAcademicYear.mockResolvedValueOnce({
         id: "year-1",
         tenantId: "tenant-1",
+        startDate: new Date("2026-09-01"),
+        endDate: new Date("2027-09-01"),
       } as any);
       repo.createTerm.mockResolvedValueOnce({ id: "term-1" } as any);
 
       const result = await service.createTerm("tenant-1", {
         academicYearId: "year-1",
         name: "Fall Term",
+        startDate: "2026-09-01",
+        endDate: "2026-12-19",
       });
       expect(result.id).toBe("term-1");
       expect(repo.createTerm).toHaveBeenCalledWith({
         academicYearId: "year-1",
         name: "Fall Term",
         tenantId: "tenant-1",
+        startDate: new Date("2026-09-01"),
+        endDate: new Date("2026-12-19"),
       });
     });
 
@@ -126,6 +138,8 @@ describe("AcademicsService (Unit / Mocked)", () => {
         service.createTerm("tenant-1", {
           academicYearId: "year-1",
           name: "Fall Term",
+          startDate: "2026-09-01",
+          endDate: "2026-12-19",
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -137,6 +151,8 @@ describe("AcademicsService (Unit / Mocked)", () => {
         service.createTerm("tenant-1", {
           academicYearId: "year-1",
           name: "Fall Term",
+          startDate: "2026-09-01",
+          endDate: "2026-12-19",
         }),
       ).rejects.toThrow(BadRequestException);
     });
