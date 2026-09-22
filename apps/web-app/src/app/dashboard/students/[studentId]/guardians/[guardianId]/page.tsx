@@ -32,18 +32,18 @@ export default function GuardianManagementPage() {
 
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [authorizations, setAuthorizations] = useState<PickupAuthorization[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [issueLoading, setIssueLoading] = useState(false);
   const [revokeCredLoading, setRevokeCredLoading] = useState<string | null>(null);
-  
+
   const [authLoading, setAuthLoading] = useState(false);
   const [revokeAuthLoading, setRevokeAuthLoading] = useState<string | null>(null);
-  
+
   const [newToken, setNewToken] = useState<string | null>(null);
-  
+
   // New Auth form state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [validFrom, setValidFrom] = useState('');
@@ -159,7 +159,7 @@ export default function GuardianManagementPage() {
           <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Guardian Management</h1>
           <p className="text-sm text-gray-500 mt-1">Manage secure Guardian QR credentials and Pickup Authorizations.</p>
         </div>
-        <Link 
+        <Link
           href={`/dashboard/students/${studentId}`}
           className="text-sm font-medium text-brand-teal hover:text-brand-navy"
         >
@@ -179,19 +179,49 @@ export default function GuardianManagementPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
+
           {/* Left Column: Credential Management */}
           <div className="space-y-8">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
               <h2 className="text-xl font-semibold text-brand-navy dark:text-white mb-6">Guardian QR Credential</h2>
-              
+
               {activeCredential ? (
                 <div className="flex flex-col items-center">
                   {newToken ? (
-                    <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-100 mb-4 text-center">
+                    <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-100 mb-4 text-center w-full flex flex-col items-center">
                       <QRCodeSVG value={newToken} size={200} level="H" />
                       <p className="text-xs text-gray-500 mt-3 font-semibold text-brand-gold">GUARDIAN QR CREDENTIAL</p>
                       <p className="text-xs text-gray-400 mt-1">This raw token will never be shown again.</p>
+                      <button
+                        onClick={() => window.print()}
+                        className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-sm font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4 inline-block mr-1 -mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Print Guardian Credential
+                      </button>
+
+                      {/* Print-only container */}
+                      <div className="hidden print:flex fixed inset-0 bg-white flex-col items-center justify-center z-50">
+                        <div className="w-[3.375in] h-[2.125in] border-2 border-brand-navy rounded-xl p-4 flex items-center justify-between shadow-sm relative overflow-hidden bg-white">
+                          <div className="absolute top-0 left-0 w-full h-1 bg-brand-teal"></div>
+                          <div className="absolute bottom-0 right-0 w-full h-1 bg-brand-gold"></div>
+
+                          <div className="flex flex-col h-full justify-between z-10 w-1/2">
+                            <div>
+                              <h1 className="text-xs font-bold text-brand-navy tracking-wider uppercase mb-1">SchoolOS</h1>
+                              <p className="text-[10px] font-semibold text-brand-gold">Guardian Credential</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 font-mono">Present for Pickup</p>
+                            </div>
+                          </div>
+
+                          <div className="w-[100px] h-[100px] bg-white p-1 rounded-lg border border-gray-200 flex-shrink-0 z-10">
+                            <QRCodeSVG value={newToken} size={90} level="H" />
+                          </div>
+                        </div>
+                        <p className="mt-4 text-[10px] text-gray-400">Please cut along the border. Present this code for authorized student pickup.</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 mb-4 flex flex-col items-center justify-center text-center">
@@ -204,7 +234,7 @@ export default function GuardianManagementPage() {
                       <p className="text-xs text-gray-400 mt-1">If the Guardian loses their credential, revoke it and issue a new one.</p>
                     </div>
                   )}
-                  
+
                   <div className="w-full mt-4 space-y-2 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Status:</span>

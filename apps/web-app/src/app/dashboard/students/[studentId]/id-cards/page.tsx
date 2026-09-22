@@ -20,7 +20,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
   const [error, setError] = useState<string | null>(null);
   const [issueLoading, setIssueLoading] = useState(false);
   const [revokeLoading, setRevokeLoading] = useState<string | null>(null);
-  
+
   // For newly issued credential token to display the QR
   const [newToken, setNewToken] = useState<string | null>(null);
 
@@ -67,7 +67,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
 
   const handleRevoke = async (credentialId: string) => {
     if (!window.confirm("Are you sure you want to revoke this ID card? It will immediately stop working.")) return;
-    
+
     try {
       setRevokeLoading(credentialId);
       setError(null);
@@ -96,7 +96,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ID Card Management</h1>
           <p className="text-sm text-gray-500 mt-1">Manage secure QR credentials for this student.</p>
         </div>
-        <Link 
+        <Link
           href={`/dashboard/students/${params.studentId}`}
           className="text-sm font-medium text-blue-600 hover:text-blue-500"
         >
@@ -114,7 +114,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
         {/* Left Column: Active Card Display */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Active ID Card</h2>
-          
+
           {loading ? (
             <div className="animate-pulse space-y-4">
               <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
@@ -122,9 +122,40 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
           ) : activeCredential ? (
             <div className="flex flex-col items-center">
               {newToken ? (
-                <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-100 mb-4">
+                <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-100 mb-4 w-full flex flex-col items-center">
                   <QRCodeSVG value={newToken} size={200} level="H" />
                   <p className="text-xs text-center text-gray-400 mt-2">New Token Active</p>
+                  <button
+                    onClick={() => window.print()}
+                    className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-sm font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4 inline-block mr-1 -mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    Print ID Card
+                  </button>
+
+                  {/* Print-only container */}
+                  <div className="hidden print:flex fixed inset-0 bg-white flex-col items-center justify-center z-50">
+                    <div className="w-[3.375in] h-[2.125in] border-2 border-brand-navy rounded-xl p-4 flex items-center justify-between shadow-sm relative overflow-hidden bg-white">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-brand-teal"></div>
+                      <div className="absolute bottom-0 right-0 w-full h-1 bg-brand-gold"></div>
+
+                      <div className="flex flex-col h-full justify-between z-10 w-1/2">
+                        <div>
+                          <h1 className="text-xs font-bold text-brand-navy tracking-wider uppercase mb-1">SchoolOS</h1>
+                          <p className="text-[10px] font-semibold text-gray-800">Student ID Card</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 leading-tight">Student Name</p>
+                          <p className="text-[10px] text-gray-500 font-mono mt-1">ID: {params.studentId.substring(0, 8).toUpperCase()}</p>
+                        </div>
+                      </div>
+
+                      <div className="w-[100px] h-[100px] bg-white p-1 rounded-lg border border-gray-200 flex-shrink-0 z-10">
+                        <QRCodeSVG value={newToken} size={90} level="H" />
+                      </div>
+                    </div>
+                    <p className="mt-4 text-[10px] text-gray-400">Please cut along the border. For internal school use only.</p>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-gray-100 dark:bg-gray-900 p-8 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 mb-4 flex flex-col items-center justify-center text-center">
@@ -137,7 +168,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
                   <p className="text-xs text-gray-400 mt-1">If the physical card is lost, revoke it and issue a new one.</p>
                 </div>
               )}
-              
+
               <div className="w-full mt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Status:</span>
@@ -182,7 +213,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
         {/* Right Column: Credential History */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Credential History</h2>
-          
+
           <div className="flow-root">
             <ul className="-mb-8">
               {credentials.map((cred, credIdx) => (
@@ -194,8 +225,8 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
                     <div className="relative flex space-x-3">
                       <div>
                         <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-gray-800 ${
-                          cred.status === 'ACTIVE' || cred.status === 'ISSUED' 
-                            ? 'bg-green-500' 
+                          cred.status === 'ACTIVE' || cred.status === 'ISSUED'
+                            ? 'bg-green-500'
                             : 'bg-gray-400'
                         }`}>
                           {cred.status === 'ACTIVE' || cred.status === 'ISSUED' ? (
@@ -228,7 +259,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
                   </div>
                 </li>
               ))}
-              
+
               {credentials.length === 0 && !loading && (
                 <div className="text-center py-4 text-sm text-gray-500">
                   No credential history found.

@@ -60,6 +60,17 @@ export default function ScannerPage() {
     resetState();
   };
 
+  // Use a ref to access latest state inside stable callbacks
+  const stateRef = useRef({
+    operationMode,
+    departureStep,
+    pendingStudentToken
+  });
+
+  useEffect(() => {
+    stateRef.current = { operationMode, departureStep, pendingStudentToken };
+  }, [operationMode, departureStep, pendingStudentToken]);
+
   const processArrival = async (rawToken: string, scanSource: ScanSource) => {
     try {
       setLoading(true);
@@ -91,8 +102,8 @@ export default function ScannerPage() {
     }
   };
 
-  const processDeparture = async (rawToken: string, scanSource: ScanSource) => {
-    if (departureStep === "STUDENT") {
+  const processDeparture = async (rawToken: string, scanSource: ScanSource, currentState: any) => {
+    if (currentState.departureStep === "STUDENT") {
       // Step 1: Capture student token, move to guardian step
       setPendingStudentToken(rawToken);
       setDepartureStep("GUARDIAN");
@@ -100,14 +111,14 @@ export default function ScannerPage() {
       return;
     }
 
-    if (departureStep === "GUARDIAN") {
+    if (currentState.departureStep === "GUARDIAN") {
       // Step 2: We have both tokens, submit to backend
       try {
         setLoading(true);
         resetState();
 
         const response = (await apiClient.post("/api/v1/movement/departure", {
-          studentToken: pendingStudentToken,
+          studentToken: currentState.pendingStudentToken,
           guardianToken: rawToken,
           source: scanSource,
         })) as { success: boolean; student: VerifiedStudent; message: string };
@@ -131,12 +142,13 @@ export default function ScannerPage() {
   };
 
   const processScan = useCallback(async (rawToken: string, scanSource: ScanSource) => {
-    if (operationMode === "ARRIVAL") {
+    const currentState = stateRef.current;
+    if (currentState.operationMode === "ARRIVAL") {
       await processArrival(rawToken, scanSource);
     } else {
-      await processDeparture(rawToken, scanSource);
+      await processDeparture(rawToken, scanSource, currentState);
     }
-  }, [operationMode, departureStep, pendingStudentToken]);
+  }, []); // No dependencies needed thanks to stateRef
 
   // External Scanner Handlers
   const handleExternalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -167,7 +179,14 @@ export default function ScannerPage() {
           (decodedText) => {
             scanner?.pause(true);
             processScan(decodedText, "CAMERA").then(() => {
-              setTimeout(() => scanner?.resume(), 2000);
+              // Only resume if we are still on camera source
+              setTimeout(() => {
+                try {
+                  scanner?.resume();
+                } catch (e) {
+                  // Ignore error if already stopped
+                }
+              }, 2000);
             });
           },
           (errorMessage) => {}
@@ -177,11 +196,15 @@ export default function ScannerPage() {
       return () => {
         clearTimeout(timer);
         if (scanner) {
-          scanner.clear().catch(console.error);
+          try {
+            scanner.clear().catch(console.error);
+          } catch (e) {
+            console.error(e);
+          }
         }
       };
     }
-  }, [source, processScan]);
+  }, [source]); // Only re-run if scan source changes
 
   return (
     <div className="p-6 max-w-4xl mx-auto min-h-[80vh] flex flex-col" onClick={maintainFocus}>
