@@ -93,6 +93,12 @@ model Tenant {
   guardianCredentials  GuardianCredential[]
   pickupAuthorizations PickupAuthorization[]
   departures           StudentDeparture[]
+  TimetablePeriod      TimetablePeriod[]
+  TimetableEntry       TimetableEntry[]
+  GradingScale         GradingScale[]
+  GradeBoundary        GradeBoundary[]
+  SubjectResult        SubjectResult[]
+  AssessmentScore      AssessmentScore[]
 
   @@map("plt_tenants")
 }
@@ -249,6 +255,12 @@ model School {
   StudentArrival       StudentArrival[]
   pickupAuthorizations PickupAuthorization[]
   departures           StudentDeparture[]
+  TimetablePeriod      TimetablePeriod[]
+  TimetableEntry       TimetableEntry[]
+  GradingScale         GradingScale[]
+  GradeBoundary        GradeBoundary[]
+  SubjectResult        SubjectResult[]
+  AssessmentScore      AssessmentScore[]
 }
 
 model StudentPhoto {
@@ -387,8 +399,11 @@ model AcademicYear {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  TimetablePeriod TimetablePeriod[]
+  TimetableEntry  TimetableEntry[]
+  SubjectResult   SubjectResult[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -409,8 +424,10 @@ model Term {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  TimetableEntry TimetableEntry[]
+  SubjectResult  SubjectResult[]
 
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
@@ -456,8 +473,9 @@ model Class {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  TimetableEntry TimetableEntry[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -481,8 +499,9 @@ model Arm {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  TimetableEntry TimetableEntry[]
 
   @@unique([tenantId, classId, campusId, name])
   @@index([tenantId])
@@ -518,8 +537,10 @@ model Subject {
   school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   subjectGroup SubjectGroup? @relation(fields: [subjectGroupId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  TimetableEntry TimetableEntry[]
+  SubjectResult  SubjectResult[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -707,8 +728,9 @@ model Enrollment {
   // Attendance (Batch 5)
   attendanceRecords AttendanceRecord[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  SubjectResult SubjectResult[]
 
   @@index([tenantId, schoolId])
   @@index([tenantId, academicYearId, classId])
@@ -946,8 +968,9 @@ model StaffProfile {
   department  Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   credentials StaffCredential[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  TimetableEntry TimetableEntry[]
 
   @@unique([tenantId, schoolId, staffNumber])
   @@index([tenantId])
@@ -1144,4 +1167,158 @@ model StudentDeparture {
 
   @@unique([tenantId, schoolId, studentId, operationalDate])
   @@index([tenantId, schoolId, operationalDate])
+}
+
+// ================= TIMETABLE MODELS (Phase 2) =================
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model TimetablePeriod {
+  id             String  @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  name           String // e.g. "Period 1"
+  startTime      String // HH:mm
+  endTime        String // HH:mm
+  isBreak        Boolean @default(false)
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  school       School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  entries      TimetableEntry[]
+
+  @@unique([tenantId, schoolId, academicYearId, name])
+  @@map("acd_timetable_periods")
+}
+
+model TimetableEntry {
+  id             String    @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  termId         String
+  classId        String
+  armId          String?
+  subjectId      String
+  teacherId      String?
+  periodId       String
+  dayOfWeek      DayOfWeek
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  school       School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  term         Term            @relation(fields: [termId], references: [id], onDelete: Cascade)
+  class        Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  arm          Arm?            @relation(fields: [armId], references: [id], onDelete: Cascade)
+  subject      Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher      StaffProfile?   @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  period       TimetablePeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  // 1. Class/Arm conflict prevention (if arm is present)
+  // NOTE: Nullable uniqueness for armId is handled by DB-level migration SQL (partial index WHERE armId IS NULL)
+  @@unique([tenantId, schoolId, termId, classId, armId, periodId, dayOfWeek])
+  // 2. Teacher conflict prevention
+  // NOTE: Nullable uniqueness handled by DB-level migration SQL
+  @@unique([tenantId, schoolId, termId, teacherId, periodId, dayOfWeek])
+  @@map("acd_timetable_entries")
+}
+
+// ================= RESULTS & GRADING MODELS (Phase 2) =================
+
+model GradingScale {
+  id          String  @id @default(uuid())
+  tenantId    String
+  schoolId    String
+  name        String
+  description String?
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  school         School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  boundaries     GradeBoundary[]
+  subjectResults SubjectResult[]
+
+  @@unique([tenantId, schoolId, name])
+  @@map("acd_grading_scales")
+}
+
+model GradeBoundary {
+  id             String  @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  gradingScaleId String
+  minScore       Float
+  grade          String
+  remark         String?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  gradingScale GradingScale @relation(fields: [gradingScaleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, schoolId, gradingScaleId, grade])
+  @@map("acd_grade_boundaries")
+}
+
+enum ResultStatus {
+  DRAFT
+  FINALIZED
+  PUBLISHED
+}
+
+model SubjectResult {
+  id             String       @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  termId         String
+  enrollmentId   String
+  subjectId      String
+  gradingScaleId String?
+  totalScore     Float?
+  grade          String?
+  remark         String?
+  status         ResultStatus @default(DRAFT)
+  publishedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term         Term          @relation(fields: [termId], references: [id], onDelete: Restrict)
+  enrollment   Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  subject      Subject       @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  gradingScale GradingScale? @relation(fields: [gradingScaleId], references: [id], onDelete: Restrict)
+
+  scores AssessmentScore[]
+
+  // A student enrollment can only have ONE result per subject per term
+  @@unique([tenantId, schoolId, enrollmentId, subjectId, termId])
+  @@map("acd_subject_results")
+}
+
+model AssessmentScore {
+  id              String   @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  subjectResultId String
+  type            String // e.g. "CA", "EXAM", "ASSIGNMENT", "PROJECT"
+  maxScore        Float
+  score           Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  school        School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectResult SubjectResult @relation(fields: [subjectResultId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, schoolId, subjectResultId, type])
+  @@map("acd_assessment_scores")
 }
