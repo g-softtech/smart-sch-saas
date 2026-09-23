@@ -6,8 +6,10 @@ import { DepartureController } from './controllers/departure.controller';
 import { GuardianCredentialController } from './controllers/guardian-credential.controller';
 import { PickupAuthorizationController } from './controllers/pickup-authorization.controller';
 import { IdempotencyService } from '@saas/core-platform';
+import { IdCardsModule } from '../id-cards/id-cards.module';
 
 @Module({
+  imports: [IdCardsModule],
   controllers: [
     DepartureController,
     GuardianCredentialController,
