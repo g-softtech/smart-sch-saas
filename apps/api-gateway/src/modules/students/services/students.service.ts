@@ -467,7 +467,7 @@ export class StudentsService {
 
     // Dynamic import file-type to validate actual magic numbers
     const fileType = await import('file-type');
-    const type = await fileType.fromBuffer(file.buffer);
+    const type = await (fileType.default || fileType as any).fromBuffer(file.buffer);
     if (!type || !['image/jpeg', 'image/png'].includes(type.mime)) {
       throw new BadRequestException("Invalid or unsupported file type. Must be JPEG or PNG.");
     }
