@@ -1,4 +1,4 @@
-﻿-- AlterTable
+-- AlterTable
 ALTER TABLE "acd_academic_years" ALTER COLUMN "endDate" DROP NOT NULL,
 ALTER COLUMN "startDate" DROP NOT NULL;
 
