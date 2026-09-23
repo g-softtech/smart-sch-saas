@@ -104,6 +104,10 @@ model Tenant {
   AssignmentSubmission AssignmentSubmission[]
   CBTExam              CBTExam[]
   CBTAttempt           CBTAttempt[]
+  FeeStructure         FeeStructure[]         @relation("FeeStructureTenant")
+  Invoice              Invoice[]              @relation("InvoiceTenant")
+  Payment              Payment[]              @relation("PaymentTenant")
+  PaymentReceipt       PaymentReceipt[]       @relation("ReceiptTenant")
 
   @@map("plt_tenants")
 }
@@ -271,6 +275,10 @@ model School {
   AssignmentSubmission AssignmentSubmission[]
   CBTExam              CBTExam[]
   CBTAttempt           CBTAttempt[]
+  FeeStructure         FeeStructure[]         @relation("FeeStructureSchool")
+  Invoice              Invoice[]              @relation("InvoiceSchool")
+  Payment              Payment[]              @relation("PaymentSchool")
+  PaymentReceipt       PaymentReceipt[]       @relation("ReceiptSchool")
 }
 
 model StudentPhoto {
@@ -415,6 +423,8 @@ model AcademicYear {
   TimetableEntry      TimetableEntry[]
   SubjectResult       SubjectResult[]
   AssessmentComponent AssessmentComponent[]
+  FeeStructure        FeeStructure[]
+  Invoice             Invoice[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -440,6 +450,8 @@ model Term {
   TimetableEntry      TimetableEntry[]
   SubjectResult       SubjectResult[]
   AssessmentComponent AssessmentComponent[]
+  FeeStructure        FeeStructure[]
+  Invoice             Invoice[]
 
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
@@ -489,6 +501,7 @@ model Class {
   updatedAt           DateTime              @updatedAt
   TimetableEntry      TimetableEntry[]
   AssessmentComponent AssessmentComponent[]
+  FeeStructure        FeeStructure[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -516,6 +529,7 @@ model Arm {
   updatedAt           DateTime              @updatedAt
   TimetableEntry      TimetableEntry[]
   AssessmentComponent AssessmentComponent[]
+  FeeStructure        FeeStructure[]
 
   @@unique([tenantId, classId, campusId, name])
   @@index([tenantId])
@@ -640,6 +654,9 @@ model Student {
   departures           StudentDeparture[]
   AssignmentSubmission AssignmentSubmission[]
   CBTAttempt           CBTAttempt[]
+  Invoice              Invoice[]              @relation("InvoiceStudent")
+  Payment              Payment[]              @relation("PaymentStudent")
+  PaymentReceipt       PaymentReceipt[]       @relation("ReceiptStudent")
 
   @@unique([tenantId, schoolId, studentNumber])
   @@index([tenantId])
@@ -1342,7 +1359,6 @@ model AssessmentScore {
 
   // Legacy fallback for manual scores
   @@unique([tenantId, schoolId, subjectResultId, type])
-  
   // Component-backed scores idempotency boundary
   @@unique([tenantId, schoolId, subjectResultId, assessmentComponentId])
   @@map("acd_assessment_scores")
@@ -1536,4 +1552,166 @@ model CBTAttemptAnswer {
 
   @@unique([attemptId, questionId])
   @@map("acd_cbt_attempt_answers")
+}
+
+// =========================================================================
+// FINANCE DOMAIN
+// =========================================================================
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  POS
+  ONLINE
+}
+
+model FeeStructure {
+  id             String    @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  termId         String
+  classId        String
+  armId          String?
+  name           String
+  description    String?
+  items          FeeItem[]
+  invoices       Invoice[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant       Tenant       @relation("FeeStructureTenant", fields: [tenantId], references: [id], onDelete: Restrict)
+  school       School       @relation("FeeStructureSchool", fields: [schoolId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term         Term         @relation(fields: [termId], references: [id], onDelete: Restrict)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Restrict)
+  arm          Arm?         @relation(fields: [armId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, schoolId, academicYearId, termId])
+  @@map("fin_fee_structures")
+}
+
+model FeeItem {
+  id             String  @id @default(uuid())
+  feeStructureId String
+  name           String
+  amount         Decimal @db.Decimal(10, 2)
+  isMandatory    Boolean @default(true)
+
+  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+
+  @@map("fin_fee_items")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  studentId      String
+  academicYearId String
+  termId         String
+  feeStructureId String?
+  invoiceNumber  String
+  totalAmount    Decimal       @db.Decimal(10, 2)
+  paidAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  status         InvoiceStatus @default(DRAFT)
+  dueDate        DateTime
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  lineItems   InvoiceLineItem[]
+  allocations PaymentAllocation[]
+
+  tenant       Tenant        @relation("InvoiceTenant", fields: [tenantId], references: [id], onDelete: Restrict)
+  school       School        @relation("InvoiceSchool", fields: [schoolId], references: [id], onDelete: Restrict)
+  student      Student       @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term         Term          @relation(fields: [termId], references: [id], onDelete: Restrict)
+  feeStructure FeeStructure? @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, schoolId, studentId])
+  @@map("fin_invoices")
+}
+
+model InvoiceLineItem {
+  id        String  @id @default(uuid())
+  invoiceId String
+  name      String
+  amount    Decimal @db.Decimal(10, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("fin_invoice_line_items")
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  tenantId    String
+  schoolId    String
+  studentId   String
+  reference   String
+  amount      Decimal       @db.Decimal(10, 2)
+  paymentDate DateTime      @default(now())
+  method      PaymentMethod
+  status      PaymentStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  allocations PaymentAllocation[]
+  receipt     PaymentReceipt?
+
+  tenant  Tenant  @relation("PaymentTenant", fields: [tenantId], references: [id], onDelete: Restrict)
+  school  School  @relation("PaymentSchool", fields: [schoolId], references: [id], onDelete: Restrict)
+  student Student @relation("PaymentStudent", fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, reference])
+  @@index([tenantId, schoolId, studentId])
+  @@map("fin_payments")
+}
+
+model PaymentAllocation {
+  id              String   @id @default(uuid())
+  paymentId       String
+  invoiceId       String
+  amountAllocated Decimal  @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@map("fin_payment_allocations")
+}
+
+model PaymentReceipt {
+  id             String   @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  studentId      String
+  paymentId      String   @unique
+  receiptNumber  String
+  amountReceived Decimal  @db.Decimal(10, 2)
+  paymentDate    DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  tenant  Tenant  @relation("ReceiptTenant", fields: [tenantId], references: [id], onDelete: Restrict)
+  school  School  @relation("ReceiptSchool", fields: [schoolId], references: [id], onDelete: Restrict)
+  student Student @relation("ReceiptStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId, schoolId, studentId])
+  @@map("fin_payment_receipts")
 }

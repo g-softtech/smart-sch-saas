@@ -16,6 +16,7 @@ import { OutboxWorkerModule } from "./modules/outbox-worker/outbox-worker.module
 import { MovementModule } from "./modules/movement/movement.module";
 import { AssignmentsModule } from "./modules/assignments/assignments.module";
 import { CBTModule } from "./modules/cbt/cbt.module";
+import { FinanceModule } from "./modules/finance/finance.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CBTModule } from "./modules/cbt/cbt.module";
     MovementModule,
     AssignmentsModule,
     CBTModule,
+    FinanceModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
