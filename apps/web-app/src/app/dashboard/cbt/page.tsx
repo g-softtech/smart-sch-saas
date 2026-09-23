@@ -1,15 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function CBTPage() {
   const [activeTab, setActiveTab] = useState<"list" | "create" | "student">("list");
   const [exams, setExams] = useState<any[]>([]);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string,
+    durationMinutes: number,
+    availableFrom: Date | null,
+    availableTo: Date | null,
+    maxScore: number
+  }>({
     title: "",
     durationMinutes: 60,
-    availableFrom: "",
-    availableTo: "",
+    availableFrom: null,
+    availableTo: null,
     maxScore: 100,
   });
 
@@ -41,8 +49,34 @@ export default function CBTPage() {
           <div className="space-y-4">
             <div><label className="block mb-1 font-medium">Title</label><input required className="w-full border p-2" value={form.title} onChange={e => setForm({...form, title: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="block mb-1 font-medium">Available From</label><input type="datetime-local" required className="w-full border p-2" value={form.availableFrom} onChange={e => setForm({...form, availableFrom: e.target.value})} /></div>
-              <div><label className="block mb-1 font-medium">Available To</label><input type="datetime-local" required className="w-full border p-2" value={form.availableTo} onChange={e => setForm({...form, availableTo: e.target.value})} /></div>
+              <div>
+                <label className="block mb-1 font-medium">Available From</label>
+                <DatePicker
+                  selected={form.availableFrom}
+                  onChange={(date: Date | null) => setForm({ ...form, availableFrom: date })}
+                  showTimeSelect
+                  timeFormat="HH:mm"
+                  timeIntervals={15}
+                  dateFormat="MMMM d, yyyy h:mm aa"
+                  className="w-full border p-2 rounded text-gray-900 bg-white"
+                  placeholderText="Select start date"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block mb-1 font-medium">Available To</label>
+                <DatePicker
+                  selected={form.availableTo}
+                  onChange={(date: Date | null) => setForm({ ...form, availableTo: date })}
+                  showTimeSelect
+                  timeFormat="HH:mm"
+                  timeIntervals={15}
+                  dateFormat="MMMM d, yyyy h:mm aa"
+                  className="w-full border p-2 rounded text-gray-900 bg-white"
+                  placeholderText="Select end date"
+                  required
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className="block mb-1 font-medium">Duration (Mins)</label><input type="number" min="1" required className="w-full border p-2" value={form.durationMinutes} onChange={e => setForm({...form, durationMinutes: Number(e.target.value)})} /></div>

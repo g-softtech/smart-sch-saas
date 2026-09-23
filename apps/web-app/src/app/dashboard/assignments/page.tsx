@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function AssignmentsPage() {
   const [activeTab, setActiveTab] = useState<"create" | "list">("list");
   const [assignments, setAssignments] = useState<any[]>([]);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{title: string, description: string, dueDate: Date | null, maxScore: number}>({
     title: "",
     description: "",
-    dueDate: "",
+    dueDate: null,
     maxScore: 100,
   });
 
@@ -22,7 +24,7 @@ export default function AssignmentsPage() {
     };
     setAssignments([...assignments, newAssignment]);
     setActiveTab("list");
-    setForm({ title: "", description: "", dueDate: "", maxScore: 100 });
+    setForm({ title: "", description: "", dueDate: null, maxScore: 100 });
   };
 
   return (
@@ -81,12 +83,16 @@ export default function AssignmentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block font-medium mb-1 text-gray-700">Due Date</label>
-                <input
-                  type="datetime-local"
+                <DatePicker
+                  selected={form.dueDate}
+                  onChange={(date: Date | null) => setForm({ ...form, dueDate: date })}
+                  showTimeSelect
+                  timeFormat="HH:mm"
+                  timeIntervals={15}
+                  dateFormat="MMMM d, yyyy h:mm aa"
+                  className="w-full border p-2 rounded text-gray-900 bg-white"
+                  placeholderText="Select due date"
                   required
-                  value={form.dueDate}
-                  onChange={e => setForm({ ...form, dueDate: e.target.value })}
-                  className="w-full border p-2 rounded text-gray-900"
                 />
               </div>
               <div>
