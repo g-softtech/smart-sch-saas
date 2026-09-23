@@ -5,6 +5,7 @@ import { DepartureService } from './services/departure.service';
 import { DepartureController } from './controllers/departure.controller';
 import { GuardianCredentialController } from './controllers/guardian-credential.controller';
 import { PickupAuthorizationController } from './controllers/pickup-authorization.controller';
+import { IdempotencyService } from '@saas/core-platform';
 
 @Module({
   controllers: [
@@ -16,6 +17,7 @@ import { PickupAuthorizationController } from './controllers/pickup-authorizatio
     GuardianCredentialService,
     PickupAuthorizationService,
     DepartureService,
+    IdempotencyService,
   ],
   exports: [
     GuardianCredentialService,

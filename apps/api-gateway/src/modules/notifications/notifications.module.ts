@@ -6,10 +6,12 @@ import { AdmissionsNotificationHandler } from "./handlers/admissions-notificatio
 import { WhatsAppProvider } from "./providers/whatsapp.provider";
 import { MetaWhatsAppAdapter } from "./providers/meta-whatsapp.adapter";
 import { MovementWhatsAppNotificationHandler } from "./handlers/movement-whatsapp.handler";
+import { IdempotencyService } from "@saas/core-platform";
 
 @Module({
   providers: [
     NotificationsService,
+    IdempotencyService,
     {
       provide: EmailProvider,
       useClass: ResendEmailAdapter,
