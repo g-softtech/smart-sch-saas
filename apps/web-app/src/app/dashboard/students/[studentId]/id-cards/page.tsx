@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiClient, ApiError } from '@/lib/api-client';
@@ -14,7 +14,10 @@ interface Credential {
   revocationReason: string | null;
 }
 
-export default function StudentIdCardsPage({ params }: { params: { studentId: string } }) {
+export default function StudentIdCardsPage({ params }: { params: Promise<{ studentId: string }> }) {
+  const resolvedParams = use(params);
+  const studentId = resolvedParams.studentId;
+
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +30,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
   const fetchCredentials = useCallback(async () => {
     try {
       setLoading(true);
-      const data = (await apiClient.get(`/api/v1/id-cards/student/${params.studentId}`)) as Credential[];
+      const data = (await apiClient.get(`/api/v1/id-cards/student/${studentId}`)) as Credential[];
       setCredentials(data || []);
       setError(null);
     } catch (err) {
@@ -39,7 +42,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
     } finally {
       setLoading(false);
     }
-  }, [params.studentId]);
+  }, [studentId]);
 
   useEffect(() => {
     fetchCredentials();
@@ -50,7 +53,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
       setIssueLoading(true);
       setError(null);
       const data = (await apiClient.post(`/api/v1/id-cards/issue`, {
-        studentId: params.studentId
+        studentId: studentId
       })) as any;
       setNewToken(data.token);
       await fetchCredentials();
@@ -97,7 +100,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
           <p className="text-sm text-gray-500 mt-1">Manage secure QR credentials for this student.</p>
         </div>
         <Link
-          href={`/dashboard/students/${params.studentId}`}
+          href={`/dashboard/students/${studentId}`}
           className="text-sm font-medium text-blue-600 hover:text-blue-500"
         >
           &larr; Back to Student
@@ -146,7 +149,7 @@ export default function StudentIdCardsPage({ params }: { params: { studentId: st
                         </div>
                         <div>
                           <p className="text-sm font-bold text-gray-900 leading-tight">Student Name</p>
-                          <p className="text-[10px] text-gray-500 font-mono mt-1">ID: {params.studentId.substring(0, 8).toUpperCase()}</p>
+                          <p className="text-[10px] text-gray-500 font-mono mt-1">ID: {studentId.substring(0, 8).toUpperCase()}</p>
                         </div>
                       </div>
 

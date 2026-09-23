@@ -91,7 +91,18 @@ async function request(endpoint: string, options: RequestOptions = {}) {
 
     // Preserve non-401 API errors
     const errorData = data as Record<string, unknown>;
-    const errorMessage = typeof errorData?.message === 'string' ? errorData.message : typeof errorData?.error === 'string' ? errorData.error : response.statusText;
+    
+    let errorMessage = response.statusText;
+    if (errorData) {
+      if (typeof errorData.message === 'string') {
+        errorMessage = errorData.message;
+      } else if (Array.isArray(errorData.message)) {
+        errorMessage = errorData.message.join(', ');
+      } else if (typeof errorData.error === 'string') {
+        errorMessage = errorData.error;
+      }
+    }
+    
     throw new ApiError(response.status, errorMessage, data);
   } catch (error) {
     if (error instanceof ApiError) {
