@@ -49,12 +49,12 @@ export default function ResultsPage() {
         apiClient.get('/api/v1/students'),
         apiClient.get('/api/v1/academics/results/scales')
       ]);
-      setAcademicYears(ayRes.data || []);
-      setTerms(termsRes.data || []);
-      setClasses(classesRes.data || []);
-      setSubjects(subRes.data || []);
-      setStudents(studentsRes.data || []);
-      setGradingScales(scalesRes.data || []);
+      setAcademicYears((ayRes as AcademicYear[]) || []);
+      setTerms((termsRes as Term[]) || []);
+      setClasses((classesRes as Class[]) || []);
+      setSubjects((subRes as Subject[]) || []);
+      setStudents((studentsRes as Student[]) || []);
+      setGradingScales((scalesRes as GradingScale[]) || []);
     } catch (e: any /* eslint-disable-line */) {
       console.error(e);
       setError("Failed to load reference data.");

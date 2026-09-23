@@ -59,12 +59,12 @@ export default function TimetablePage() {
         apiClient.get('/api/v1/academics/subjects'),
         apiClient.get('/api/v1/staff')
       ]);
-      setAcademicYears(ayRes.data || []);
-      setTerms(termsRes.data || []);
-      setClasses(classesRes.data || []);
-      setArms(armsRes.data || []);
-      setSubjects(subRes.data || []);
-      setStaff(staffRes.data || []);
+      setAcademicYears((ayRes as AcademicYear[]) || []);
+      setTerms((termsRes as Term[]) || []);
+      setClasses((classesRes as Class[]) || []);
+      setArms((armsRes as Arm[]) || []);
+      setSubjects((subRes as Subject[]) || []);
+      setStaff((staffRes as Staff[]) || []);
     } catch (e: any /* eslint-disable-line */) {
       console.error(e);
       setError("Failed to load reference data.");
@@ -86,8 +86,8 @@ export default function TimetablePage() {
         apiClient.get(`/api/v1/academics/timetable/periods/${academicYearId}`),
         apiClient.get(`/api/v1/academics/timetable/class/${academicYearId}/${termId}/${classId}${armId ? `?armId=${armId}` : ''}`)
       ]);
-      setPeriods(periodsRes.data || []);
-      setTimetable(timetableRes.data || []);
+      setPeriods((periodsRes as Period[]) || []);
+      setTimetable((timetableRes as TimetableEntry[]) || []);
     } catch (e: any /* eslint-disable-line */) {
       setError(e.response?.data?.message || "Failed to load timetable.");
     }
