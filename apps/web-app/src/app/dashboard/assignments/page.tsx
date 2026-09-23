@@ -77,17 +77,7 @@ export default function AssignmentsPage() {
                 className="w-full border dark:border-gray-600 p-2 rounded h-32 text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
-            <div>
-              <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
-                Attachment <span className="text-sm font-normal text-gray-500 dark:text-gray-400">(Optional. Supported formats: PDF, DOCX, ZIP. Max size: 10MB)</span>
-              </label>
-              <input
-                type="file"
-                accept=".pdf,.docx,.zip"
-                className="w-full border dark:border-gray-600 p-2 rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Note: Upload functionality is simulated for this MVP phase.</p>
-            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">Due Date</label>

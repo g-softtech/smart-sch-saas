@@ -175,19 +175,13 @@ export class CBTService {
     if (attempt.status !== "IN_PROGRESS") throw new BadRequestException("Attempt has already been submitted");
 
     const now = new Date();
-    // Validate Backend-Authoritative Timing (No explicit grace period configured, MVP: use submissionDeadline = min(availableTo, startTime + durationMinutes) + 1 min fixed network grace)
-    const endTimeLimit = new Date(attempt.startTime.getTime() + attempt.exam.durationMinutes * 60000 + 60000); 
-    const absoluteDeadline = new Date(attempt.exam.availableTo.getTime() + 60000);
+    // Validate Backend-Authoritative Timing: submissionDeadline = min(availableTo, startTime + durationMinutes)
+    const endTimeLimit = new Date(attempt.startTime.getTime() + attempt.exam.durationMinutes * 60000); 
+    const absoluteDeadline = attempt.exam.availableTo;
+    const submissionDeadline = new Date(Math.min(endTimeLimit.getTime(), absoluteDeadline.getTime()));
     
-    if (now > endTimeLimit || now > absoluteDeadline) {
-      // We will accept the submission but mark it, or strictly reject?
-      // Prompt option A: no grace period, but a small fixed 1 min network buffer is standard.
-      // If late, we can auto-submit what they have or reject. Let's just reject and force auto-submit logic if late?
-      // To be safe, we just enforce the deadline.
-      // Actually, if we reject, the student's work is lost. Let's accept it but log it's late, or just enforce strictly.
-      if (now.getTime() - endTimeLimit.getTime() > 5 * 60000) {
-          throw new BadRequestException("Submission deadline has passed significantly. Attempt voided.");
-      }
+    if (now > submissionDeadline) {
+      throw new BadRequestException("Submission deadline has passed. Attempt voided.");
     }
 
     // Auto-Grade
