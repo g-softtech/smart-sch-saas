@@ -220,12 +220,14 @@ export default function StudentIdCardsPage({
                 </div>
               ) : (
                 <div className="w-full flex flex-col items-center">
-                  <div className="opacity-90 pointer-events-none mb-4 transform scale-90 sm:scale-100 origin-top">
-                    <PhysicalIdCard
-                      student={physicalStudent}
-                      school={physicalSchool}
-                      qrToken="HIDDEN_FOR_SECURITY"
-                    />
+                  <div className="opacity-90 mb-4 max-w-full overflow-x-auto pb-2 flex justify-center w-full">
+                    <div className="transform scale-[0.85] sm:scale-100 origin-top">
+                      <PhysicalIdCard
+                        student={physicalStudent}
+                        school={physicalSchool}
+                        qrToken="HIDDEN_FOR_SECURITY"
+                      />
+                    </div>
                   </div>
                   <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 mb-4 flex flex-col items-center justify-center text-center w-full max-w-sm">
                     <div className="flex items-center text-gray-500 mb-1">
