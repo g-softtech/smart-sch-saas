@@ -49,44 +49,55 @@ export default function AssignmentsPage() {
           <h2 className="text-lg font-semibold mb-4">Create Assignment</h2>
           <div className="space-y-4">
             <div>
-              <label className="block font-medium mb-1">Title</label>
+              <label className="block font-medium mb-1 text-gray-700">Title</label>
               <input
                 type="text"
                 required
                 value={form.title}
                 onChange={e => setForm({ ...form, title: e.target.value })}
-                className="w-full border p-2 rounded"
+                className="w-full border p-2 rounded text-gray-900"
               />
             </div>
             <div>
-              <label className="block font-medium mb-1">Description (Rich Text MVP)</label>
+              <label className="block font-medium mb-1 text-gray-700">Description (Rich Text MVP)</label>
               <textarea
                 required
                 value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })}
-                className="w-full border p-2 rounded h-32"
+                className="w-full border p-2 rounded h-32 text-gray-900"
               />
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-gray-700">
+                Attachment <span className="text-sm font-normal text-gray-500">(Optional. Supported formats: PDF, DOCX, ZIP. Max size: 10MB)</span>
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.docx,.zip"
+                className="w-full border p-2 rounded text-gray-900 bg-white"
+              />
+              <p className="text-xs text-gray-500 mt-1">Note: Upload functionality is simulated for this MVP phase.</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block font-medium mb-1">Due Date</label>
+                <label className="block font-medium mb-1 text-gray-700">Due Date</label>
                 <input
                   type="datetime-local"
                   required
                   value={form.dueDate}
                   onChange={e => setForm({ ...form, dueDate: e.target.value })}
-                  className="w-full border p-2 rounded"
+                  className="w-full border p-2 rounded text-gray-900"
                 />
               </div>
               <div>
-                <label className="block font-medium mb-1">Max Score</label>
+                <label className="block font-medium mb-1 text-gray-700">Max Score</label>
                 <input
                   type="number"
                   min="0"
                   required
                   value={form.maxScore}
                   onChange={e => setForm({ ...form, maxScore: Number(e.target.value) })}
-                  className="w-full border p-2 rounded"
+                  className="w-full border p-2 rounded text-gray-900"
                 />
               </div>
             </div>
