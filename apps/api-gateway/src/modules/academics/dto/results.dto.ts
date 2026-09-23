@@ -40,7 +40,7 @@ export class RecordScoreDto {
 
   @IsString()
   @IsNotEmpty()
-  enrollmentId: string;
+  studentId: string;
 
   @IsString()
   @IsNotEmpty()

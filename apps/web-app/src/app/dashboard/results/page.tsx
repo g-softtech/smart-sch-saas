@@ -103,7 +103,7 @@ export default function ResultsPage() {
       await apiClient.post('/api/v1/academics/results/record-score', {
         academicYearId,
         termId,
-        enrollmentId,
+        studentId: enrollmentId,
         subjectId,
         type: studentScore.type || "CA",
         score: studentScore.score,

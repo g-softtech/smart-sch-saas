@@ -84,7 +84,7 @@ export class ResultsService {
     const [academicYear, term, enrollment, subject] = await Promise.all([
       prisma.academicYear.findUnique({ where: { id: dto.academicYearId } }),
       prisma.term.findUnique({ where: { id: dto.termId } }),
-      prisma.enrollment.findUnique({ where: { id: dto.enrollmentId } }),
+      prisma.enrollment.findFirst({ where: { studentId: dto.studentId, academicYearId: dto.academicYearId, status: "ACTIVE" } }),
       prisma.subject.findUnique({ where: { id: dto.subjectId } }),
     ]);
 
@@ -101,7 +101,7 @@ export class ResultsService {
           tenantId_schoolId_enrollmentId_subjectId_termId: {
             tenantId,
             schoolId,
-            enrollmentId: dto.enrollmentId,
+            enrollmentId: enrollment.id,
             subjectId: dto.subjectId,
             termId: dto.termId,
           },
@@ -115,7 +115,7 @@ export class ResultsService {
             schoolId,
             academicYearId: dto.academicYearId,
             termId: dto.termId,
-            enrollmentId: dto.enrollmentId,
+            enrollmentId: enrollment.id,
             subjectId: dto.subjectId,
             status: ResultStatus.DRAFT,
           },
