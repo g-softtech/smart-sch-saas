@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { apiClient, ApiError } from '@/lib/api-client';
@@ -97,6 +97,12 @@ export default function StudentProfilePage() {
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
+  // Photo Upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
   const fetchProfile = useCallback(async (isRefresh = false) => {
     if (!studentId) return;
     try {
@@ -133,10 +139,68 @@ export default function StudentProfilePage() {
     }
   }, [studentId]);
 
+  const loadPhoto = useCallback(async () => {
+    try {
+      setPhotoLoading(true);
+      const blob = await apiClient.getBlob(`api/v1/students/${studentId}/photo`);
+      if (blob) {
+        if (photoUrl) URL.revokeObjectURL(photoUrl);
+        setPhotoUrl(URL.createObjectURL(blob));
+      } else {
+        setPhotoUrl(null);
+      }
+    } catch (err) {
+      console.error("Failed to load photo", err);
+    } finally {
+      setPhotoLoading(false);
+    }
+  }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProfile();
-  }, [fetchProfile]);
+    loadPhoto();
+  }, [fetchProfile, loadPhoto]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('File size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setPhotoError(null);
+      setPhotoLoading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      await apiClient.postFormData(`api/v1/students/${studentId}/photo`, formData);
+      await loadPhoto();
+    } catch (err: any) {
+      setPhotoError(err.message || 'Failed to upload photo');
+    } finally {
+      setPhotoLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!confirm('Are you sure you want to remove the official student photo?')) return;
+    
+    try {
+      setPhotoError(null);
+      setPhotoLoading(true);
+      await apiClient.delete(`api/v1/students/${studentId}/photo`);
+      setPhotoUrl(null);
+    } catch (err: any) {
+      setPhotoError(err.message || 'Failed to remove photo');
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
 
   const fetchAcademics = useCallback(async () => {
     try {
@@ -400,6 +464,57 @@ export default function StudentProfilePage() {
 
         {/* Right Column */}
         <div className="space-y-8">
+
+          {/* Profile Photo Card */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
+            <h2 className="text-xl font-semibold text-brand-navy dark:text-white mb-4">Official Photo</h2>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-32 h-32 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden mb-4 relative group">
+                {photoLoading && (
+                  <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center z-10">
+                    <div className="w-6 h-6 border-2 border-brand-teal border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoUrl} alt="Student Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-gray-400 dark:text-gray-500 text-center text-sm p-4">
+                    No photo uploaded
+                  </div>
+                )}
+              </div>
+              
+              {photoError && <p className="text-red-500 text-sm mb-3">{photoError}</p>}
+
+              <div className="flex gap-3">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/png, image/jpeg" 
+                  onChange={handlePhotoUpload} 
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={photoLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-brand-teal hover:bg-teal-600 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {photoUrl ? 'Replace Photo' : 'Upload Photo'}
+                </button>
+                {photoUrl && (
+                  <button
+                    onClick={handlePhotoDelete}
+                    disabled={photoLoading}
+                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* ID Card & Security Actions */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">

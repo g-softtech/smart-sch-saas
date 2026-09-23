@@ -20,6 +20,8 @@ export const apiClient = {
   put: (url: string, data?: unknown, options?: RequestOptions) => request(url, { ...options, method: 'PUT', body: data ? JSON.stringify(data) : undefined }),
   patch: (url: string, data?: unknown, options?: RequestOptions) => request(url, { ...options, method: 'PATCH', body: data ? JSON.stringify(data) : undefined }),
   delete: (url: string, options?: RequestOptions) => request(url, { ...options, method: 'DELETE' }),
+  postFormData: (url: string, formData: FormData, options?: RequestOptions) => request(url, { ...options, method: 'POST', body: formData }),
+  getBlob: (url: string, options?: RequestOptions) => request(url, { ...options, method: 'GET', _returnBlob: true } as any),
 };
 
 async function request(endpoint: string, options: RequestOptions = {}) {
@@ -28,11 +30,13 @@ async function request(endpoint: string, options: RequestOptions = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:3000';
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
+  const isFormData = customConfig.body instanceof FormData;
+
   const config: RequestInit = {
     cache: 'no-store',
     ...customConfig,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...headers,
     },
   };
@@ -57,6 +61,10 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     
     // We expect 204 No Content to be empty
     if (response.status === 204) return null;
+
+    if (response.ok && (customConfig as any)._returnBlob) {
+      return await response.blob();
+    }
 
     let data;
     const contentType = response.headers.get('content-type');

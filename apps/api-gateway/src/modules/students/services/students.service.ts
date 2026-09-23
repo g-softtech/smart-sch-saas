@@ -454,4 +454,82 @@ export class StudentsService {
 
     return this.repo.listGuardians(schoolId, search);
   }
+
+  // ─── Student Photo ─────────────────────────────────────────────────────────
+
+  async uploadStudentPhoto(studentId: string, file: Express.Multer.File, schoolId: string) {
+    const tenantId = this.getActiveTenantId();
+
+    const student = await this.repo.findStudent(studentId);
+    if (!student || student.schoolId !== schoolId) {
+      throw new ForbiddenException("Not authorized to modify this student");
+    }
+
+    // Dynamic import file-type to validate actual magic numbers
+    const fileType = await import('file-type');
+    const type = await fileType.fromBuffer(file.buffer);
+    if (!type || !['image/jpeg', 'image/png'].includes(type.mime)) {
+      throw new BadRequestException("Invalid or unsupported file type. Must be JPEG or PNG.");
+    }
+    
+    // Strip EXIF data? We'll rely on the client or advanced processing if needed. 
+    // Minimum requirement: validate MIME type from actual buffer.
+
+    // Upsert the photo
+    const photo = await kernel.db.studentPhoto.upsert({
+      where: { studentId },
+      create: {
+        tenantId,
+        schoolId,
+        studentId,
+        mimeType: type.mime,
+        data: file.buffer,
+      },
+      update: {
+        mimeType: type.mime,
+        data: file.buffer,
+      },
+    });
+
+    return { id: photo.id, mimeType: photo.mimeType, updatedAt: photo.updatedAt };
+  }
+
+  async getStudentPhoto(studentId: string) {
+    const tenantId = this.getActiveTenantId();
+    
+    // We must ensure the student belongs to the active tenant
+    const student = await kernel.db.student.findFirst({
+      where: { id: studentId, tenantId },
+      select: { id: true },
+    });
+
+    if (!student) {
+      throw new ForbiddenException("Not authorized to access this student photo");
+    }
+
+    const photo = await kernel.db.studentPhoto.findUnique({
+      where: { studentId },
+    });
+
+    if (!photo) {
+      return null;
+    }
+
+    return photo;
+  }
+
+  async deleteStudentPhoto(studentId: string, schoolId: string) {
+    const tenantId = this.getActiveTenantId();
+
+    const student = await this.repo.findStudent(studentId);
+    if (!student || student.schoolId !== schoolId) {
+      throw new ForbiddenException("Not authorized to modify this student");
+    }
+
+    await kernel.db.studentPhoto.delete({
+      where: { studentId },
+    }).catch(() => null);
+
+    return { success: true };
+  }
 }

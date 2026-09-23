@@ -34,6 +34,8 @@ export default function StudentIdCardsPage({
   const [issueLoading, setIssueLoading] = useState(false);
   const [revokeLoading, setRevokeLoading] = useState<string | null>(null);
 
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
+
   // For newly issued credential token to display the QR
   const [newToken, setNewToken] = useState<string | null>(null);
 
@@ -64,9 +66,22 @@ export default function StudentIdCardsPage({
     }
   }, [studentId]);
 
+  const loadPhoto = useCallback(async () => {
+    try {
+      const blob = await apiClient.getBlob(`api/v1/students/${studentId}/photo`);
+      if (blob) {
+        if (photoUrl) URL.revokeObjectURL(photoUrl);
+        setPhotoUrl(URL.createObjectURL(blob));
+      }
+    } catch (err) {
+      console.error("Failed to load photo", err);
+    }
+  }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    loadPhoto();
+  }, [fetchData, loadPhoto]);
 
   const handleIssue = async () => {
     try {
@@ -130,7 +145,7 @@ export default function StudentIdCardsPage({
         studentNumber: student.studentNumber,
         className: activeEnrollment?.class?.name,
         armName: activeEnrollment?.arm?.name,
-        photoUrl: undefined, // Explicit placeholder: missing in backend schema
+        photoUrl: photoUrl,
       }
     : null;
 

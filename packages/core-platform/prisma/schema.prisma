@@ -52,11 +52,12 @@ model Tenant {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  users        UserTenantMembership[]
-  schoolAccess UserSchoolAccess[]
-  roles        Role[]
-  auditLogs    AuditLog[]
-  schools      School[] // TENANT_SCOPED
+  users         UserTenantMembership[]
+  schoolAccess  UserSchoolAccess[]
+  roles         Role[]
+  auditLogs     AuditLog[]
+  schools       School[] // TENANT_SCOPED
+  studentPhotos StudentPhoto[]
 
   // Academics (Batch 3A)
   campuses      Campus[]
@@ -227,7 +228,8 @@ model School {
   subjects      Subject[]
 
   // Students (Batch 3B)
-  students Student[]
+  students      Student[]
+  studentPhotos StudentPhoto[]
 
   // Admissions (Batch 3C)
   publishedForms        PublishedAdmissionForm[]
@@ -247,6 +249,23 @@ model School {
   StudentArrival       StudentArrival[]
   pickupAuthorizations PickupAuthorization[]
   departures           StudentDeparture[]
+}
+
+model StudentPhoto {
+  id        String   @id @default(uuid())
+  tenantId  String
+  schoolId  String
+  studentId String   @unique
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  school  School  @relation(fields: [schoolId], references: [id])
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("stud_photos")
 }
 
 // ================= SYSTEM_ONLY MODELS =================
@@ -575,6 +594,8 @@ model Student {
 
   // Credentials (Phase 16)
   credentials StudentCredential[]
+
+  photo StudentPhoto?
 
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt

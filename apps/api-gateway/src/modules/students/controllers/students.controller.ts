@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   Param,
   Query,
@@ -9,8 +10,16 @@ import {
   UseInterceptors,
   HttpCode,
   Req,
+  Res,
   BadRequestException,
+  NotFoundException,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { Response } from "express";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { StudentsService } from "../services/students.service";
 import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
@@ -106,6 +115,67 @@ export class StudentsController {
   ): Promise<ApiResponseDto<any>> {
     const student = await this.studentsService.getStudent(studentId);
     return { success: true, data: student };
+  }
+
+  // ─── Student Photo ─────────────────────────────────────────────────────────
+
+  @Post(":studentId/photo")
+  @ApiOperation({ summary: "Upload/replace official student profile photo" })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadStudentPhoto(
+    @Req() req: any,
+    @Param("studentId") studentId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB limit
+          new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
+        ],
+      }),
+    ) file: Express.Multer.File,
+  ): Promise<ApiResponseDto<any>> {
+    const { schoolId } = req.workspace;
+    if (!schoolId) {
+      throw new BadRequestException("School context is required");
+    }
+
+    const photoInfo = await this.studentsService.uploadStudentPhoto(studentId, file, schoolId);
+    return { success: true, data: photoInfo };
+  }
+
+  @Get(":studentId/photo")
+  @ApiOperation({ summary: "Get official student profile photo" })
+  async getStudentPhoto(
+    @Param("studentId") studentId: string,
+    @Res() res: Response
+  ) {
+    const photo = await this.studentsService.getStudentPhoto(studentId);
+    if (!photo) {
+      throw new NotFoundException("Student photo not found");
+    }
+
+    res.set({
+      'Content-Type': photo.mimeType,
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, max-age=3600',
+    });
+
+    res.send(photo.data);
+  }
+
+  @Delete(":studentId/photo")
+  @ApiOperation({ summary: "Remove official student profile photo" })
+  async deleteStudentPhoto(
+    @Req() req: any,
+    @Param("studentId") studentId: string,
+  ): Promise<ApiResponseDto<any>> {
+    const { schoolId } = req.workspace;
+    if (!schoolId) {
+      throw new BadRequestException("School context is required");
+    }
+
+    await this.studentsService.deleteStudentPhoto(studentId, schoolId);
+    return { success: true, data: { removed: true } };
   }
 
   // ─── Guardians ─────────────────────────────────────────────────────────────
