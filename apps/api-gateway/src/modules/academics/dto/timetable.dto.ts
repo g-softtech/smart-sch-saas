@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsEnum, Matches } from "class-validator";
-import { DayOfWeek } from "@prisma/client";
+import { DayOfWeek } from "@saas/core-platform";
 
 export class CreateTimetablePeriodDto {
   @IsString()

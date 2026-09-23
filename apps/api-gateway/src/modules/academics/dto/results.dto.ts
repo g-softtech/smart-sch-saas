@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsOptional, IsNumber, Min } from "class-validator";
-import { ResultStatus } from "@prisma/client";
+import { ResultStatus } from "@saas/core-platform";
 
 export class CreateGradingScaleDto {
   @IsString()

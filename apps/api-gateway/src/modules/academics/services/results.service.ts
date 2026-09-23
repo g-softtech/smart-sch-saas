@@ -5,10 +5,10 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaClient, ResultStatus } from "@prisma/client";
+import { ResultStatus, kernel } from "@saas/core-platform";
 import { CreateGradingScaleDto, CreateGradeBoundaryDto, RecordScoreDto } from "../dto/results.dto";
 
-const prisma = new PrismaClient();
+const prisma = kernel.db;
 
 @Injectable()
 export class ResultsService {

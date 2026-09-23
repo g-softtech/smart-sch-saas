@@ -4,10 +4,10 @@ import {
   ConflictException,
   BadRequestException,
 } from "@nestjs/common";
-import { PrismaClient, DayOfWeek } from "@prisma/client";
+import { DayOfWeek, kernel } from "@saas/core-platform";
 import { CreateTimetablePeriodDto, CreateTimetableEntryDto } from "../dto/timetable.dto";
 
-const prisma = new PrismaClient();
+const prisma = kernel.db;
 
 @Injectable()
 export class TimetableService {
