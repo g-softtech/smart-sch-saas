@@ -1,12 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { EmailProvider } from "./providers/email.provider";
-import { ResendEmailAdapter } from "./providers/resend-email.adapter";
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly emailProvider: ResendEmailAdapter) {}
+  constructor(private readonly emailProvider: EmailProvider) {}
+
 
   async sendTransactionalEmail(
     to: string,
