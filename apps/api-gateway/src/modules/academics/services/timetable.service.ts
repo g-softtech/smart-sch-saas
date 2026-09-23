@@ -69,22 +69,62 @@ export class TimetableService {
       }
     }
 
-    try {
-      return await prisma.timetableEntry.create({
-        data: {
+    return prisma.$transaction(async (tx) => {
+      // 2. Check for class-wide vs arm-specific conflict
+      const existingClassEntries = await tx.timetableEntry.findMany({
+        where: {
           tenantId,
           schoolId,
-          ...dto,
-        },
+          periodId: dto.periodId,
+          dayOfWeek: dto.dayOfWeek,
+          classId: dto.classId,
+        }
       });
-    } catch (e: any) {
-      if (e.code === "P2002") {
-        throw new ConflictException(
-          "Timetable clash detected: The class or teacher is already scheduled for this period and day."
-        );
+
+      for (const entry of existingClassEntries) {
+        if (!dto.armId) {
+          // Inserting class-wide -> conflicts with ANY existing entry for this class
+          throw new ConflictException("Timetable clash: A class-wide entry conflicts with existing entries for this class/arm.");
+        } else {
+          // Inserting arm-specific
+          if (!entry.armId) {
+            // Existing is class-wide -> conflict
+            throw new ConflictException("Timetable clash: An existing class-wide entry conflicts with this arm-specific entry.");
+          }
+          if (entry.armId === dto.armId) {
+             // Existing is same arm -> conflict
+             throw new ConflictException("Timetable clash: An entry for this arm already exists.");
+          }
+        }
       }
-      throw e;
-    }
+
+      // 3. Teacher conflict check
+      if (dto.teacherId) {
+        const teacherConflict = await tx.timetableEntry.findFirst({
+           where: {
+             tenantId, schoolId, periodId: dto.periodId, dayOfWeek: dto.dayOfWeek, teacherId: dto.teacherId
+           }
+        });
+        if (teacherConflict) throw new ConflictException("Timetable clash: Teacher is already scheduled for this period and day.");
+      }
+
+      try {
+        return await tx.timetableEntry.create({
+          data: {
+            tenantId,
+            schoolId,
+            ...dto,
+          },
+        });
+      } catch (e: any) {
+        if (e.code === "P2002") {
+          throw new ConflictException(
+            "Timetable clash detected: The class or teacher is already scheduled for this period and day."
+          );
+        }
+        throw e;
+      }
+    }, { isolationLevel: 'Serializable' });
   }
 
   async listClassTimetable(tenantId: string, schoolId: string, academicYearId: string, termId: string, classId: string, armId?: string) {

@@ -35,8 +35,17 @@ export class ResultsService {
       throw new NotFoundException("Grading Scale not found in this school context.");
     }
     
-    // Boundary domain check is implicitly handled by dto validation (minScore >= 0)
-    // Could add extra logic to prevent overlapping boundaries if needed.
+    // Check if the scale is attached to any locked results
+    const lockedResults = await prisma.subjectResult.findFirst({
+      where: {
+        gradingScaleId: dto.gradingScaleId,
+        status: { in: [ResultStatus.FINALIZED, ResultStatus.PUBLISHED] },
+      },
+    });
+
+    if (lockedResults) {
+      throw new ForbiddenException("Cannot modify Grading Scale: It is attached to finalized or published results.");
+    }
 
     try {
       return await prisma.gradeBoundary.create({
