@@ -89,7 +89,7 @@ export default function TimetablePage() {
       setPeriods((periodsRes as Period[]) || []);
       setTimetable((timetableRes as TimetableEntry[]) || []);
     } catch (e: any /* eslint-disable-line */) {
-      setError(e.response?.data?.message || "Failed to load timetable.");
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to load timetable.");
     }
   };
 
@@ -110,7 +110,7 @@ export default function TimetablePage() {
       setNewPeriodEnd('');
       fetchTimetable(); // Reload
     } catch (e: any /* eslint-disable-line */) {
-      setError(e.response?.data?.message || "Failed to create period.");
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to create period.");
     }
   };
 
@@ -130,7 +130,7 @@ export default function TimetablePage() {
       setSuccess("Timetable entry added successfully.");
       fetchTimetable();
     } catch (e: any /* eslint-disable-line */) {
-      setError(e.response?.data?.message || "Failed to add timetable entry.");
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to add timetable entry.");
     }
   };
 
@@ -190,8 +190,8 @@ export default function TimetablePage() {
               <div className="space-y-4">
                 <input type="text" placeholder="Name (e.g. Period 1)" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newPeriodName} onChange={e => setNewPeriodName(e.target.value)} />
                 <div className="flex gap-2">
-                  <input type="text" placeholder="Start (HH:mm)" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newPeriodStart} onChange={e => setNewPeriodStart(e.target.value)} />
-                  <input type="text" placeholder="End (HH:mm)" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newPeriodEnd} onChange={e => setNewPeriodEnd(e.target.value)} />
+                  <input type="time" placeholder="Start (HH:mm)" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newPeriodStart} onChange={e => setNewPeriodStart(e.target.value)} />
+                  <input type="time" placeholder="End (HH:mm)" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newPeriodEnd} onChange={e => setNewPeriodEnd(e.target.value)} />
                 </div>
                 <label className="flex items-center gap-2 dark:text-white">
                   <input type="checkbox" checked={newPeriodIsBreak} onChange={e => setNewPeriodIsBreak(e.target.checked)} />

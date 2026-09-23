@@ -73,7 +73,7 @@ export default function ResultsPage() {
       setNewScaleName('');
       fetchReferenceData();
     } catch (e: any /* eslint-disable-line */) {
-      setError(e.response?.data?.message || "Failed to create scale.");
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to create scale.");
     }
   };
 
@@ -90,7 +90,7 @@ export default function ResultsPage() {
       setNewBoundaryGrade('');
       fetchReferenceData();
     } catch (e: any /* eslint-disable-line */) {
-      setError(e.response?.data?.message || "Failed to add boundary.");
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to add boundary.");
     }
   };
 
@@ -112,7 +112,7 @@ export default function ResultsPage() {
       
       setSuccess(`Score recorded for student.`);
     } catch (e: any /* eslint-disable-line */) {
-      setError(e.response?.data?.message || "Failed to record score.");
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to record score.");
     }
   };
 
