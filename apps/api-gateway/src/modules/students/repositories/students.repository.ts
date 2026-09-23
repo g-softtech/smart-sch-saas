@@ -298,8 +298,17 @@ export class StudentsRepository {
     });
   }
 
-  async listStudents(schoolId?: string) {
-    const where: Record<string, unknown> = schoolId ? { schoolId } : {};
+  async listStudents(schoolId?: string, search?: string) {
+    const where: any = schoolId ? { schoolId } : {};
+    
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { studentNumber: { contains: search, mode: "insensitive" } }
+      ];
+    }
+    
     return kernel.db.student.findMany({ where });
   }
 

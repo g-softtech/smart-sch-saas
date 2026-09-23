@@ -2,6 +2,7 @@ import { DepartureService } from "./departure.service";
 import { StudentCredentialService } from "../../id-cards/services/student-credential.service";
 import { GuardianCredentialService } from "./guardian-credential.service";
 import { PickupAuthorizationService } from "./pickup-authorization.service";
+import { IdempotencyService } from "@saas/core-platform";
 import { BadRequestException } from "@nestjs/common";
 import { kernel } from "@saas/core-platform";
 
@@ -19,6 +20,7 @@ describe("DepartureService", () => {
   let studentCredSvc: jest.Mocked<StudentCredentialService>;
   let guardianCredSvc: jest.Mocked<GuardianCredentialService>;
   let authSvc: jest.Mocked<PickupAuthorizationService>;
+  let idempotencySvc: jest.Mocked<IdempotencyService>;
 
   beforeEach(() => {
     studentCredSvc = {
@@ -30,11 +32,15 @@ describe("DepartureService", () => {
     authSvc = {
       verifyPickupAuthorization: jest.fn()
     } as any;
+    idempotencySvc = {
+      withIdempotency: jest.fn().mockImplementation(async (db, name, opId, cb) => cb(db))
+    } as any;
 
     departureService = new DepartureService(
       studentCredSvc,
       guardianCredSvc,
-      authSvc
+      authSvc,
+      idempotencySvc
     );
 
     jest.clearAllMocks();

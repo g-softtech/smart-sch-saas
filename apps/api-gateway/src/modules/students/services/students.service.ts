@@ -397,8 +397,8 @@ export class StudentsService {
 
   // ─── Read Operations ───────────────────────────────────────────────────────
 
-  async listStudents(schoolId?: string) {
-    return this.repo.listStudents(schoolId);
+  async listStudents(schoolId?: string, search?: string) {
+    return this.repo.listStudents(schoolId, search);
   }
 
   async getStudent(studentId: string) {

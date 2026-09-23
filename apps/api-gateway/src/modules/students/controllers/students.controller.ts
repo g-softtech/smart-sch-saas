@@ -83,7 +83,7 @@ export class StudentsController {
   async listStudents(
     @Query() query: PaginationQueryDto,
   ): Promise<ApiResponseDto<any>> {
-    const students = await this.studentsService.listStudents(query.schoolId);
+    const students = await this.studentsService.listStudents(query.schoolId, query.search);
 
     // Simple offset pagination on the returned result set.
     // TODO: push pagination to the repository layer when data volumes require it.

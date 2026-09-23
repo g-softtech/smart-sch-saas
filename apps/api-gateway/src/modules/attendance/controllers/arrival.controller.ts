@@ -32,4 +32,33 @@ export class ArrivalController {
       dto.source
     );
   }
+
+  @Post("manual")
+  @ApiOperation({ summary: "Record student arrival manually (Fallback)" })
+  @ApiResponse({ status: 200, description: "Arrival recorded manually" })
+  async recordManualArrival(@Req() req: any, @Body() dto: { studentId: string; operationId: string; occurredAt?: string }) {
+    const { tenantId, schoolId } = req.workspace;
+    const operatorId = req.user.sub;
+    
+    if (!schoolId) {
+      throw new BadRequestException("School context is required");
+    }
+
+    if (!dto.studentId) {
+      throw new BadRequestException("studentId is required for manual arrival");
+    }
+
+    if (!dto.operationId) {
+      throw new BadRequestException("operationId is required for manual arrival");
+    }
+
+    return this.arrivalService.recordManualArrival(
+      tenantId,
+      schoolId,
+      operatorId,
+      dto.studentId,
+      dto.operationId,
+      dto.occurredAt
+    );
+  }
 }

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ArrivalService } from "./arrival.service";
 import { StudentCredentialService } from "../../id-cards/services/student-credential.service";
+import { IdempotencyService } from "@saas/core-platform";
 import { BadRequestException, ConflictException } from "@nestjs/common";
 
 const mockTransaction = jest.fn();
@@ -33,6 +34,12 @@ describe("ArrivalService", () => {
           provide: StudentCredentialService,
           useValue: {
             verifyCredential: jest.fn(),
+          },
+        },
+        {
+          provide: IdempotencyService,
+          useValue: {
+            withIdempotency: jest.fn().mockImplementation(async (db, name, opId, cb) => cb(db)),
           },
         },
       ],
