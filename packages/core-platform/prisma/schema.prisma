@@ -348,12 +348,12 @@ model Campus {
 }
 
 model AcademicYear {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   tenantId  String
   schoolId  String
   name      String
-  startDate DateTime @db.Date
-  endDate   DateTime @db.Date
+  startDate DateTime? @db.Date
+  endDate   DateTime? @db.Date
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -377,12 +377,12 @@ model AcademicYear {
 }
 
 model Term {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   tenantId       String
   academicYearId String
   name           String
-  startDate      DateTime @db.Date
-  endDate        DateTime @db.Date
+  startDate      DateTime? @db.Date
+  endDate        DateTime? @db.Date
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)

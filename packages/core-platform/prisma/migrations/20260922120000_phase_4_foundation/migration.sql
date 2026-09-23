@@ -5,12 +5,12 @@ CREATE TYPE "CredentialStatus" AS ENUM ('ISSUED', 'ACTIVE', 'REVOKED', 'REPLACED
 ALTER TYPE "OutboxStatus" ADD VALUE 'PROCESSING';
 
 -- AlterTable
-ALTER TABLE "acd_academic_years" ADD COLUMN     "endDate" DATE NOT NULL,
-ADD COLUMN     "startDate" DATE NOT NULL;
+ALTER TABLE "acd_academic_years" ADD COLUMN     "endDate" DATE,
+ADD COLUMN     "startDate" DATE;
 
 -- AlterTable
-ALTER TABLE "acd_terms" ADD COLUMN     "endDate" DATE NOT NULL,
-ADD COLUMN     "startDate" DATE NOT NULL;
+ALTER TABLE "acd_terms" ADD COLUMN     "endDate" DATE,
+ADD COLUMN     "startDate" DATE;
 
 -- CreateTable
 CREATE TABLE "stud_credentials" (
