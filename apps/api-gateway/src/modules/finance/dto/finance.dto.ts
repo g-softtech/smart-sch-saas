@@ -62,11 +62,15 @@ export class GenerateInvoiceDto {
   @IsString()
   @IsOptional()
   feeStructureId?: string;
+  
+  @IsString()
+  @IsOptional()
+  financialPeriodId?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => FeeItemDto)
-  @IsOptional() // if feeStructureId is provided, items can be omitted
+  @IsOptional()
   customItems?: FeeItemDto[];
 
   @IsString()
@@ -103,4 +107,56 @@ export class RecordPaymentDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsString()
+  @IsOptional()
+  financialAccountId?: string;
+
+  @IsString()
+  @IsOptional()
+  financialPeriodId?: string;
+}
+
+export class ApplyAdjustmentDto {
+  @IsString()
+  @IsNotEmpty()
+  invoiceId: string;
+
+  @IsString()
+  @IsIn(["SCHOLARSHIP", "DISCOUNT", "WAIVER"])
+  type: "SCHOLARSHIP" | "DISCOUNT" | "WAIVER";
+
+  @IsNumber()
+  @Min(1)
+  amount: number;
+
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+
+  @IsString()
+  @IsOptional()
+  financialPeriodId?: string;
+}
+
+export class RefundPaymentDto {
+  @IsString()
+  @IsNotEmpty()
+  paymentId: string;
+
+  @IsNumber()
+  @Min(1)
+  amount: number;
+
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+
+  @IsString()
+  @IsIn(["ORIGINAL_GATEWAY", "WALLET_CREDIT"])
+  refundMethod: "ORIGINAL_GATEWAY" | "WALLET_CREDIT";
+
+  @IsString()
+  @IsOptional()
+  financialPeriodId?: string;
 }

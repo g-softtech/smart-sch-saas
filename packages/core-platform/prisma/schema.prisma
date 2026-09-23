@@ -1631,12 +1631,16 @@ model Invoice {
   lineItems   InvoiceLineItem[]
   allocations PaymentAllocation[]
 
-  tenant       Tenant        @relation("InvoiceTenant", fields: [tenantId], references: [id], onDelete: Restrict)
-  school       School        @relation("InvoiceSchool", fields: [schoolId], references: [id], onDelete: Restrict)
-  student      Student       @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  term         Term          @relation(fields: [termId], references: [id], onDelete: Restrict)
-  feeStructure FeeStructure? @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+  tenant            Tenant                @relation("InvoiceTenant", fields: [tenantId], references: [id], onDelete: Restrict)
+  school            School                @relation("InvoiceSchool", fields: [schoolId], references: [id], onDelete: Restrict)
+  student           Student               @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term              Term                  @relation(fields: [termId], references: [id], onDelete: Restrict)
+  feeStructure      FeeStructure?         @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+  financialPeriodId String?
+  financialPeriod   FinancialPeriod?      @relation("InvoiceFinancialPeriod", fields: [financialPeriodId], references: [id], onDelete: Restrict)
+  walletAllocations WalletAllocation[]
+  adjustments       FinancialAdjustment[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, schoolId, studentId])
@@ -1671,9 +1675,14 @@ model Payment {
   allocations PaymentAllocation[]
   receipt     PaymentReceipt?
 
-  tenant  Tenant  @relation("PaymentTenant", fields: [tenantId], references: [id], onDelete: Restrict)
-  school  School  @relation("PaymentSchool", fields: [schoolId], references: [id], onDelete: Restrict)
-  student Student @relation("PaymentStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  tenant             Tenant            @relation("PaymentTenant", fields: [tenantId], references: [id], onDelete: Restrict)
+  school             School            @relation("PaymentSchool", fields: [schoolId], references: [id], onDelete: Restrict)
+  student            Student           @relation("PaymentStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  financialAccountId String?
+  financialAccount   FinancialAccount? @relation("PaymentFinancialAccount", fields: [financialAccountId], references: [id], onDelete: Restrict)
+  financialPeriodId  String?
+  financialPeriod    FinancialPeriod?  @relation("PaymentFinancialPeriod", fields: [financialPeriodId], references: [id], onDelete: Restrict)
+  refunds            Refund[]
 
   @@unique([tenantId, reference])
   @@index([tenantId, schoolId, studentId])
@@ -1687,8 +1696,10 @@ model PaymentAllocation {
   amountAllocated Decimal  @db.Decimal(10, 2)
   createdAt       DateTime @default(now())
 
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payment           Payment          @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice           Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  financialPeriodId String?
+  financialPeriod   FinancialPeriod? @relation("PaymentAllocationFinancialPeriod", fields: [financialPeriodId], references: [id], onDelete: Restrict)
 
   @@index([paymentId])
   @@index([invoiceId])
@@ -1714,4 +1725,169 @@ model PaymentReceipt {
   @@unique([tenantId, receiptNumber])
   @@index([tenantId, schoolId, studentId])
   @@map("fin_payment_receipts")
+}
+
+enum FinancialPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+enum AdjustmentType {
+  SCHOLARSHIP
+  DISCOUNT
+  WAIVER
+}
+
+enum RefundMethod {
+  ORIGINAL_GATEWAY
+  WALLET_CREDIT
+}
+
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+}
+
+model FinancialPeriod {
+  id        String                @id @default(uuid())
+  tenantId  String
+  schoolId  String
+  name      String
+  startDate DateTime?             @db.Date
+  endDate   DateTime?             @db.Date
+  status    FinancialPeriodStatus @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices           Invoice[]             @relation("InvoiceFinancialPeriod")
+  payments           Payment[]             @relation("PaymentFinancialPeriod")
+  paymentAllocations PaymentAllocation[]   @relation("PaymentAllocationFinancialPeriod")
+  walletAllocations  WalletAllocation[]    @relation("WalletAllocationFinancialPeriod")
+  adjustments        FinancialAdjustment[] @relation("FinancialAdjustmentFinancialPeriod")
+  refunds            Refund[]              @relation("RefundFinancialPeriod")
+  walletTransactions WalletTransaction[]   @relation("WalletTransactionFinancialPeriod")
+
+  @@unique([tenantId, schoolId, name])
+  @@index([tenantId, schoolId])
+  @@map("fin_financial_periods")
+}
+
+model FinancialAccount {
+  id         String  @id @default(uuid())
+  tenantId   String
+  schoolId   String
+  guardianId String?
+  studentId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallet   Wallet?
+  payments Payment[] @relation("PaymentFinancialAccount")
+
+  @@unique([tenantId, schoolId, guardianId, studentId])
+  @@index([tenantId, schoolId])
+  @@map("fin_financial_accounts")
+}
+
+model Wallet {
+  id                 String  @id @default(uuid())
+  tenantId           String
+  schoolId           String
+  financialAccountId String  @unique
+  cachedBalance      Decimal @default(0.00) @db.Decimal(10, 2)
+
+  financialAccount FinancialAccount    @relation(fields: [financialAccountId], references: [id], onDelete: Restrict)
+  transactions     WalletTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, schoolId])
+  @@map("fin_wallets")
+}
+
+model WalletTransaction {
+  id                String                @id @default(uuid())
+  tenantId          String
+  schoolId          String
+  walletId          String
+  financialPeriodId String?
+  type              WalletTransactionType
+  amount            Decimal               @db.Decimal(10, 2)
+  reference         String
+  reason            String?
+  sourcePaymentId   String?
+  sourceRefundId    String?
+
+  wallet          Wallet           @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  financialPeriod FinancialPeriod? @relation("WalletTransactionFinancialPeriod", fields: [financialPeriodId], references: [id], onDelete: Restrict)
+
+  allocations WalletAllocation[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, reference])
+  @@index([tenantId, schoolId, walletId])
+  @@map("fin_wallet_transactions")
+}
+
+model WalletAllocation {
+  id                  String  @id @default(uuid())
+  walletTransactionId String
+  invoiceId           String
+  financialPeriodId   String?
+  amountAllocated     Decimal @db.Decimal(10, 2)
+
+  walletTransaction WalletTransaction @relation(fields: [walletTransactionId], references: [id], onDelete: Cascade)
+  invoice           Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  financialPeriod   FinancialPeriod?  @relation("WalletAllocationFinancialPeriod", fields: [financialPeriodId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([walletTransactionId])
+  @@index([invoiceId])
+  @@map("fin_wallet_allocations")
+}
+
+model FinancialAdjustment {
+  id                String         @id @default(uuid())
+  tenantId          String
+  schoolId          String
+  invoiceId         String
+  financialPeriodId String?
+  type              AdjustmentType
+  amount            Decimal        @db.Decimal(10, 2)
+  reason            String
+  approvedBy        String?
+
+  invoice         Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  financialPeriod FinancialPeriod? @relation("FinancialAdjustmentFinancialPeriod", fields: [financialPeriodId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, schoolId, invoiceId])
+  @@map("fin_financial_adjustments")
+}
+
+model Refund {
+  id                String       @id @default(uuid())
+  tenantId          String
+  schoolId          String
+  paymentId         String
+  financialPeriodId String?
+  amount            Decimal      @db.Decimal(10, 2)
+  reason            String
+  refundMethod      RefundMethod
+
+  payment         Payment          @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  financialPeriod FinancialPeriod? @relation("RefundFinancialPeriod", fields: [financialPeriodId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, schoolId, paymentId])
+  @@map("fin_refunds")
 }
