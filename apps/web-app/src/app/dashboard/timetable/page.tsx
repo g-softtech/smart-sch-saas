@@ -12,7 +12,7 @@ interface Term { id: string; name: string; academicYearId: string; }
 interface Class { id: string; name: string; }
 interface Arm { id: string; name: string; classId: string; }
 interface Subject { id: string; name: string; }
-interface Staff { id: string; user?: { firstName: string; lastName: string; } }
+interface Staff { id: string; firstName: string; lastName: string; }
 interface Period { id: string; name: string; startTime: string; endTime: string; isBreak: boolean; }
 interface TimetableEntry { id: string; periodId: string; dayOfWeek: string; subject?: Subject; teacher?: Staff; armId?: string; }
 
@@ -210,7 +210,7 @@ export default function TimetablePage() {
                 </select>
                 <select className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newEntryTeacherId} onChange={e => setNewEntryTeacherId(e.target.value)}>
                   <option value="">Select Teacher (Optional)...</option>
-                  {staff.map(s => <option key={s.id} value={s.id}>{s.user?.firstName} {s.user?.lastName}</option>)}
+                  {staff.map(s => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
                 </select>
                 <select className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newEntryDayOfWeek} onChange={e => setNewEntryDayOfWeek(e.target.value)}>
                   <option value="">Select Day...</option>
@@ -255,7 +255,7 @@ export default function TimetablePage() {
                               {entries.map(entry => (
                                 <div key={entry.id} className={`p-2 mb-2 rounded text-xs border ${entry.armId ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800' : 'bg-purple-50 border-purple-200 dark:bg-purple-900/30 dark:border-purple-800'}`}>
                                   <div className="font-semibold text-gray-900 dark:text-white">{entry.subject?.name}</div>
-                                  {entry.teacher && <div className="text-gray-600 dark:text-gray-400 truncate">{entry.teacher.user?.firstName}</div>}
+                                  {entry.teacher && <div className="text-gray-600 dark:text-gray-400 truncate">{entry.teacher.firstName}</div>}
                                   {!entry.armId && <div className="mt-1 text-[10px] font-medium text-purple-600 dark:text-purple-400">Class-wide</div>}
                                 </div>
                               ))}
