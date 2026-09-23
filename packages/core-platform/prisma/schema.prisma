@@ -99,6 +99,11 @@ model Tenant {
   GradeBoundary        GradeBoundary[]
   SubjectResult        SubjectResult[]
   AssessmentScore      AssessmentScore[]
+  AssessmentComponent  AssessmentComponent[]
+  Assignment           Assignment[]
+  AssignmentSubmission AssignmentSubmission[]
+  CBTExam              CBTExam[]
+  CBTAttempt           CBTAttempt[]
 
   @@map("plt_tenants")
 }
@@ -261,6 +266,11 @@ model School {
   GradeBoundary        GradeBoundary[]
   SubjectResult        SubjectResult[]
   AssessmentScore      AssessmentScore[]
+  AssessmentComponent  AssessmentComponent[]
+  Assignment           Assignment[]
+  AssignmentSubmission AssignmentSubmission[]
+  CBTExam              CBTExam[]
+  CBTAttempt           CBTAttempt[]
 }
 
 model StudentPhoto {
@@ -399,11 +409,12 @@ model AcademicYear {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  TimetablePeriod TimetablePeriod[]
-  TimetableEntry  TimetableEntry[]
-  SubjectResult   SubjectResult[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  TimetablePeriod     TimetablePeriod[]
+  TimetableEntry      TimetableEntry[]
+  SubjectResult       SubjectResult[]
+  AssessmentComponent AssessmentComponent[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -424,10 +435,11 @@ model Term {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  TimetableEntry TimetableEntry[]
-  SubjectResult  SubjectResult[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  TimetableEntry      TimetableEntry[]
+  SubjectResult       SubjectResult[]
+  AssessmentComponent AssessmentComponent[]
 
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
@@ -473,9 +485,10 @@ model Class {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  TimetableEntry TimetableEntry[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  TimetableEntry      TimetableEntry[]
+  AssessmentComponent AssessmentComponent[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -499,9 +512,10 @@ model Arm {
   // Attendance (Batch 5)
   attendanceRegisters AttendanceRegister[]
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  TimetableEntry TimetableEntry[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  TimetableEntry      TimetableEntry[]
+  AssessmentComponent AssessmentComponent[]
 
   @@unique([tenantId, classId, campusId, name])
   @@index([tenantId])
@@ -537,10 +551,11 @@ model Subject {
   school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   subjectGroup SubjectGroup? @relation(fields: [subjectGroupId], references: [id], onDelete: SetNull)
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  TimetableEntry TimetableEntry[]
-  SubjectResult  SubjectResult[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  TimetableEntry      TimetableEntry[]
+  SubjectResult       SubjectResult[]
+  AssessmentComponent AssessmentComponent[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -618,11 +633,13 @@ model Student {
 
   photo StudentPhoto?
 
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   StudentArrival       StudentArrival[]
   pickupAuthorizations PickupAuthorization[]
   departures           StudentDeparture[]
+  AssignmentSubmission AssignmentSubmission[]
+  CBTAttempt           CBTAttempt[]
 
   @@unique([tenantId, schoolId, studentNumber])
   @@index([tenantId])
@@ -971,6 +988,8 @@ model StaffProfile {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   TimetableEntry TimetableEntry[]
+  Assignment     Assignment[]
+  CBTExam        CBTExam[]
 
   @@unique([tenantId, schoolId, staffNumber])
   @@index([tenantId])
@@ -1305,20 +1324,216 @@ model SubjectResult {
 }
 
 model AssessmentScore {
-  id              String   @id @default(uuid())
-  tenantId        String
-  schoolId        String
-  subjectResultId String
-  type            String // e.g. "CA", "EXAM", "ASSIGNMENT", "PROJECT"
-  maxScore        Float
-  score           Float?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  tenantId              String
+  schoolId              String
+  subjectResultId       String
+  type                  String // e.g. "CA", "EXAM", "ASSIGNMENT", "PROJECT"
+  assessmentComponentId String? // Nullable for legacy/manual scores
+  maxScore              Float
+  score                 Float?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id])
-  school        School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subjectResult SubjectResult @relation(fields: [subjectResultId], references: [id], onDelete: Cascade)
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  school              School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectResult       SubjectResult        @relation(fields: [subjectResultId], references: [id], onDelete: Cascade)
+  assessmentComponent AssessmentComponent? @relation(fields: [assessmentComponentId], references: [id], onDelete: Restrict)
 
+  // Legacy fallback for manual scores
   @@unique([tenantId, schoolId, subjectResultId, type])
+  
+  // Component-backed scores idempotency boundary
+  @@unique([tenantId, schoolId, subjectResultId, assessmentComponentId])
   @@map("acd_assessment_scores")
+}
+
+// ================= ASSESSMENT OPERATIONS (Phase 3) =================
+
+enum AssessmentComponentType {
+  ASSIGNMENT
+  CBT
+  MANUAL_CA
+}
+
+model AssessmentComponent {
+  id             String                  @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  termId         String
+  classId        String
+  armId          String? // Nullable for class-wide assessments
+  subjectId      String
+  type           AssessmentComponentType
+  title          String
+  maxScore       Float
+
+  scores AssessmentScore[]
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  term         Term         @relation(fields: [termId], references: [id])
+  class        Class        @relation(fields: [classId], references: [id])
+  arm          Arm?         @relation(fields: [armId], references: [id])
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+
+  Assignment Assignment?
+  CBTExam    CBTExam?
+
+  @@index([tenantId, schoolId, subjectId])
+  @@map("acd_assessment_components")
+}
+
+// ---- ASSIGNMENTS ----
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+model Assignment {
+  id                    String           @id @default(uuid())
+  tenantId              String
+  schoolId              String
+  assessmentComponentId String           @unique
+  teacherId             String
+  title                 String
+  description           String           @db.Text
+  dueDate               DateTime
+  status                AssignmentStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant              Tenant                 @relation(fields: [tenantId], references: [id])
+  school              School                 @relation(fields: [schoolId], references: [id])
+  assessmentComponent AssessmentComponent    @relation(fields: [assessmentComponentId], references: [id], onDelete: Cascade)
+  teacher             StaffProfile           @relation(fields: [teacherId], references: [id])
+  submissions         AssignmentSubmission[]
+
+  @@map("acd_assignments")
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  GRADED
+}
+
+model AssignmentSubmission {
+  id           String           @id @default(uuid())
+  tenantId     String
+  schoolId     String
+  assignmentId String
+  studentId    String
+  textContent  String?          @db.Text
+  status       SubmissionStatus @default(PENDING)
+  score        Float?
+  feedback     String?          @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  school     School     @relation(fields: [schoolId], references: [id])
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id])
+
+  @@unique([tenantId, assignmentId, studentId])
+  @@map("acd_assignment_submissions")
+}
+
+// ---- CBT EXAMINATIONS ----
+
+enum CBTStatus {
+  DRAFT
+  PUBLISHED
+  ACTIVE
+  CLOSED
+}
+
+model CBTExam {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  schoolId              String
+  assessmentComponentId String    @unique
+  teacherId             String
+  title                 String
+  instructions          String?   @db.Text
+  availableFrom         DateTime
+  availableTo           DateTime
+  durationMinutes       Int
+  status                CBTStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant              Tenant              @relation(fields: [tenantId], references: [id])
+  school              School              @relation(fields: [schoolId], references: [id])
+  assessmentComponent AssessmentComponent @relation(fields: [assessmentComponentId], references: [id], onDelete: Cascade)
+  teacher             StaffProfile        @relation(fields: [teacherId], references: [id])
+
+  questions CBTQuestion[]
+  attempts  CBTAttempt[]
+
+  @@map("acd_cbt_exams")
+}
+
+model CBTQuestion {
+  id            String             @id @default(uuid())
+  examId        String
+  questionText  String             @db.Text
+  options       Json // Array of string options
+  correctOption Int
+  points        Float
+  exam          CBTExam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers       CBTAttemptAnswer[]
+
+  @@map("acd_cbt_questions")
+}
+
+enum CBTAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+model CBTAttempt {
+  id         String           @id @default(uuid())
+  tenantId   String
+  schoolId   String
+  examId     String
+  studentId  String
+  startTime  DateTime         @default(now())
+  submitTime DateTime?
+  status     CBTAttemptStatus @default(IN_PROGRESS)
+  totalScore Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id])
+  school  School             @relation(fields: [schoolId], references: [id])
+  exam    CBTExam            @relation(fields: [examId], references: [id], onDelete: Restrict)
+  student Student            @relation(fields: [studentId], references: [id])
+  answers CBTAttemptAnswer[]
+
+  @@unique([tenantId, examId, studentId])
+  @@map("acd_cbt_attempts")
+}
+
+model CBTAttemptAnswer {
+  id             String      @id @default(uuid())
+  attemptId      String
+  questionId     String
+  selectedOption Int
+  awardedScore   Float
+  attempt        CBTAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       CBTQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([attemptId, questionId])
+  @@map("acd_cbt_attempt_answers")
 }

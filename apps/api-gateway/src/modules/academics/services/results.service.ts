@@ -127,29 +127,56 @@ export class ResultsService {
         }
       }
 
-      // Upsert AssessmentScore
-      await tx.assessmentScore.upsert({
-        where: {
-          tenantId_schoolId_subjectResultId_type: {
+      // Upsert AssessmentScore using the appropriate idempotency boundary
+      if (dto.assessmentComponentId) {
+        await tx.assessmentScore.upsert({
+          where: {
+            tenantId_schoolId_subjectResultId_assessmentComponentId: {
+              tenantId,
+              schoolId,
+              subjectResultId: subjectResult.id,
+              assessmentComponentId: dto.assessmentComponentId,
+            },
+          },
+          update: {
+            score: dto.score,
+            maxScore: dto.maxScore,
+            type: dto.type,
+          },
+          create: {
             tenantId,
             schoolId,
             subjectResultId: subjectResult.id,
             type: dto.type,
+            assessmentComponentId: dto.assessmentComponentId,
+            score: dto.score,
+            maxScore: dto.maxScore,
           },
-        },
-        update: {
-          score: dto.score,
-          maxScore: dto.maxScore,
-        },
-        create: {
-          tenantId,
-          schoolId,
-          subjectResultId: subjectResult.id,
-          type: dto.type,
-          score: dto.score,
-          maxScore: dto.maxScore,
-        },
-      });
+        });
+      } else {
+        await tx.assessmentScore.upsert({
+          where: {
+            tenantId_schoolId_subjectResultId_type: {
+              tenantId,
+              schoolId,
+              subjectResultId: subjectResult.id,
+              type: dto.type,
+            },
+          },
+          update: {
+            score: dto.score,
+            maxScore: dto.maxScore,
+          },
+          create: {
+            tenantId,
+            schoolId,
+            subjectResultId: subjectResult.id,
+            type: dto.type,
+            score: dto.score,
+            maxScore: dto.maxScore,
+          },
+        });
+      }
 
       // Recalculate deterministic aggregation 
       // Do not hard-code simple raw-score addition assumptions for all future assessment systems.

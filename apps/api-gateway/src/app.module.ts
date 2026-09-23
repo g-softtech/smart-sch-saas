@@ -14,6 +14,8 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
 import { OutboxWorkerModule } from "./modules/outbox-worker/outbox-worker.module";
 
 import { MovementModule } from "./modules/movement/movement.module";
+import { AssignmentsModule } from "./modules/assignments/assignments.module";
+import { CBTModule } from "./modules/cbt/cbt.module";
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { MovementModule } from "./modules/movement/movement.module";
     IdCardsModule,
     OutboxWorkerModule,
     MovementModule,
+    AssignmentsModule,
+    CBTModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

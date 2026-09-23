@@ -54,6 +54,10 @@ export class RecordScoreDto {
   @Min(0)
   maxScore: number;
 
+  @IsString()
+  @IsOptional()
+  assessmentComponentId?: string;
+
   @IsNumber()
   @Min(0)
   @IsOptional()
