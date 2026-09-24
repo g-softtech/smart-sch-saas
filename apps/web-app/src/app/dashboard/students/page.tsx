@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { DataTable, Column } from '@/components/DataTable';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 type TabType = 'students' | 'guardians';
 
@@ -33,6 +34,7 @@ const initialTabState: TabState = {
 };
 
 export default function StudentsPage() {
+  const { campusId } = useWorkspace();
   const [activeTab, setActiveTab] = useState<TabType>('students');
   const [tabStates, setTabStates] = useState<Record<TabType, TabState>>({
     'students': { ...initialTabState },
@@ -41,7 +43,7 @@ export default function StudentsPage() {
 
   // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  
+
   // Form State
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -50,11 +52,17 @@ export default function StudentsPage() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [nationality, setNationality] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
-  
+
   // Submission State
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState(false);
+
+  // Initial Enrollment State
+  const [createEnrollYearId, setCreateEnrollYearId] = useState('');
+  const [createEnrollClassId, setCreateEnrollClassId] = useState('');
+  const [createEnrollArmId, setCreateEnrollArmId] = useState('');
+  const [createEnrollCampusId, setCreateEnrollCampusId] = useState('');
 
   // Guardian Modal State
   const [isCreateGuardianModalOpen, setIsCreateGuardianModalOpen] = useState(false);
@@ -102,19 +110,22 @@ export default function StudentsPage() {
   const [academicYears, setAcademicYears] = useState<{id: string, name: string}[]>([]);
   const [classes, setClasses] = useState<{id: string, name: string}[]>([]);
   const [arms, setArms] = useState<{id: string, name: string, classId: string}[]>([]);
+  const [campuses, setCampuses] = useState<{id: string, name: string}[]>([]);
   const [academicsError, setAcademicsError] = useState<string | null>(null);
 
   const loadAcademicsForEnrollment = async () => {
     try {
       setAcademicsError(null);
-      const [ayRes, clsRes, armRes] = await Promise.all([
+      const [ayRes, clsRes, armRes, campusRes] = await Promise.all([
         apiClient.get('api/v1/academics/academic-years?limit=100'),
         apiClient.get('api/v1/academics/classes?limit=100'),
-        apiClient.get('api/v1/academics/arms?limit=100')
+        apiClient.get('api/v1/academics/arms?limit=100'),
+        apiClient.get('api/v1/academics/campuses?limit=100')
       ]);
       setAcademicYears(Array.isArray(ayRes) ? ayRes : (ayRes as { data?: {id: string, name: string}[] })?.data || []);
       setClasses(Array.isArray(clsRes) ? clsRes : (clsRes as { data?: {id: string, name: string}[] })?.data || []);
       setArms(Array.isArray(armRes) ? armRes : (armRes as { data?: {id: string, name: string, classId: string}[] })?.data || []);
+      setCampuses(Array.isArray(campusRes) ? campusRes : (campusRes as { data?: {id: string, name: string}[] })?.data || []);
     } catch (err: unknown) {
       if (err instanceof ApiError) setAcademicsError(err.message);
       else setAcademicsError('Failed to load academic data');
@@ -135,11 +146,11 @@ export default function StudentsPage() {
       } else {
         endpoint = `api/v1/students/guardians/list?page=${page}&limit=${LIMIT}`;
       }
-      
+
       const response = await apiClient.get(endpoint);
-      
+
       const data = Array.isArray(response) ? response : [];
-      
+
       setTabStates(prev => ({
         ...prev,
         [tab]: {
@@ -194,6 +205,16 @@ export default function StudentsPage() {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !gender || !admissionDate) return;
 
+    if (!createEnrollYearId || !createEnrollClassId) {
+      setCreateError('Academic Year and Class are required for initial enrollment.');
+      return;
+    }
+
+    if (!campusId && campuses.length > 1 && !createEnrollCampusId) {
+      setCreateError('Campus selection is required in School Wide view for multi-campus schools.');
+      return;
+    }
+
     setCreateLoading(true);
     setCreateError(null);
     setCreateSuccess(false);
@@ -227,10 +248,22 @@ export default function StudentsPage() {
       if (nationality.trim()) payload.nationality = nationality.trim();
 
       // schoolId is intentionally omitted; backend infers from workspace
-      await apiClient.post('api/v1/students', payload);
+      const studentRes = await apiClient.post('api/v1/students', payload) as any;
+      const newStudentId = studentRes?.data?.id || studentRes?.id;
+
+      if (newStudentId) {
+        const enrollPayload: Record<string, string> = {
+          academicYearId: createEnrollYearId,
+          classId: createEnrollClassId,
+        };
+        if (createEnrollArmId) enrollPayload.armId = createEnrollArmId;
+        if (!campusId && createEnrollCampusId) enrollPayload.campusId = createEnrollCampusId;
+
+        await apiClient.post(`api/v1/students/${newStudentId}/enrollments`, enrollPayload);
+      }
 
       setCreateSuccess(true);
-      
+
       // Reset form
       setFirstName('');
       setLastName('');
@@ -239,6 +272,10 @@ export default function StudentsPage() {
       setDateOfBirth('');
       setNationality('');
       setAdmissionDate('');
+      setCreateEnrollYearId('');
+      setCreateEnrollClassId('');
+      setCreateEnrollArmId('');
+      setCreateEnrollCampusId('');
 
       setTimeout(() => {
         setIsCreateModalOpen(false);
@@ -250,7 +287,7 @@ export default function StudentsPage() {
 
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setCreateError(err.message || 'Failed to create student');
+        setCreateError(err.message || 'Failed to create and enroll student');
       } else {
         setCreateError(err instanceof Error ? err.message : 'An error occurred');
       }
@@ -398,7 +435,7 @@ export default function StudentsPage() {
 
       await apiClient.post(`api/v1/students/${enrollStudentId}/enrollments`, payload);
       setEnrollSuccess(true);
-      
+
       setTimeout(() => {
         setIsEnrollModalOpen(false);
         setEnrollSuccess(false);
@@ -419,12 +456,12 @@ export default function StudentsPage() {
   const currentState = tabStates[activeTab];
 
   let columns: Column<Record<string, unknown>>[] = [];
-  
+
   if (activeTab === 'students') {
     columns = [
       { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { 
-        header: 'Name', 
+      {
+        header: 'Name',
         accessor: (item) => {
           const first = item.firstName || '';
           const last = item.lastName || '';
@@ -432,8 +469,8 @@ export default function StudentsPage() {
         }
       },
       { header: 'Gender', accessor: 'gender' },
-      { 
-        header: 'Admission Date', 
+      {
+        header: 'Admission Date',
         accessor: (item) => {
           return item.admissionDate ? new Date(item.admissionDate as string).toLocaleDateString() : 'N/A';
         }
@@ -474,8 +511,8 @@ export default function StudentsPage() {
   } else if (activeTab === 'guardians') {
     columns = [
       { header: 'ID', accessor: 'id', hideOnMobile: true },
-      { 
-        header: 'Name', 
+      {
+        header: 'Name',
         accessor: (item) => {
           const first = item.firstName || '';
           const last = item.lastName || '';
@@ -496,7 +533,10 @@ export default function StudentsPage() {
         </div>
         {activeTab === 'students' && (
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              if (classes.length === 0) loadAcademicsForEnrollment();
+              setIsCreateModalOpen(true);
+            }}
             className="inline-flex items-center rounded-md bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover transition-colors focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 dark:focus:ring-offset-brand-navy"
           >
             Add Student
@@ -568,7 +608,7 @@ export default function StudentsPage() {
               <div>
                 <h3 className="text-lg font-semibold leading-6 text-brand-navy dark:text-brand-offwhite">Add New Student</h3>
                 <form onSubmit={handleCreateSubmit} className="mt-6 space-y-4">
-                  
+
                   <div className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-2">
                     {/* First Name */}
                     <div>
@@ -700,6 +740,100 @@ export default function StudentsPage() {
                           disabled={createLoading}
                           className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
                         />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2 pt-4 mt-2 border-t border-gray-200 dark:border-brand-border-dark">
+                      <h4 className="text-md font-medium text-brand-navy dark:text-brand-offwhite mb-4">Initial Enrollment</h4>
+
+                      <div className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-2">
+                        {/* Academic Year */}
+                        <div>
+                          <label className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                            Academic Year <span className="text-red-500">*</span>
+                          </label>
+                          <div className="mt-1">
+                            <select
+                              value={createEnrollYearId}
+                              onChange={e => setCreateEnrollYearId(e.target.value)}
+                              className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                              required
+                              disabled={createLoading}
+                            >
+                              <option value="">Select Academic Year</option>
+                              {academicYears.map(ay => (
+                                <option key={ay.id} value={ay.id}>{ay.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Class */}
+                        <div>
+                          <label className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                            Class <span className="text-red-500">*</span>
+                          </label>
+                          <div className="mt-1">
+                            <select
+                              value={createEnrollClassId}
+                              onChange={e => {
+                                setCreateEnrollClassId(e.target.value);
+                                setCreateEnrollArmId('');
+                              }}
+                              className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                              required
+                              disabled={createLoading}
+                            >
+                              <option value="">Select Class</option>
+                              {classes.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Arm (Optional) */}
+                        <div>
+                          <label className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                            Arm
+                          </label>
+                          <div className="mt-1">
+                            <select
+                              value={createEnrollArmId}
+                              onChange={e => setCreateEnrollArmId(e.target.value)}
+                              className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                              disabled={!createEnrollClassId || createLoading}
+                            >
+                              <option value="">Select Arm</option>
+                              {arms.filter(a => a.classId === createEnrollClassId).map(a => (
+                                <option key={a.id} value={a.id}>{a.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Campus (If School Wide and multi-campus) */}
+                        {!campusId && campuses.length > 1 && (
+                          <div>
+                            <label className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                              Campus <span className="text-red-500">*</span>
+                            </label>
+                            <div className="mt-1">
+                              <select
+                                value={createEnrollCampusId}
+                                onChange={e => setCreateEnrollCampusId(e.target.value)}
+                                className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                                required
+                                disabled={createLoading}
+                              >
+                                <option value="">Select Campus</option>
+                                {campuses.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
