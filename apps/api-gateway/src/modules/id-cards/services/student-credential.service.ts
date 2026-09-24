@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from "@nestjs/common";
 import { StudentCredentialRepository } from "../repositories/student-credential.repository";
 import { randomUUID, createHmac } from "crypto";
 import { kernel } from "@saas/core-platform";
@@ -6,7 +10,8 @@ import { kernel } from "@saas/core-platform";
 @Injectable()
 export class StudentCredentialService {
   // In a real scenario, this would be injected via config
-  private readonly SECRET_KEY = process.env.CREDENTIAL_SECRET || "fallback-secret-key-do-not-use-in-prod";
+  private readonly SECRET_KEY =
+    process.env.CREDENTIAL_SECRET || "fallback-secret-key-do-not-use-in-prod";
 
   constructor(private readonly repository: StudentCredentialRepository) {}
 
@@ -15,10 +20,37 @@ export class StudentCredentialService {
   }
 
   async issueCredential(tenantId: string, schoolId: string, studentId: string) {
-    // 1. Check if an active credential already exists
-    const existing = await this.repository.findActiveByStudent(tenantId, schoolId, studentId);
+    // 1. Authoritative student state check
+    const student = await kernel.db.student.findUnique({
+      where: { id: studentId },
+    });
+
+    if (
+      !student ||
+      student.tenantId !== tenantId ||
+      student.schoolId !== schoolId
+    ) {
+      throw new NotFoundException(
+        "Student not found or does not belong to active school",
+      );
+    }
+
+    if (student.status !== "ACTIVE") {
+      throw new BadRequestException(
+        `Cannot issue credential for a student with status '${student.status}'`,
+      );
+    }
+
+    // 2. Check if an active credential already exists
+    const existing = await this.repository.findActiveByStudent(
+      tenantId,
+      schoolId,
+      studentId,
+    );
     if (existing) {
-      throw new BadRequestException("Student already has an active ID card credential. Revoke it before issuing a new one.");
+      throw new BadRequestException(
+        "Student already has an active ID card credential. Revoke it before issuing a new one.",
+      );
     }
 
     // 2. Generate opaque token (high entropy UUID)
@@ -38,13 +70,22 @@ export class StudentCredentialService {
     return { credential, token };
   }
 
-  async revokeCredential(tenantId: string, schoolId: string, credentialId: string, reason?: string) {
+  async revokeCredential(
+    tenantId: string,
+    schoolId: string,
+    credentialId: string,
+    reason?: string,
+  ) {
     // Note: The controller should ensure the user has permission to revoke credentials
     // The repository checks are scoped to tenantId via PlatformKernel if properly configured
     return this.repository.revoke(credentialId, reason);
   }
 
-  async getCredentialsForStudent(tenantId: string, schoolId: string, studentId: string) {
+  async getCredentialsForStudent(
+    tenantId: string,
+    schoolId: string,
+    studentId: string,
+  ) {
     return this.repository.findAllByStudent(tenantId, schoolId, studentId);
   }
 
@@ -53,7 +94,7 @@ export class StudentCredentialService {
     schoolId: string,
     operatorId: string,
     rawToken: string,
-    source: "CAMERA" | "EXTERNAL"
+    source: "CAMERA" | "EXTERNAL",
   ) {
     let auditStatus = "FAILED";
     let auditReason = "UNKNOWN";
@@ -64,8 +105,12 @@ export class StudentCredentialService {
       const credentialHash = this.hashToken(rawToken);
 
       // 2. Lookup scoped by workspace (tenant/school)
-      const credential = await this.repository.findByHashAndWorkspace(tenantId, schoolId, credentialHash);
-      
+      const credential = await this.repository.findByHashAndWorkspace(
+        tenantId,
+        schoolId,
+        credentialHash,
+      );
+
       if (!credential) {
         auditReason = "NOT_FOUND_OR_WRONG_WORKSPACE";
         throw new BadRequestException("Credential could not be verified");
@@ -77,7 +122,13 @@ export class StudentCredentialService {
         throw new BadRequestException("Credential could not be verified");
       }
 
-      // 4. Success
+      // 4. Authoritative student state check
+      if (credential.student.status !== "ACTIVE") {
+        auditReason = `STUDENT_INELIGIBLE_${credential.student.status}`;
+        throw new BadRequestException("Credential could not be verified");
+      }
+
+      // 5. Success
       auditStatus = "SUCCESS";
       auditReason = "VERIFIED";
       studentInfo = {
@@ -92,7 +143,6 @@ export class StudentCredentialService {
         success: true,
         student: studentInfo,
       };
-
     } finally {
       // 5. Persistent Audit
       try {
@@ -108,8 +158,8 @@ export class StudentCredentialService {
               reason: auditReason,
               source,
               studentId: studentInfo?.id || null,
-            }
-          }
+            },
+          },
         });
       } catch (e) {
         console.error("Failed to write audit log:", e);
