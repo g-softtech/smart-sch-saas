@@ -63,7 +63,7 @@ export class AttendanceIntegrationService {
       // Re-fetch register with row lock
       const lockedRegisterRows = await tx.$queryRaw<any[]>`
         SELECT "isFinalized" 
-        FROM "sys_attendance_registers"
+        FROM "att_registers"
         WHERE id = ${register.id}
         FOR UPDATE
       `;
@@ -82,7 +82,7 @@ export class AttendanceIntegrationService {
       // 4. Create PRESENT only when no AttendanceRecord already exists
       const existingRecordRows = await tx.$queryRaw<any[]>`
         SELECT id, status 
-        FROM "sys_attendance_records"
+        FROM "att_records"
         WHERE "registerId" = ${register.id} AND "studentId" = ${studentId}
       `;
 
