@@ -33,6 +33,7 @@ export class AttendanceService {
   async bulkCreateRegister(
     tenantId: string,
     schoolId: string,
+    campusId: string | undefined,
     userId: string,
     dto: BulkCreateAttendanceRegisterDto,
   ) {
@@ -71,6 +72,7 @@ export class AttendanceService {
     const enrollments = await this.repo.getEligibleEnrollments(
       tenantId,
       schoolId,
+      campusId,
       dto.classId,
       dto.armId || null,
       dateObj,
@@ -124,6 +126,7 @@ export class AttendanceService {
       {
         tenantId,
         schoolId,
+        campusId,
         academicYearId: dto.academicYearId,
         termId: dto.termId,
         classId: dto.classId,
@@ -245,6 +248,7 @@ export class AttendanceService {
   async getRegisters(
     tenantId: string,
     schoolId: string,
+    campusId: string | undefined,
     skip: number = 0,
     take: number = 50,
     startDate?: string,
@@ -255,7 +259,7 @@ export class AttendanceService {
     }
     const start = startDate ? this.parseDate(startDate) : undefined;
     const end = endDate ? this.parseDate(endDate) : undefined;
-    return this.repo.getRegisters(tenantId, schoolId, skip, take, start, end);
+    return this.repo.getRegisters(tenantId, schoolId, campusId, skip, take, start, end);
   }
 
   async getRegisterById(
@@ -291,6 +295,7 @@ export class AttendanceService {
   async getEligibleStudents(
     tenantId: string,
     schoolId: string,
+    campusId: string | undefined,
     classId: string,
     armId: string | null,
     dateStr: string,
@@ -299,6 +304,7 @@ export class AttendanceService {
     const enrollments = await this.repo.getEligibleEnrollments(
       tenantId,
       schoolId,
+      campusId,
       classId,
       armId,
       dateObj,

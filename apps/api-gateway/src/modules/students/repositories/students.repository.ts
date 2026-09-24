@@ -36,12 +36,14 @@ export type CreateEnrollmentInput = {
   studentId: string;
   academicYearId: string;
   classId: string;
+  campusId: string | null;
   armId?: string;
 };
 
 export type TransferEnrollmentInput = {
   enrollmentId: string;
   newClassId: string;
+  newCampusId: string | null;
   newArmId?: string;
   notes?: string;
 };
@@ -226,6 +228,7 @@ export class StudentsRepository {
       schoolId: string;
       academicYearId: string;
       classId: string;
+      campusId: string;
       armId?: string;
     },
     tx?: typeof kernel.db,
@@ -238,6 +241,7 @@ export class StudentsRepository {
         schoolId: data.schoolId,
         academicYearId: data.academicYearId,
         classId: data.classId,
+        campusId: data.campusId,
         armId: data.armId,
         status: EnrollmentStatus.ACTIVE,
       },
@@ -252,6 +256,7 @@ export class StudentsRepository {
   async transferEnrollment(
     enrollmentId: string,
     newClassId: string,
+    newCampusId: string,
     tenantId: string,
     schoolId: string,
     studentId: string,
@@ -274,6 +279,7 @@ export class StudentsRepository {
           schoolId,
           academicYearId,
           classId: newClassId,
+          campusId: newCampusId,
           armId: newArmId,
           status: EnrollmentStatus.ACTIVE,
         },
@@ -298,9 +304,18 @@ export class StudentsRepository {
     });
   }
 
-  async listStudents(schoolId?: string, search?: string) {
+  async listStudents(schoolId?: string, campusId?: string, search?: string) {
     const where: any = schoolId ? { schoolId } : {};
     
+    if (campusId) {
+      where.enrollments = {
+        some: {
+          campusId: campusId,
+          status: EnrollmentStatus.ACTIVE
+        }
+      };
+    }
+
     if (search) {
       where.OR = [
         { firstName: { contains: search, mode: "insensitive" } },

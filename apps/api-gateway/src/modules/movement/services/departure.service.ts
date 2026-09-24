@@ -17,6 +17,7 @@ export class DepartureService {
   async processDeparture(
     tenantId: string,
     schoolId: string,
+    campusId: string,
     operatorId: string,
     studentRawToken: string,
     guardianRawToken: string,
@@ -40,6 +41,21 @@ export class DepartureService {
         throw new BadRequestException("Student verification failed");
       }
       verifiedStudentId = studentVerification.student.id;
+
+      if (studentVerification.student.status !== "ACTIVE") {
+        throw new BadRequestException("Student is not active");
+      }
+
+      const activeEnrollment = await kernel.db.enrollment.findFirst({
+        where: {
+          studentId: verifiedStudentId,
+          campusId,
+          status: "ACTIVE"
+        }
+      });
+      if (!activeEnrollment) {
+        throw new BadRequestException("Student does not have an active enrollment in this campus");
+      }
 
       // 2. Verify Pickup Person Identity
       const guardianVerification = await this.guardianCredentialService.verifyCredential(
@@ -68,6 +84,7 @@ export class DepartureService {
       const eventPayload = {
         tenantId,
         schoolId,
+        campusId,
         studentId: verifiedStudentId,
         operationalDate,
         timestamp: timestamp.toISOString(),
@@ -85,6 +102,7 @@ export class DepartureService {
           data: {
             tenantId,
             schoolId,
+            campusId,
             studentId: verifiedStudentId!,
             operationalDate,
             timestamp,
@@ -189,6 +207,7 @@ export class DepartureService {
   async processManualDeparture(
     tenantId: string,
     schoolId: string,
+    campusId: string,
     operatorId: string,
     studentId: string,
     guardianId: string,
@@ -211,6 +230,17 @@ export class DepartureService {
       
       if (student.status !== "ACTIVE") {
         throw new BadRequestException(`Cannot record departure for a student with status '${student.status}'`);
+      }
+
+      const activeEnrollment = await kernel.db.enrollment.findFirst({
+        where: {
+          studentId: student.id,
+          campusId,
+          status: "ACTIVE"
+        }
+      });
+      if (!activeEnrollment) {
+        throw new BadRequestException("Student does not have an active enrollment in this campus");
       }
 
       // 2. Verify Guardian exists and belongs to Tenant
@@ -236,6 +266,7 @@ export class DepartureService {
       const eventPayload = {
         tenantId,
         schoolId,
+        campusId,
         studentId: student.id,
         operationalDate,
         timestamp: timestamp.toISOString(), // actual movement time
@@ -256,6 +287,7 @@ export class DepartureService {
             data: {
               tenantId,
               schoolId,
+              campusId,
               studentId: student.id,
               operationalDate,
               timestamp,

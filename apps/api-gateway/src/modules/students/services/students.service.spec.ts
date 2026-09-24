@@ -75,6 +75,8 @@ describe("StudentsService (Unit / Mocked)", () => {
     const { kernel } = require("@saas/core-platform");
     kernel.db.$queryRaw = jest.fn().mockResolvedValue([{ id: "mock" }]);
     kernel.db.role = { findUnique: jest.fn() };
+    kernel.db.school = { findUnique: jest.fn().mockResolvedValue({ campuses: [] }) };
+    kernel.db.campus = { findUnique: jest.fn().mockResolvedValue({ schoolId: SCHOOL_ID }) };
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -354,6 +356,7 @@ describe("StudentsService (Unit / Mocked)", () => {
       studentId: "stu-1",
       academicYearId: "year-1",
       classId: "class-1",
+      campusId: "campus-1",
     };
 
     const activeStudent = {
@@ -546,6 +549,7 @@ describe("StudentsService (Unit / Mocked)", () => {
         const result = await service.transferEnrollment({
           enrollmentId: "enr-1",
           newClassId: "class-2",
+          newCampusId: "campus-2",
         });
         expect(result.id).toBe("enr-2");
         // Old enrollment preservation is the repository's responsibility (it wraps both ops in $transaction).
@@ -564,6 +568,7 @@ describe("StudentsService (Unit / Mocked)", () => {
           service.transferEnrollment({
             enrollmentId: "enr-1",
             newClassId: "class-2",
+            newCampusId: "campus-2",
           }),
         ).rejects.toThrow(BadRequestException);
       }),
@@ -582,6 +587,7 @@ describe("StudentsService (Unit / Mocked)", () => {
           service.transferEnrollment({
             enrollmentId: "enr-1",
             newClassId: "class-2",
+            newCampusId: "campus-2",
           }),
         ).rejects.toThrow(BadRequestException);
       }),
@@ -603,6 +609,7 @@ describe("StudentsService (Unit / Mocked)", () => {
         await service.transferEnrollment({
           enrollmentId: "enr-1",
           newClassId: "class-2",
+          newCampusId: "campus-2",
         });
 
         // setStudentStatus must NOT be called — student remains ACTIVE.
@@ -627,6 +634,7 @@ describe("StudentsService (Unit / Mocked)", () => {
           service.transferEnrollment({
             enrollmentId: "enr-1",
             newClassId: "class-2",
+            newCampusId: "campus-2",
             newArmId: "arm-1",
           }),
         ).rejects.toThrow(BadRequestException);

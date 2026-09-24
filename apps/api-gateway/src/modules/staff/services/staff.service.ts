@@ -76,8 +76,8 @@ export class StaffService {
     return staff;
   }
 
-  async listStaff(tenantId: string, schoolId: string, skip = 0, take = 50) {
-    return this.staffRepo.getStaffList(tenantId, schoolId, skip, take);
+  async listStaff(tenantId: string, schoolId: string, campusId?: string, skip = 0, take = 50) {
+    return this.staffRepo.getStaffList(tenantId, schoolId, campusId, skip, take);
   }
 
   async updateStaffStatus(

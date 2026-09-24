@@ -22,6 +22,7 @@ export class ArrivalService {
   async recordArrival(
     tenantId: string,
     schoolId: string,
+    campusId: string,
     operatorId: string,
     rawToken: string,
     source: "CAMERA" | "EXTERNAL"
@@ -41,6 +42,22 @@ export class ArrivalService {
       throw new BadRequestException("Credential could not be verified");
     }
 
+    if (student.status !== "ACTIVE") {
+      throw new BadRequestException("Student is not active");
+    }
+
+    const activeEnrollment = await kernel.db.enrollment.findFirst({
+      where: {
+        studentId: student.id,
+        campusId,
+        status: "ACTIVE"
+      }
+    });
+
+    if (!activeEnrollment) {
+      throw new BadRequestException("Student does not have an active enrollment in this campus");
+    }
+
     const timestamp = new Date();
     const operationalDate = this.getOperationalDate(tenantId, schoolId, timestamp);
     
@@ -52,6 +69,7 @@ export class ArrivalService {
           data: {
             tenantId,
             schoolId,
+            campusId,
             studentId: student.id,
             operationalDate,
             timestamp,
@@ -128,6 +146,7 @@ export class ArrivalService {
   async recordManualArrival(
     tenantId: string,
     schoolId: string,
+    campusId: string,
     operatorId: string,
     studentId: string,
     operationId: string,
@@ -146,6 +165,18 @@ export class ArrivalService {
       throw new BadRequestException(`Cannot record arrival for a student with status '${student.status}'`);
     }
 
+    const activeEnrollment = await kernel.db.enrollment.findFirst({
+      where: {
+        studentId: student.id,
+        campusId,
+        status: "ACTIVE"
+      }
+    });
+
+    if (!activeEnrollment) {
+      throw new BadRequestException("Student does not have an active enrollment in this campus");
+    }
+
     const timestamp = occurredAt ? new Date(occurredAt) : new Date();
     const operationalDate = this.getOperationalDate(tenantId, schoolId, timestamp);
     const source = "MANUAL";
@@ -161,6 +192,7 @@ export class ArrivalService {
             data: {
               tenantId,
               schoolId,
+              campusId,
               studentId: student.id,
               operationalDate,
               timestamp,

@@ -241,7 +241,6 @@ export class StudentsService {
       );
     }
 
-    // Arm (optional): validate class and school/campus consistency.
     if (input.armId) {
       const arm = await this.repo.findArm(input.armId, tx);
       if (!arm) {
@@ -254,8 +253,29 @@ export class StudentsService {
           "Arm does not belong to the specified Class",
         );
       }
-      // arm.campusId → campus.schoolId == student.schoolId checked via class.schoolId === arm's class.schoolId;
-      // arm.classId === classId already verified, and classEntity.schoolId === student.schoolId already verified.
+      if (arm.campusId !== input.campusId) {
+        throw new BadRequestException(
+          "Specified campusId does not match the arm's campus",
+        );
+      }
+    }
+
+    const school = await kernel.db.school.findUnique({
+      where: { id: student.schoolId },
+      include: { campuses: true }
+    });
+
+    if (school?.campuses && school.campuses.length > 1) {
+      if (!input.campusId) {
+        throw new BadRequestException("Campus context is strictly required for new enrollment in a multi-campus school. (Contract gap for internal callers lacking campus context)");
+      }
+    }
+
+    if (input.campusId) {
+      const campus = await kernel.db.campus.findUnique({ where: { id: input.campusId } });
+      if (!campus || campus.schoolId !== student.schoolId) {
+        throw new BadRequestException("Campus not found or does not belong to the school");
+      }
     }
 
     // Friendly pre-check before hitting the DB partial index.
@@ -279,6 +299,7 @@ export class StudentsService {
           schoolId: student.schoolId,
           academicYearId: input.academicYearId,
           classId: input.classId,
+          campusId: input.campusId,
           armId: input.armId,
         },
         tx,
@@ -345,11 +366,35 @@ export class StudentsService {
           "Target Arm does not belong to the target Class",
         );
       }
+      if (arm.campusId !== input.newCampusId) {
+        throw new BadRequestException(
+          "Specified newCampusId does not match the arm's campus",
+        );
+      }
+    }
+
+    const school = await kernel.db.school.findUnique({
+      where: { id: enrollment.schoolId },
+      include: { campuses: true }
+    });
+
+    if (school?.campuses && school.campuses.length > 1) {
+      if (!input.newCampusId) {
+        throw new BadRequestException("Campus context is strictly required for enrollment transfer in a multi-campus school");
+      }
+    }
+
+    if (input.newCampusId) {
+      const campus = await kernel.db.campus.findUnique({ where: { id: input.newCampusId } });
+      if (!campus || campus.schoolId !== enrollment.schoolId) {
+        throw new BadRequestException("Campus not found or does not belong to the school");
+      }
     }
 
     return this.repo.transferEnrollment(
       input.enrollmentId,
       input.newClassId,
+      input.newCampusId,
       tenantId,
       enrollment.schoolId,
       enrollment.studentId,
@@ -397,8 +442,8 @@ export class StudentsService {
 
   // ─── Read Operations ───────────────────────────────────────────────────────
 
-  async listStudents(schoolId?: string, search?: string) {
-    return this.repo.listStudents(schoolId, search);
+  async listStudents(schoolId?: string, campusId?: string, search?: string) {
+    return this.repo.listStudents(schoolId, campusId, search);
   }
 
   async getStudent(studentId: string) {

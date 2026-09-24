@@ -19,7 +19,7 @@ export class ArrivalController {
   @ApiOperation({ summary: "Record student arrival via QR scan" })
   @ApiResponse({ status: 200, description: "Arrival recorded" })
   async recordArrival(@Req() req: any, @Body() dto: ScanCredentialDto) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     const operatorId = req.user.sub;
     
     if (!schoolId) {
@@ -34,6 +34,7 @@ export class ArrivalController {
     return this.arrivalService.recordArrival(
       tenantId,
       schoolId,
+      campusId,
       operatorId,
       normalizedToken,
       dto.source
@@ -44,7 +45,7 @@ export class ArrivalController {
   @ApiOperation({ summary: "Record student arrival manually (Fallback)" })
   @ApiResponse({ status: 200, description: "Arrival recorded manually" })
   async recordManualArrival(@Req() req: any, @Body() dto: { studentId: string; operationId: string; occurredAt?: string }) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     const operatorId = req.user.sub;
     
     if (!schoolId) {
@@ -62,6 +63,7 @@ export class ArrivalController {
     return this.arrivalService.recordManualArrival(
       tenantId,
       schoolId,
+      campusId,
       operatorId,
       dto.studentId,
       dto.operationId,

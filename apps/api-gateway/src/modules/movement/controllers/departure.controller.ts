@@ -13,7 +13,7 @@ export class DepartureController {
 
   @Post()
   async recordDeparture(@Req() req: any, @Body() dto: RecordDepartureDto) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     const operatorId = req.user.sub;
 
     if (!schoolId) {
@@ -32,6 +32,7 @@ export class DepartureController {
     return this.departureService.processDeparture(
       tenantId,
       schoolId,
+      campusId,
       operatorId,
       studentToken,
       guardianToken,
@@ -42,7 +43,7 @@ export class DepartureController {
 
   @Post("manual")
   async recordManualDeparture(@Req() req: any, @Body() dto: { studentId: string; guardianId: string; operationId: string; occurredAt?: string }) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     const operatorId = req.user.sub;
 
     if (!schoolId) {
@@ -62,6 +63,7 @@ export class DepartureController {
     return this.departureService.processManualDeparture(
       tenantId,
       schoolId,
+      campusId,
       operatorId,
       dto.studentId,
       dto.guardianId,

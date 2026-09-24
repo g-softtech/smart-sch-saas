@@ -90,9 +90,12 @@ export class StudentsController {
       "List students within the active tenant (optionally filtered by school)",
   })
   async listStudents(
+    @Req() req: any,
     @Query() query: PaginationQueryDto,
   ): Promise<ApiResponseDto<any>> {
-    const students = await this.studentsService.listStudents(query.schoolId, query.search);
+    const { schoolId, campusId } = req.workspace;
+    const resolvedSchoolId = query.schoolId || schoolId;
+    const students = await this.studentsService.listStudents(resolvedSchoolId, campusId, query.search);
 
     // Simple offset pagination on the returned result set.
     // TODO: push pagination to the repository layer when data volumes require it.
@@ -251,14 +254,20 @@ export class StudentsController {
     summary: "Enroll a student into a class for an academic year",
   })
   async createEnrollment(
+    @Req() req: any,
     @Param("studentId") studentId: string,
     @Body() dto: CreateEnrollmentDto,
   ): Promise<ApiResponseDto<any>> {
+    const { campusId, isMultiCampus } = req.workspace;
+    if (isMultiCampus && !campusId) {
+      throw new BadRequestException("Campus is required for enrollment in a multi-campus school");
+    }
     const enrollment = await this.studentsService.createEnrollment({
       studentId,
       academicYearId: dto.academicYearId,
       classId: dto.classId,
       armId: dto.armId,
+      campusId,
     });
     return { success: true, data: enrollment };
   }
@@ -280,14 +289,20 @@ export class StudentsController {
       "Transfer student to a different class/arm (internal, preserves enrollment history)",
   })
   async transferEnrollment(
+    @Req() req: any,
     @Param("studentId") _studentId: string,
     @Param("enrollmentId") enrollmentId: string,
     @Body() dto: TransferEnrollmentDto,
   ): Promise<ApiResponseDto<any>> {
+    const { campusId, isMultiCampus } = req.workspace;
+    if (isMultiCampus && !campusId) {
+      throw new BadRequestException("Campus is required for enrollment transfer in a multi-campus school");
+    }
     const newEnrollment = await this.studentsService.transferEnrollment({
       enrollmentId,
       newClassId: dto.newClassId,
       newArmId: dto.newArmId,
+      newCampusId: campusId,
       notes: dto.notes,
     });
     return { success: true, data: newEnrollment };

@@ -21,6 +21,7 @@ export class AttendanceRepository {
   async getEligibleEnrollments(
     tenantId: string,
     schoolId: string,
+    campusId: string | undefined,
     classId: string,
     armId: string | null,
     date: Date,
@@ -29,6 +30,7 @@ export class AttendanceRepository {
       where: {
         tenantId,
         schoolId,
+        ...(campusId ? { campusId } : {}),
         classId,
         ...(armId ? { armId } : {}),
         status: "ACTIVE",
@@ -54,6 +56,7 @@ export class AttendanceRepository {
         where: {
           tenantId,
           schoolId,
+          campusId: registerData.campusId,
           classId: registerData.classId,
           armId: registerData.armId,
           date: registerData.date,
@@ -113,12 +116,17 @@ export class AttendanceRepository {
   async getRegisters(
     tenantId: string,
     schoolId: string,
+    campusId: string | undefined,
     skip: number = 0,
     take: number = 50,
     startDate?: Date,
     endDate?: Date,
   ) {
     const where: Prisma.AttendanceRegisterWhereInput = { tenantId, schoolId };
+
+    if (campusId) {
+      where.campusId = campusId;
+    }
 
     if (startDate || endDate) {
       where.date = {};

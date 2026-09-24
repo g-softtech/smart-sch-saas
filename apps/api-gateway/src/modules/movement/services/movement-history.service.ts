@@ -21,11 +21,14 @@ export class MovementHistoryService {
     };
   }
 
-  async getArrivals(tenantId: string, schoolId: string, query: MovementHistoryQueryDto) {
+  async getArrivals(tenantId: string, schoolId: string, campusId: string | undefined, query: MovementHistoryQueryDto) {
     const where: any = {
       tenantId,
       schoolId,
     };
+    if (campusId) {
+      where.campusId = campusId;
+    }
 
     if (query.startDate || query.endDate) {
       where.operationalDate = {
@@ -68,11 +71,14 @@ export class MovementHistoryService {
     return { items, total, skip: query.skip, take: query.take };
   }
 
-  async getDepartures(tenantId: string, schoolId: string, query: MovementHistoryQueryDto) {
+  async getDepartures(tenantId: string, schoolId: string, campusId: string | undefined, query: MovementHistoryQueryDto) {
     const where: any = {
       tenantId,
       schoolId,
     };
+    if (campusId) {
+      where.campusId = campusId;
+    }
 
     if (query.startDate || query.endDate) {
       where.operationalDate = {

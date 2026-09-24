@@ -89,4 +89,7 @@ export class CreateStaffDto {
   @IsString()
   @IsOptional()
   userId?: string;
+
+  @IsOptional()
+  campusIds?: string[];
 }

@@ -38,7 +38,7 @@ export class StaffController {
     @Query("skip") skip?: string,
     @Query("take") take?: string,
   ) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     if (!schoolId) throw new BadRequestException("School context is required");
     const parsedSkip = skip ? parseInt(skip, 10) : 0;
     const parsedTake = take ? parseInt(take, 10) : 50;
@@ -46,6 +46,7 @@ export class StaffController {
     const list = await this.staffService.listStaff(
       tenantId,
       schoolId,
+      campusId,
       parsedSkip,
       parsedTake,
     );

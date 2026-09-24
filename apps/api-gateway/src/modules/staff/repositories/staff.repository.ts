@@ -46,13 +46,23 @@ export class StaffRepository {
       // 3. Format the staff number (e.g., STF-000001)
       const formattedStaffNumber = `STF-${String(nextNumber).padStart(6, "0")}`;
 
+      // Extract campusIds to avoid type error and to use for campusAssignments
+      const { campusIds, ...restData } = data as any;
+
       // 4. Create the Staff Profile in the exact same transaction
       return tx.staffProfile.create({
         data: {
-          ...data,
+          ...restData,
           staffNumber: formattedStaffNumber,
           tenantId,
           schoolId,
+          campusAssignments: campusIds && campusIds.length > 0 ? {
+            create: campusIds.map((campusId: string) => ({
+              tenantId,
+              schoolId,
+              campusId,
+            }))
+          } : undefined,
         },
       });
     });
@@ -94,11 +104,18 @@ export class StaffRepository {
   async getStaffList(
     tenantId: string,
     schoolId: string,
+    campusId: string | undefined,
     skip: number,
     take: number,
   ): Promise<StaffProfile[]> {
+    const where: any = { tenantId, schoolId };
+    if (campusId) {
+      where.campusAssignments = {
+        some: { campusId }
+      };
+    }
     return kernel.db.staffProfile.findMany({
-      where: { tenantId, schoolId },
+      where,
       skip,
       take,
       orderBy: { createdAt: "desc" },

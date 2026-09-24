@@ -21,8 +21,8 @@ export class MovementHistoryController {
   @ApiResponse({ status: 200, description: "Arrival history returned" })
   @RequirePermission("movement:read")
   async getArrivals(@Req() req: any, @Query() query: MovementHistoryQueryDto) {
-    const { tenantId, schoolId } = req.workspace;
-    return this.historyService.getArrivals(tenantId, schoolId, query);
+    const { tenantId, schoolId, campusId } = req.workspace;
+    return this.historyService.getArrivals(tenantId, schoolId, campusId, query);
   }
 
   @Get("departures")
@@ -30,7 +30,7 @@ export class MovementHistoryController {
   @ApiResponse({ status: 200, description: "Departure history returned" })
   @RequirePermission("movement:read")
   async getDepartures(@Req() req: any, @Query() query: MovementHistoryQueryDto) {
-    const { tenantId, schoolId } = req.workspace;
-    return this.historyService.getDepartures(tenantId, schoolId, query);
+    const { tenantId, schoolId, campusId } = req.workspace;
+    return this.historyService.getDepartures(tenantId, schoolId, campusId, query);
   }
 }

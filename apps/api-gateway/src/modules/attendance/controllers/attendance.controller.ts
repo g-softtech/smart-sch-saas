@@ -52,12 +52,13 @@ export class AttendanceController {
     @Req() req: any,
     @Body() dto: BulkCreateAttendanceRegisterDto,
   ) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     const userId = req.user.sub;
     if (!schoolId) throw new BadRequestException("School context is required");
     const register = await this.attendanceService.bulkCreateRegister(
       tenantId,
       schoolId,
+      campusId,
       userId,
       dto,
     );
@@ -74,12 +75,13 @@ export class AttendanceController {
     @Req() req: any,
     @Query() query: GetEligibleStudentsQueryDto,
   ) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     if (!schoolId) throw new BadRequestException("School context is required");
 
     return this.attendanceService.getEligibleStudents(
       tenantId,
       schoolId,
+      campusId,
       query.classId,
       query.armId || null,
       query.date,
@@ -96,11 +98,12 @@ export class AttendanceController {
     @Req() req: any,
     @Query() query: AttendanceFilterQueryDto,
   ) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     if (!schoolId) throw new BadRequestException("School context is required");
     const registers = await this.attendanceService.getRegisters(
       tenantId,
       schoolId,
+      campusId,
       query.skip,
       query.take,
       query.startDate,

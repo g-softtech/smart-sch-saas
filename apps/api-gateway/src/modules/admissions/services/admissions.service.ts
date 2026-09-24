@@ -547,6 +547,7 @@ export class AdmissionsService {
           studentId: student.id,
           academicYearId: app.publishedForm.academicYearId,
           classId: app.publishedForm.targetClassId,
+          campusId: null,
         },
         tx,
       );

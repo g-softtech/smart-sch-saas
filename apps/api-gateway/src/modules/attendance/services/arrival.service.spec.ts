@@ -72,7 +72,7 @@ describe("ArrivalService", () => {
 
       mockTransaction.mockResolvedValue({ id: "arrival-id-1" });
 
-      const result = await arrivalService.recordArrival(tenantId, schoolId, operatorId, rawToken, "CAMERA");
+      const result = await arrivalService.recordArrival(tenantId, schoolId, "campus-1", operatorId, rawToken, "CAMERA");
 
       expect(result.success).toBe(true);
       expect(result.message).toBe("Arrival Recorded");
@@ -103,7 +103,7 @@ describe("ArrivalService", () => {
       // Simulate a unique constraint failure when creating StudentArrival
       mockTransaction.mockRejectedValueOnce({ code: "P2002" });
 
-      await expect(arrivalService.recordArrival(tenantId, schoolId, operatorId, rawToken, "CAMERA"))
+      await expect(arrivalService.recordArrival(tenantId, schoolId, "campus-1", operatorId, rawToken, "CAMERA"))
         .rejects
         .toThrow(new ConflictException("Already Arrived"));
     });
@@ -112,7 +112,7 @@ describe("ArrivalService", () => {
       // credentialService throws BadRequestException for revoked
       credentialService.verifyCredential.mockRejectedValue(new BadRequestException("Credential could not be verified"));
 
-      await expect(arrivalService.recordArrival(tenantId, schoolId, operatorId, rawToken, "EXTERNAL"))
+      await expect(arrivalService.recordArrival(tenantId, schoolId, "campus-1", operatorId, rawToken, "EXTERNAL"))
         .rejects
         .toThrow(new BadRequestException("Credential could not be verified"));
       
@@ -130,7 +130,7 @@ describe("ArrivalService", () => {
       const err = new Error("Database connection lost");
       mockTransaction.mockRejectedValue(err);
 
-      await expect(arrivalService.recordArrival(tenantId, schoolId, operatorId, rawToken, "EXTERNAL"))
+      await expect(arrivalService.recordArrival(tenantId, schoolId, "campus-1", operatorId, rawToken, "EXTERNAL"))
         .rejects
         .toThrow(err);
     });

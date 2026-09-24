@@ -34,7 +34,7 @@ describe("MovementHistoryService", () => {
     (kernel.db.studentArrival.findMany as jest.Mock).mockResolvedValue([]);
     (kernel.db.studentArrival.count as jest.Mock).mockResolvedValue(0);
 
-    const result = await service.getArrivals("tenant-1", "school-1", { skip: 0, take: 10 });
+    const result = await service.getArrivals("tenant-1", "school-1", undefined, { skip: 0, take: 10 });
     
     expect(kernel.db.studentArrival.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -52,7 +52,7 @@ describe("MovementHistoryService", () => {
     (kernel.db.studentDeparture.findMany as jest.Mock).mockResolvedValue([]);
     (kernel.db.studentDeparture.count as jest.Mock).mockResolvedValue(0);
 
-    const result = await service.getDepartures("tenant-2", "school-2", { skip: 0, take: 10 });
+    const result = await service.getDepartures("tenant-2", "school-2", undefined, { skip: 0, take: 10 });
     
     expect(kernel.db.studentDeparture.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -70,7 +70,7 @@ describe("MovementHistoryService", () => {
     (kernel.db.studentArrival.findMany as jest.Mock).mockResolvedValue([]);
     (kernel.db.studentArrival.count as jest.Mock).mockResolvedValue(0);
 
-    await service.getArrivals("tenant-1", "school-1", { startDate: "2026-09-01", endDate: "2026-09-30" });
+    await service.getArrivals("tenant-1", "school-1", undefined, { startDate: "2026-09-01", endDate: "2026-09-30" });
     
     expect(kernel.db.studentArrival.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

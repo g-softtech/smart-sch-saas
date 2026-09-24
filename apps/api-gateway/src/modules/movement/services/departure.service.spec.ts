@@ -65,7 +65,7 @@ describe("DepartureService", () => {
     guardianCredSvc.verifyCredential.mockResolvedValue({ success: true, guardian: { id: "grd-1" }, credentialId: "cred-1" } as any);
     authSvc.verifyPickupAuthorization.mockResolvedValue({ id: "auth-1" } as any);
 
-    const result = await departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22");
+    const result = await departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22");
 
     expect(result).toEqual(validTxResult);
     expect(kernel.db.$transaction).toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe("DepartureService", () => {
   it("2. Invalid student credential -> rejected", async () => {
     studentCredSvc.verifyCredential.mockResolvedValue({ success: false } as any);
 
-    await expect(departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
+    await expect(departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
       .rejects.toThrow("Student verification failed");
   });
 
@@ -82,7 +82,7 @@ describe("DepartureService", () => {
     studentCredSvc.verifyCredential.mockResolvedValue({ success: true, student: { id: "stu-1" } } as any);
     guardianCredSvc.verifyCredential.mockRejectedValue(new BadRequestException("Guardian credential could not be verified"));
 
-    await expect(departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
+    await expect(departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
       .rejects.toThrow("Guardian credential could not be verified");
   });
 
@@ -90,7 +90,7 @@ describe("DepartureService", () => {
     studentCredSvc.verifyCredential.mockResolvedValue({ success: true, student: { id: "stu-1" } } as any);
     guardianCredSvc.verifyCredential.mockRejectedValue(new BadRequestException("Guardian credential is expired"));
 
-    await expect(departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
+    await expect(departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
       .rejects.toThrow("Guardian credential is expired");
   });
 
@@ -99,7 +99,7 @@ describe("DepartureService", () => {
     guardianCredSvc.verifyCredential.mockResolvedValue({ success: true, guardian: { id: "grd-1" }, credentialId: "cred-1" } as any);
     authSvc.verifyPickupAuthorization.mockRejectedValue(new BadRequestException("Guardian is not authorized for this student"));
 
-    await expect(departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
+    await expect(departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
       .rejects.toThrow("Guardian is not authorized for this student");
   });
 
@@ -114,7 +114,7 @@ describe("DepartureService", () => {
 
     (kernel.db.$transaction as jest.Mock).mockRejectedValue(mockPrismaError);
 
-    await expect(departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
+    await expect(departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22"))
       .rejects.toThrow("Student has already departed for this operational date");
   });
 
@@ -140,7 +140,7 @@ describe("DepartureService", () => {
       return validTxResult;
     });
 
-    await departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22");
+    await departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22");
 
     // Ensure NO RAW TOKENS in event payload
     expect(capturedPayload).toBeDefined();
@@ -157,7 +157,7 @@ describe("DepartureService", () => {
     guardianCredSvc.verifyCredential.mockResolvedValue({ success: true, guardian: { id: "grd-1" }, credentialId: "cred-1" } as any);
     authSvc.verifyPickupAuthorization.mockResolvedValue({ id: "auth-1" } as any);
 
-    await departureService.processDeparture("t-1", "s-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22");
+    await departureService.processDeparture("t-1", "s-1", "c-1", "op-1", "st-tok", "gr-tok", "CAMERA", "2026-09-22");
 
     expect(guardianCredSvc.verifyCredential).toHaveBeenCalledWith("t-1", "gr-tok", "op-1", "CAMERA");
     expect(authSvc.verifyPickupAuthorization).toHaveBeenCalledWith("t-1", "s-1", "stu-1", "grd-1", expect.any(Date));
