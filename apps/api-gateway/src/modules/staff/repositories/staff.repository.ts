@@ -59,7 +59,6 @@ export class StaffRepository {
           campusAssignments: campusIds && campusIds.length > 0 ? {
             create: campusIds.map((campusId: string) => ({
               tenantId,
-              schoolId,
               campusId,
             }))
           } : undefined,
