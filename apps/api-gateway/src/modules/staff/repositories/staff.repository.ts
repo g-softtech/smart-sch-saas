@@ -106,12 +106,24 @@ export class StaffRepository {
     campusId: string | undefined,
     skip: number,
     take: number,
+    search?: string,
   ): Promise<StaffProfile[]> {
     const where: any = { tenantId, schoolId };
     if (campusId) {
       where.campusAssignments = {
         some: { campusId }
       };
+    }
+
+    if (search) {
+      const searchTerms = search.trim().split(/\s+/);
+      where.AND = searchTerms.map(term => ({
+        OR: [
+          { firstName: { contains: term, mode: "insensitive" } },
+          { lastName: { contains: term, mode: "insensitive" } },
+          { staffNumber: { contains: term, mode: "insensitive" } }
+        ]
+      }));
     }
     return kernel.db.staffProfile.findMany({
       where,

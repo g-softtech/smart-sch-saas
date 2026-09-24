@@ -317,11 +317,14 @@ export class StudentsRepository {
     }
 
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: "insensitive" } },
-        { lastName: { contains: search, mode: "insensitive" } },
-        { studentNumber: { contains: search, mode: "insensitive" } }
-      ];
+      const searchTerms = search.trim().split(/\s+/);
+      where.AND = searchTerms.map(term => ({
+        OR: [
+          { firstName: { contains: term, mode: "insensitive" } },
+          { lastName: { contains: term, mode: "insensitive" } },
+          { studentNumber: { contains: term, mode: "insensitive" } }
+        ]
+      }));
     }
     
     return kernel.db.student.findMany({ where });
@@ -356,12 +359,15 @@ export class StudentsRepository {
     // }
 
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: "insensitive" } },
-        { lastName: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-      ];
+      const searchTerms = search.trim().split(/\s+/);
+      where.AND = searchTerms.map(term => ({
+        OR: [
+          { firstName: { contains: term, mode: "insensitive" } },
+          { lastName: { contains: term, mode: "insensitive" } },
+          { phone: { contains: term, mode: "insensitive" } },
+          { email: { contains: term, mode: "insensitive" } },
+        ]
+      }));
     }
 
     return kernel.db.guardian.findMany({ where });

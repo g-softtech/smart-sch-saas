@@ -43,6 +43,7 @@ export class StaffController {
     @Req() req: any,
     @Query("skip") skip?: string,
     @Query("take") take?: string,
+    @Query("search") search?: string,
   ) {
     const { tenantId, schoolId, campusId } = req.workspace;
     if (!schoolId) throw new BadRequestException("School context is required");
@@ -55,6 +56,7 @@ export class StaffController {
       campusId,
       parsedSkip,
       parsedTake,
+      search
     );
     return list.map((staff) => StaffResponseDto.fromEntity(staff));
   }
