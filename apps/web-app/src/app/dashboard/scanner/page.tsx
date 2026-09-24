@@ -84,8 +84,9 @@ export default function ScannerPage() {
 
       setSuccessResult(response.student);
       setTimeout(() => setSuccessResult(null), 5000);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
+    } catch (err: any) {
+      const isApiError = err instanceof ApiError || err?.name === 'ApiError';
+      if (isApiError) {
         if (err.message === "Already Arrived") {
           setWarningResult(err.message);
         } else {
@@ -126,8 +127,9 @@ export default function ScannerPage() {
 
         setSuccessResult(response.student);
         setTimeout(() => setSuccessResult(null), 5000);
-      } catch (err: unknown) {
-        if (err instanceof ApiError) {
+      } catch (err: any) {
+        const isApiError = err instanceof ApiError || err?.name === 'ApiError';
+        if (isApiError) {
           if (err.message === "Guardian credential could not be verified") {
             setErrorResult("Please scan the authorized guardian QR code.");
           } else {
