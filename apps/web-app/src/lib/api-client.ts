@@ -7,6 +7,7 @@ export class ApiError extends Error {
     this.status = status;
     this.data = data;
     this.name = 'ApiError';
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 
@@ -112,8 +113,8 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     }
     
     throw new ApiError(response.status, errorMessage, data);
-  } catch (error) {
-    if (error instanceof ApiError) {
+  } catch (error: any) {
+    if (error instanceof ApiError || error?.name === 'ApiError') {
       throw error;
     }
     throw new ApiError(500, error instanceof Error ? error.message : 'Unknown network error');
