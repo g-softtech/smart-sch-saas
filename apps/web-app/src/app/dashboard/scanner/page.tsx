@@ -128,7 +128,11 @@ export default function ScannerPage() {
         setTimeout(() => setSuccessResult(null), 5000);
       } catch (err: unknown) {
         if (err instanceof ApiError) {
-          setErrorResult(err.message);
+          if (err.message === "Guardian credential could not be verified") {
+            setErrorResult("Please scan the authorized guardian QR code.");
+          } else {
+            setErrorResult(err.message);
+          }
         } else {
           setErrorResult("System error during departure");
         }
