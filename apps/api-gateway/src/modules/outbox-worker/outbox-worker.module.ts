@@ -6,7 +6,10 @@ import { OutboxWorkerService } from './outbox-worker.service';
   providers: [
     {
       provide: PrismaClient,
-      useValue: kernel.db,
+      useFactory: () => {
+        const { kernel } = require('@saas/core-platform');
+        return kernel.db;
+      }
     },
     {
       provide: DomainEventPublisher,
