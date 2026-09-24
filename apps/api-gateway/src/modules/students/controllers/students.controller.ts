@@ -259,7 +259,8 @@ export class StudentsController {
     @Body() dto: CreateEnrollmentDto,
   ): Promise<ApiResponseDto<any>> {
     const { campusId, isMultiCampus } = req.workspace;
-    if (isMultiCampus && !campusId) {
+    const resolvedCampusId = campusId || dto.campusId;
+    if (isMultiCampus && !resolvedCampusId) {
       throw new BadRequestException("Campus is required for enrollment in a multi-campus school");
     }
     const enrollment = await this.studentsService.createEnrollment({
@@ -267,7 +268,7 @@ export class StudentsController {
       academicYearId: dto.academicYearId,
       classId: dto.classId,
       armId: dto.armId,
-      campusId,
+      campusId: resolvedCampusId,
     });
     return { success: true, data: enrollment };
   }

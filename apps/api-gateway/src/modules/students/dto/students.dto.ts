@@ -176,9 +176,10 @@ export class CreateEnrollmentDto {
   @IsUUID("all")
   classId!: string;
 
-  @ApiProperty({ example: "uuid-of-campus" })
+  @ApiPropertyOptional({ example: "uuid-of-campus" })
   @IsUUID("all")
-  campusId!: string;
+  @IsOptional()
+  campusId?: string;
 
   @ApiPropertyOptional({ example: "uuid-of-arm" })
   @IsUUID("all")

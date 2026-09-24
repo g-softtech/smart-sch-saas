@@ -26,8 +26,14 @@ export class StaffController {
 
   @Post()
   async createStaff(@Req() req: any, @Body() dto: CreateStaffDto) {
-    const { tenantId, schoolId } = req.workspace;
+    const { tenantId, schoolId, campusId } = req.workspace;
     if (!schoolId) throw new BadRequestException("School context is required");
+
+    // Auto-scope to the selected campus if creating within a campus workspace
+    if (campusId && (!dto.campusIds || dto.campusIds.length === 0)) {
+      dto.campusIds = [campusId];
+    }
+
     const staff = await this.staffService.createStaff(tenantId, schoolId, dto);
     return StaffResponseDto.fromEntity(staff);
   }
