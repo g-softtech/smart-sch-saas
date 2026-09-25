@@ -46,8 +46,12 @@ export class FinanceController {
     const tenantId = req.workspace?.tenantId;
     if (!schoolId || !tenantId) throw new BadRequestException("Workspace context missing");
 
-    const result = await this.service.listInvoices(tenantId, schoolId, studentId);
-    return { success: true, data: result };
+    try {
+      const result = await this.service.listInvoices(tenantId, schoolId, studentId);
+      return { success: true, data: result };
+    } catch (error: any) {
+      throw new BadRequestException(`Failed to list invoices: ${error.message}`);
+    }
   }
 
   @Get("invoices/:id")

@@ -431,10 +431,10 @@ export class FinanceService {
     });
 
     return invoices.map(inv => {
-      const adjs = inv.adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
-      const paid = inv.allocations.reduce((sum, a) => sum + Number(a.amountAllocated), 0) +
-                   inv.walletAllocations.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
-      const outstandingAmount = Number(inv.totalAmount) - adjs - paid;
+      const adjs = (inv.adjustments || []).reduce((sum, a) => sum + Number(a.amount), 0);
+      const paid = (inv.allocations || []).reduce((sum, a) => sum + Number(a.amountAllocated), 0) +
+                   (inv.walletAllocations || []).reduce((sum, a) => sum + Number(a.amountAllocated), 0);
+      const outstandingAmount = Number(inv.totalAmount || 0) - adjs - paid;
       return {
         ...inv,
         outstandingAmount

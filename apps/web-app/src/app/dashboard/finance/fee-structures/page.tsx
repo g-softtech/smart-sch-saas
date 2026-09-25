@@ -29,7 +29,7 @@ export default function FeeStructuresPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Fee Structures</h1>
           <p className="text-gray-500 dark:text-gray-400">Manage termly fee templates</p>
         </div>
-        <button className="px-4 py-2 bg-brand-navy text-white rounded hover:bg-brand-navy/90 focus:outline-none" onClick={() => alert("Not implemented in Phase 4 minimal scope")}>Create Fee Structure</button>
+        <button onClick={() => window.location.href='/dashboard/finance/fee-structures/new'} className="px-4 py-2 bg-brand-navy text-white rounded hover:bg-brand-navy/90 focus:outline-none">Create Fee Structure</button>
       </div>
 
       <div className="bg-white dark:bg-brand-navy-surface rounded-lg shadow-sm border border-gray-200 dark:border-brand-border-dark overflow-hidden">
