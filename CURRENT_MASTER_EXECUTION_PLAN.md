@@ -24,7 +24,7 @@ Transform a monolithic School Management System into an enterprise-grade SchoolO
 - Student Movement & Guardian Pickup: **COMPLETE**
 
 ### Core Modules (Partial / Planned)
-- Finance (Invoicing & Ledger): **PARTIAL**
+- Finance (Invoicing & Ledger): **COMPLETE**
 - Notifications (WhatsApp Outbox): **PARTIAL**
 - Timetables & Scheduling: **PLANNED**
 - Results & Grades Engine: **PLANNED**
@@ -77,11 +77,10 @@ Parent Portal (Consumes Finance, Results, Movement, Attendance, Identity)
 - **Prerequisites:** Phase 2 (Results Engine).
 - **Scope:** Assignments & Homework, Examinations & CBT.
 
-### Phase 4: Financial Core UI
+### Phase 4: Financial Core UI (CURRENTLY COMPLETE)
 - **Objective:** Enable billing, invoicing, and fee tracking.
-- **Prerequisites:** Finance backend APIs.
-- **Scope:** Admin-facing UI for ledgers, invoices, and payments.
-- **Verification Gate:** Ability to generate an invoice and process a payment.
+- **Status:** Checkpoint reached. Implemented Admin-facing UI for ledgers, invoicing forms with human-readable selectors, and payments.
+- **Verification Gate:** Ability to generate an invoice and process a payment is verified.
 
 ### Phase 5: The Portals (BFF Integration)
 - **Objective:** Deliver the authenticated self-service experiences for Students and Parents.
