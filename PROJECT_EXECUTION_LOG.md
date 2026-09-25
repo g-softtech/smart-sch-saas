@@ -11,10 +11,10 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | Pending commit |
+| **HEAD** | `8bedbef3` |
 | **HEAD message** | `fix(academics): resolve Phase 2 Timetable visibility and Results roster integration gaps` |
-| **Remote sync** | `origin/main` |
-| **Working tree** | Uncommitted documentation updates |
+| **Remote sync** | `origin/main` — up to date (pushed 2026-09-25) |
+| **Working tree** | Clean |
 | **Last completed phase** | Phase 2 — Academic Infrastructure (COMPLETE & INTEGRATED) |
 | **Last completed checkpoint** | Phase 2 Integration Completion |
 | **Current active workstream** | None. Phase 2 integration completion is verified. |
@@ -41,6 +41,7 @@
 
 **Status:** VERIFIED COMPLETE
 **Period:** 2026-09-25
+**Key commit:** `8bedbef3`
 
 **Implementation summary:**
 - **Reconciled premature checkpoint:** Reconciled earlier premature completion record `0a4c03feafcb350bc991f090cfb9bbf0cc06c3ec`.
