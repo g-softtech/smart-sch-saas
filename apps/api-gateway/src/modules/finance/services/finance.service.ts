@@ -411,7 +411,7 @@ export class FinanceService {
   }
 
   async listInvoices(tenantId: string, schoolId: string, studentId?: string) {
-    return this.prisma.invoice.findMany({
+    const invoices = await this.prisma.invoice.findMany({
       where: {
         tenantId,
         schoolId,
@@ -423,8 +423,22 @@ export class FinanceService {
         },
         academicYear: true,
         term: true,
+        adjustments: true,
+        allocations: true,
+        walletAllocations: true,
       },
       orderBy: { createdAt: 'desc' },
+    });
+
+    return invoices.map(inv => {
+      const adjs = inv.adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
+      const paid = inv.allocations.reduce((sum, a) => sum + Number(a.amountAllocated), 0) +
+                   inv.walletAllocations.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
+      const outstandingAmount = Number(inv.totalAmount) - adjs - paid;
+      return {
+        ...inv,
+        outstandingAmount
+      };
     });
   }
 
