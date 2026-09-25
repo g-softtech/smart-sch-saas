@@ -26,8 +26,8 @@ Transform a monolithic School Management System into an enterprise-grade SchoolO
 ### Core Modules (Partial / Planned)
 - Finance (Invoicing & Ledger): **COMPLETE**
 - Notifications (WhatsApp Outbox): **PARTIAL**
-- Timetables & Scheduling: **PLANNED**
-- Results & Grades Engine: **PLANNED**
+- Timetables & Scheduling: **COMPLETE**
+- Results & Grades Engine: **COMPLETE**
 - Assignments & Assessments: **PLANNED**
 - Examinations & CBT: **PLANNED**
 - Student Portal (BFF): **PLANNED**
@@ -64,13 +64,14 @@ Parent Portal (Consumes Finance, Results, Movement, Attendance, Identity)
 - **Objective:** Establish the secure multi-tenant foundation, onboarding workflows, and physical operational security.
 - **Status:** Checkpoint reached. Implemented Identity, Admissions, Students, Academics, Staff, Movement, ID Cards, QR Scanner.
 
-### Phase 2: Academic Infrastructure (Immediate Next Phase)
+### Phase 2: Academic Infrastructure (COMPLETE & INTEGRATED)
 - **Objective:** Establish the scheduling logic and assessment backbone required for students and parents to track academic progress.
 - **Prerequisites:** Core Academics (Classes/Terms).
 - **Scope:** 
-  - Backend/Frontend: Timetable / Scheduling module.
-  - Backend/Frontend: Core Results & Grading Engine (Configurable scales, report cards).
-- **Verification Gate:** Ability to generate a report card and schedule a class.
+  - Backend/Frontend: Timetable / Scheduling module (Class-wide + Arm-specific visibility).
+  - Backend/Frontend: Core Results & Grading Engine (Real student roster, record-score API integration, configurable scales).
+- **Status:** Checkpoint reached. Reconciled and verified end-to-end integration.
+- **Verification Gate:** Verified timetable class/arm visibility query, real student roster loading, and score recording flow.
 
 ### Phase 3: Assessment Operations
 - **Objective:** Build the specific methods of assessment that feed into the Results engine.

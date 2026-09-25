@@ -442,8 +442,15 @@ export class StudentsService {
 
   // ─── Read Operations ───────────────────────────────────────────────────────
 
-  async listStudents(schoolId?: string, campusId?: string, search?: string) {
-    return this.repo.listStudents(schoolId, campusId, search);
+  async listStudents(
+    schoolId?: string,
+    campusId?: string,
+    search?: string,
+    academicYearId?: string,
+    classId?: string,
+    armId?: string
+  ) {
+    return this.repo.listStudents(schoolId, campusId, search, academicYearId, classId, armId);
   }
 
   async getStudent(studentId: string) {

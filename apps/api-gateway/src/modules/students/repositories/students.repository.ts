@@ -304,14 +304,25 @@ export class StudentsRepository {
     });
   }
 
-  async listStudents(schoolId?: string, campusId?: string, search?: string) {
+  async listStudents(
+    schoolId?: string,
+    campusId?: string,
+    search?: string,
+    academicYearId?: string,
+    classId?: string,
+    armId?: string
+  ) {
     const where: any = schoolId ? { schoolId } : {};
     
-    if (campusId) {
+    // We construct the enrollment filter incrementally if any enrollment-related parameter is present.
+    if (campusId || academicYearId || classId || armId) {
       where.enrollments = {
         some: {
-          campusId: campusId,
-          status: EnrollmentStatus.ACTIVE
+          status: EnrollmentStatus.ACTIVE,
+          ...(campusId && { campusId }),
+          ...(academicYearId && { academicYearId }),
+          ...(classId && { classId }),
+          ...(armId && { armId }),
         }
       };
     }

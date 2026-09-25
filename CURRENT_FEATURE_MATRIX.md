@@ -25,8 +25,8 @@ This document is the authoritative inventory of SchoolOS functionality, replacin
 | **Student Movement & Pickup**| N/A | Authorizations, Departure logging | `movement` backend, `dashboard/scanner` | **COMPLETE** | Tested | Guardians, QR | **NEW REQUIREMENT** |
 | **Notifications** | SMS/Email | WhatsApp-first outbox architecture | `notifications` backend, outbox worker | **PARTIAL** | Core APIs | Movement | Lacks Admin UI config |
 | **Finance/Payments** | Invoices, Accounting, Paystack | Ledger, transactions, invoicing | `payments` backend APIs | **PARTIAL** | APIs exist | Students | No frontend UI for admins/parents |
-| **Timetable / Scheduling** | Tenant-aware scheduling | Academic infrastructure domain | Missing | **PLANNED** | N/A | Academics | Prerequisite for Portals |
-| **Results & Grading** | Configurable scales, remarks | Academic results engine | Missing | **PLANNED** | N/A | Academics | Broad academic results domain |
+| **Timetable / Scheduling** | Tenant-aware scheduling | Academic infrastructure domain | `timetable` backend, `dashboard/timetable` | **COMPLETE** | Tested | Academics | Prerequisite for Portals |
+| **Results & Grading** | Configurable scales, remarks | Academic results engine | `results` backend, `dashboard/results` | **COMPLETE** | Tested | Academics | Broad academic results domain |
 | **Assignments & Homework** | Teacher task assignment | Integrated assessment sub-system | Missing | **PLANNED** | N/A | Academics | Feeds into Results |
 | **Examinations & CBT** | Multi-campus, AI questions | Assessment subsystem | Missing | **PLANNED** | N/A | Academics | Feeds into Results |
 | **Student Portal** | Derived UI | First-class BFF, authenticated self-service | Missing | **PLANNED** | N/A | Results, Timetable, ID| Re-architected scope |

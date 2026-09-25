@@ -11,14 +11,14 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `b608018f` |
-| **HEAD message** | `fix(scanner): apply robust ApiError check for idempotency feedback` |
-| **Remote sync** | `origin/main` — up to date (pushed 2026-09-24) |
-| **Working tree** | Clean |
-| **Last completed phase** | Phase 1 — Security & Core Operations (COMPLETE) |
-| **Last completed checkpoint** | `b608018f` — Scanner idempotency feedback fix |
-| **Current active workstream** | None. Phase 1 is closed. |
-| **Next authorized action** | **Phase 2: Academic Infrastructure** — Timetable/Scheduling module + Results & Grading Engine. See `CURRENT_MASTER_EXECUTION_PLAN.md § Phase 2`. NOTE: Review commits `c18b7a91` and `d02c1abd` first — significant scaffolding already exists. |
+| **HEAD** | Pending commit |
+| **HEAD message** | `fix(academics): resolve Phase 2 Timetable visibility and Results roster integration gaps` |
+| **Remote sync** | `origin/main` |
+| **Working tree** | Uncommitted documentation updates |
+| **Last completed phase** | Phase 2 — Academic Infrastructure (COMPLETE & INTEGRATED) |
+| **Last completed checkpoint** | Phase 2 Integration Completion |
+| **Current active workstream** | None. Phase 2 integration completion is verified. |
+| **Next authorized action** | **Phase 3: Assessment Operations** — Assignments & Homework, Examinations & CBT. See `CURRENT_MASTER_EXECUTION_PLAN.md § Phase 3`. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -34,6 +34,29 @@
 ---
 
 ## Chronological Checkpoint History
+
+---
+
+### CHECKPOINT: Phase 2 Academic Infrastructure — Integration Completion
+
+**Status:** VERIFIED COMPLETE
+**Period:** 2026-09-25
+
+**Implementation summary:**
+- **Reconciled premature checkpoint:** Reconciled earlier premature completion record `0a4c03feafcb350bc991f090cfb9bbf0cc06c3ec`.
+- **Timetable Class/Arm Visibility Defect Fixed:** Modified `TimetableService.listClassTimetable` to include shared class-wide entries (`armId: null`) alongside arm-specific entries when querying an arm-specific timetable (`OR: armId ? [{ armId }, { armId: null }] : undefined`).
+- **Timetable Unit Tests Added:** Added focused unit test suite in `apps/api-gateway/src/modules/academics/services/timetable.service.spec.ts`.
+- **Results Roster Integration Fixed:** Replaced fake `students.slice(0, 5)` mock in `apps/web-app/src/app/dashboard/results/page.tsx` with authoritative backend student roster using the `useClassRoster` hook in `apps/web-app/src/hooks/useFinanceSelectors.ts`.
+- **Backend Filter Parameters Extended:** Updated `PaginationQueryDto` and `StudentsRepository.listStudents` to support `academicYearId`, `classId`, `armId` filtering on active enrollments.
+- **Results Score-Recording Payload Corrected:** Removed fake `enrollment-${student.id}` identifier. Aligned frontend payload to send real `studentId` matching the authoritative `RecordScoreDto` backend contract.
+
+**Verification Matrix:**
+- `web-app` TypeScript (`tsc --noEmit`): **PASS**
+- `api-gateway` TypeScript (`tsc --noEmit`): **PASS**
+- `web-app` ESLint & build (`next build` with Turbopack): **PASS**
+- `api-gateway` production build (`nest build`): **PASS**
+- `git diff --check`: **PASS** (0 warnings, 0 trailing whitespace)
+- Jest Unit Tests (`TimetableService` spec): **BLOCKED** by known workspace `@nestjs/event-emitter` Babel/ESM parser issue.
 
 ---
 

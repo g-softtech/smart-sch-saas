@@ -232,9 +232,58 @@ export function useStudentEnrollments(studentId: string | null) {
     return () => { cancelled = true; };
   }, [studentId]);
 
-  // Return the most recent ACTIVE enrollment for prefill
+// Return the most recent ACTIVE enrollment for prefill
   const activeEnrollment = data.find((e) => e.status === "ACTIVE") ?? data[0] ?? null;
   return { data, activeEnrollment, loading, error };
+}
+
+export function useClassRoster(
+  academicYearId: string | null,
+  classId: string | null,
+  armId?: string | null,
+) {
+  const [data, setData] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!academicYearId || !classId) {
+      setData([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    let url = `api/v1/students?academicYearId=${academicYearId}&classId=${classId}&limit=100`;
+    if (armId) url += `&armId=${armId}`;
+
+    apiClient
+      .get(url)
+      .then((res: unknown) => {
+        if (!cancelled) {
+          // The API returns paginated data: { success: true, data: [...], meta: {...} }
+          // apiClient might unwrap 'data' depending on interceptors, let's handle both
+          const payload = res as any;
+          if (Array.isArray(payload)) {
+            setData(payload);
+          } else if (payload && Array.isArray(payload.data)) {
+            setData(payload.data);
+          } else {
+            setData([]);
+          }
+        }
+      })
+      .catch((e: Error | unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load class roster");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [academicYearId, classId, armId]);
+
+  return { data, loading, error };
 }
 
 // ─── Utility ─────────────────────────────────────────────────────────────────

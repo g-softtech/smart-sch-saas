@@ -239,6 +239,21 @@ export class PaginationQueryDto {
   @IsOptional()
   schoolId?: string;
 
+  @ApiPropertyOptional({ description: "Filter by academicYearId" })
+  @IsUUID("all")
+  @IsOptional()
+  academicYearId?: string;
+
+  @ApiPropertyOptional({ description: "Filter by classId" })
+  @IsUUID("all")
+  @IsOptional()
+  classId?: string;
+
+  @ApiPropertyOptional({ description: "Filter by armId" })
+  @IsUUID("all")
+  @IsOptional()
+  armId?: string;
+
   @ApiPropertyOptional({ description: "Search query for filtering results" })
   @IsString()
   @MaxLength(100)

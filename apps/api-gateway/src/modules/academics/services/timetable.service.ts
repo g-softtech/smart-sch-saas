@@ -135,7 +135,7 @@ export class TimetableService {
         academicYearId,
         termId,
         classId,
-        armId: armId || null,
+        OR: armId ? [{ armId }, { armId: null }] : undefined,
       },
       include: {
         period: true,

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { apiClient } from '@/lib/api-client';
+import { useClassRoster } from '@/hooks/useFinanceSelectors';
 
 interface AcademicYear { id: string; name: string; }
 interface Term { id: string; name: string; academicYearId: string; }
@@ -18,13 +19,13 @@ export default function ResultsPage() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
   
   const [academicYearId, setAcademicYearId] = useState('');
   const [termId, setTermId] = useState('');
   const [classId, setClassId] = useState('');
   const [subjectId, setSubjectId] = useState('');
   
+  const { data: classStudents, loading: rosterLoading } = useClassRoster(academicYearId, classId, null);
   const [gradingScales, setGradingScales] = useState<GradingScale[]>([]);
   
   const [error, setError] = useState<string | null>(null);
@@ -41,19 +42,17 @@ export default function ResultsPage() {
 
   const fetchReferenceData = useCallback(async () => {
     try {
-      const [ayRes, termsRes, classesRes, subRes, studentsRes, scalesRes] = await Promise.all([
+      const [ayRes, termsRes, classesRes, subRes, scalesRes] = await Promise.all([
         apiClient.get('/api/v1/academics/academic-years'),
         apiClient.get('/api/v1/academics/terms'),
         apiClient.get('/api/v1/academics/classes'),
         apiClient.get('/api/v1/academics/subjects'),
-        apiClient.get('/api/v1/students'),
         apiClient.get('/api/v1/academics/results/scales')
       ]);
       setAcademicYears((ayRes as AcademicYear[]) || []);
       setTerms((termsRes as Term[]) || []);
       setClasses((classesRes as Class[]) || []);
       setSubjects((subRes as Subject[]) || []);
-      setStudents((studentsRes as Student[]) || []);
       setGradingScales((scalesRes as GradingScale[]) || []);
     } catch (e: any /* eslint-disable-line */) {
       console.error(e);
@@ -94,16 +93,16 @@ export default function ResultsPage() {
     }
   };
 
-  const handleRecordScore = async (enrollmentId: string) => {
+  const handleRecordScore = async (studentId: string) => {
     try {
       setError(null);
-      const studentScore = scores[enrollmentId];
+      const studentScore = scores[studentId];
       if (!studentScore) return setError("Please enter score data first.");
       
       await apiClient.post('/api/v1/academics/results/record-score', {
         academicYearId,
         termId,
-        studentId: enrollmentId,
+        studentId,
         subjectId,
         type: studentScore.type || "CA",
         score: studentScore.score,
@@ -116,19 +115,15 @@ export default function ResultsPage() {
     }
   };
 
-  const handleScoreChange = (enrollmentId: string, field: string, value: string | number) => {
+  const handleScoreChange = (studentId: string, field: string, value: string | number) => {
     setScores(prev => ({
       ...prev,
-      [enrollmentId]: {
-        ...prev[enrollmentId],
+      [studentId]: {
+        ...prev[studentId],
         [field]: field === 'type' ? value : parseFloat(value as string) || 0
       }
     }));
   };
-
-  // Minimal filtering to approximate active class enrollments if the endpoint didn't populate them directly
-  // In a real app we'd fetch enrollments per class, but for UI test we just map students to a mock enrollmentId
-  const classStudents = classId ? students.slice(0, 5) : []; // For minimal testing since we don't have direct enrollment creation in Phase 2 mock yet
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -203,42 +198,45 @@ export default function ResultsPage() {
           {classId && subjectId && termId && academicYearId && (
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
               <h2 className="text-lg font-semibold mb-4 dark:text-white">Student Roster</h2>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b dark:border-gray-700">
-                    <th className="p-2 text-left dark:text-white">Student</th>
-                    <th className="p-2 text-left dark:text-white">Type</th>
-                    <th className="p-2 text-left dark:text-white">Score</th>
-                    <th className="p-2 text-left dark:text-white">Max</th>
-                    <th className="p-2 text-left dark:text-white">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {classStudents.map(student => {
-                    const mockEnrollmentId = `enrollment-${student.id}`;
-                    return (
+              {rosterLoading ? (
+                <div className="p-4 text-center dark:text-gray-400">Loading student roster...</div>
+              ) : classStudents.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 dark:text-gray-400">No active students enrolled for this class.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b dark:border-gray-700">
+                      <th className="p-2 text-left dark:text-white">Student</th>
+                      <th className="p-2 text-left dark:text-white">Type</th>
+                      <th className="p-2 text-left dark:text-white">Score</th>
+                      <th className="p-2 text-left dark:text-white">Max</th>
+                      <th className="p-2 text-left dark:text-white">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {classStudents.map(student => (
                       <tr key={student.id} className="border-b dark:border-gray-700 last:border-0">
                         <td className="p-2 dark:text-gray-300">{student.firstName} {student.lastName}</td>
                         <td className="p-2">
                           <input type="text" placeholder="e.g. CA" className="w-20 border p-1 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            onChange={e => handleScoreChange(mockEnrollmentId, 'type', e.target.value)} />
+                            onChange={e => handleScoreChange(student.id, 'type', e.target.value)} />
                         </td>
                         <td className="p-2">
                           <input type="number" placeholder="Score" className="w-20 border p-1 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            onChange={e => handleScoreChange(mockEnrollmentId, 'score', e.target.value)} />
+                            onChange={e => handleScoreChange(student.id, 'score', e.target.value)} />
                         </td>
                         <td className="p-2">
                           <input type="number" placeholder="Max" className="w-20 border p-1 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            onChange={e => handleScoreChange(mockEnrollmentId, 'maxScore', e.target.value)} />
+                            onChange={e => handleScoreChange(student.id, 'maxScore', e.target.value)} />
                         </td>
                         <td className="p-2">
-                          <button onClick={() => handleRecordScore(mockEnrollmentId)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs">Record</button>
+                          <button onClick={() => handleRecordScore(student.id)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors">Record</button>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              )}
               <div className="mt-6 flex justify-between items-center border-t dark:border-gray-700 pt-4">
                 <span className="text-sm font-medium dark:text-gray-300">Once Finalized, scores cannot be modified without amendment protocol.</span>
               </div>

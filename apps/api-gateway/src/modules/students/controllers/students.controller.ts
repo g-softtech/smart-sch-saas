@@ -95,7 +95,14 @@ export class StudentsController {
   ): Promise<ApiResponseDto<any>> {
     const { schoolId, campusId } = req.workspace;
     const resolvedSchoolId = query.schoolId || schoolId;
-    const students = await this.studentsService.listStudents(resolvedSchoolId, campusId, query.search);
+    const students = await this.studentsService.listStudents(
+      resolvedSchoolId,
+      campusId,
+      query.search,
+      query.academicYearId,
+      query.classId,
+      query.armId
+    );
 
     // Simple offset pagination on the returned result set.
     // TODO: push pagination to the repository layer when data volumes require it.
