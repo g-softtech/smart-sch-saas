@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { DataTable, Column } from '@/components/DataTable';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 
 type TabType = 'students' | 'guardians';
 
@@ -40,6 +41,9 @@ export default function StudentsPage() {
     'students': { ...initialTabState },
     'guardians': { ...initialTabState }
   });
+
+  const [listSearchQuery, setListSearchQuery] = useState('');
+  const debouncedListSearch = useDebounce(listSearchQuery, 500);
 
   // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -132,7 +136,7 @@ export default function StudentsPage() {
     }
   };
 
-  const fetchTabData = useCallback(async (tab: TabType, pageIndex: number) => {
+  const fetchTabData = useCallback(async (tab: TabType, pageIndex: number, search: string = '') => {
     setTabStates(prev => ({
       ...prev,
       [tab]: { ...prev[tab], loading: true, error: null }
@@ -145,6 +149,10 @@ export default function StudentsPage() {
         endpoint = `api/v1/students?page=${page}&limit=${LIMIT}`;
       } else {
         endpoint = `api/v1/students/guardians/list?page=${page}&limit=${LIMIT}`;
+      }
+
+      if (search) {
+        endpoint += `&search=${encodeURIComponent(search)}`;
       }
 
       const response = await apiClient.get(endpoint);
@@ -180,24 +188,20 @@ export default function StudentsPage() {
   }, []);
 
   useEffect(() => {
-    const currentState = tabStates[activeTab];
-    if (!currentState.initialized && !currentState.loading) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchTabData(activeTab, 0);
-    }
-  }, [activeTab, tabStates, fetchTabData]);
+    fetchTabData(activeTab, 0, debouncedListSearch);
+  }, [activeTab, fetchTabData, debouncedListSearch]);
 
   const handleNext = () => {
     const currentState = tabStates[activeTab];
     if (currentState.hasMore) {
-      fetchTabData(activeTab, currentState.pageIndex + 1);
+      fetchTabData(activeTab, currentState.pageIndex + 1, debouncedListSearch);
     }
   };
 
   const handlePrev = () => {
     const currentState = tabStates[activeTab];
     if (currentState.pageIndex > 0) {
-      fetchTabData(activeTab, currentState.pageIndex - 1);
+      fetchTabData(activeTab, currentState.pageIndex - 1, debouncedListSearch);
     }
   };
 
@@ -280,6 +284,8 @@ export default function StudentsPage() {
       setTimeout(() => {
         setIsCreateModalOpen(false);
         setCreateSuccess(false);
+        // Refresh list
+        fetchTabData('students', 0, debouncedListSearch);
       }, 1500);
 
       // Refresh list
@@ -333,6 +339,8 @@ export default function StudentsPage() {
       setTimeout(() => {
         setIsCreateGuardianModalOpen(false);
         setCreateGuardianSuccess(false);
+        // Refresh list
+        fetchTabData('guardians', 0, debouncedListSearch);
       }, 1500);
 
       // Refresh list
@@ -572,6 +580,19 @@ export default function StudentsPage() {
             </button>
           ))}
         </nav>
+      </div>
+
+      <div className="flex justify-start">
+        <input
+          type="text"
+          placeholder={`Search ${activeTab}...`}
+          value={listSearchQuery}
+          onChange={(e) => {
+            setListSearchQuery(e.target.value);
+            // Tab states will reset pageIndex on next fetch inherently when we fetch page 0
+          }}
+          className="w-full sm:w-80 px-4 py-2 bg-white dark:bg-brand-dark border border-gray-300 dark:border-gray-700 rounded-md text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+        />
       </div>
 
       {currentState.error && (

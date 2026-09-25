@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { DataTable, Column } from "@/components/DataTable";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 const TAKE = 50;
 
@@ -23,6 +24,8 @@ export default function StaffPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
 
   // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -42,13 +45,16 @@ export default function StaffPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState(false);
 
-  const fetchStaff = useCallback(async (page: number) => {
+  const fetchStaff = useCallback(async (page: number, search: string = "") => {
     setLoading(true);
     setError(null);
 
     try {
       const skip = page * TAKE;
-      const endpoint = `api/v1/staff?skip=${skip}&take=${TAKE}`;
+      let endpoint = `api/v1/staff?skip=${skip}&take=${TAKE}`;
+      if (search) {
+        endpoint += `&search=${encodeURIComponent(search)}`;
+      }
       const response = await apiClient.get(endpoint);
 
       const fetchedData = Array.isArray(response) ? response : [];
@@ -74,21 +80,21 @@ export default function StaffPage() {
   }, []);
 
   useEffect(() => {
-    if (!initialized && !loading) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchStaff(0);
-    }
-  }, [initialized, loading, fetchStaff]);
+    // We intentionally fetch when debouncedSearch changes or on initial mount.
+    fetchStaff(0, debouncedSearch);
+    setInitialized(true);
+    setPageIndex(0);
+  }, [debouncedSearch, fetchStaff]);
 
   const handleNext = () => {
     if (hasMore) {
-      fetchStaff(pageIndex + 1);
+      fetchStaff(pageIndex + 1, debouncedSearch);
     }
   };
 
   const handlePrev = () => {
     if (pageIndex > 0) {
-      fetchStaff(pageIndex - 1);
+      fetchStaff(pageIndex - 1, debouncedSearch);
     }
   };
 
@@ -169,7 +175,7 @@ export default function StaffPage() {
       }, 1500);
 
       // Refresh list
-      fetchStaff(0);
+      fetchStaff(0, debouncedSearch);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setCreateError(err.message || "Failed to create staff member");
@@ -266,6 +272,19 @@ export default function StaffPage() {
             Staff Directory
           </button>
         </nav>
+      </div>
+
+      <div className="flex justify-start">
+        <input
+          type="text"
+          placeholder="Search staff..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setPageIndex(0); // Reset page on search
+          }}
+          className="w-full sm:w-80 px-4 py-2 bg-white dark:bg-brand-dark border border-gray-300 dark:border-gray-700 rounded-md text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+        />
       </div>
 
       {error ? (
