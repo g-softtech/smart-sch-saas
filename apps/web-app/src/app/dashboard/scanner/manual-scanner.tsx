@@ -55,7 +55,7 @@ export function ManualScanner({ operationMode }: { operationMode: OperationMode 
       setLoadingSearch(true);
       try {
         const response = await apiClient.get(`/api/v1/students?search=${encodeURIComponent(debouncedSearch)}`);
-        setStudents((response as any).data || []);
+        setStudents(Array.isArray(response) ? response : []);
       } catch (err) {
         console.error("Failed to search students", err);
       } finally {
@@ -75,7 +75,8 @@ export function ManualScanner({ operationMode }: { operationMode: OperationMode 
       setLoadingGuardians(true);
       try {
         const response = await apiClient.get(`/api/v1/students/${student.id}/guardians`);
-        const guardiansList = ((response as any).data || []).map((sg: any) => sg.guardian);
+        const responseData = Array.isArray(response) ? response : [];
+        const guardiansList = responseData.map((sg: any) => sg.guardian);
         setGuardians(guardiansList);
       } catch (err) {
         console.error("Failed to fetch guardians", err);
