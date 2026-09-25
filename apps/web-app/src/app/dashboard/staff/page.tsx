@@ -283,7 +283,7 @@ export default function StaffPage() {
             setSearchQuery(e.target.value);
             setPageIndex(0); // Reset page on search
           }}
-          className="w-full sm:w-80 px-4 py-2 bg-white dark:bg-brand-dark border border-gray-300 dark:border-gray-700 rounded-md text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+          className="w-full sm:w-80 px-4 py-2 bg-white dark:bg-brand-dark border border-gray-300 dark:border-gray-700 rounded-md text-sm text-gray-900 dark:text-brand-offwhite shadow-sm placeholder-gray-400 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
         />
       </div>
 
