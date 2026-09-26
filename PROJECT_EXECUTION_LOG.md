@@ -36,6 +36,37 @@
 
 ## Chronological Checkpoint History
 
+### CHECKPOINT: Assessment Operations — Phase 3 Implementation & Integration
+
+**Status:** COMPLETE & VERIFIED
+**Date:** 2026-09-26
+
+**Implementation Summary:**
+- **Zero-Trust Controllers Refactored:**
+  - `AssignmentsController` secured with `@UseGuards(JwtAuthGuard)` and `@UseInterceptors(WorkspaceContextInterceptor)`.
+  - `CBTController` secured with `@UseGuards(JwtAuthGuard)` and `@UseInterceptors(WorkspaceContextInterceptor)`.
+  - Removed all fallback identity strings (e.g. `"default_tenant"`, `"default_school"`, `"mock_teacher_id"`). Tenant/School/Campus and User ID extracted strictly from `req.workspace` and `req.user.sub`.
+  - Route prefixes mapped cleanly to `api/v1/assignments`, `v1/assignments`, `api/v1/cbt`, and `v1/cbt`.
+- **Focused Unit Coverage Added:**
+  - `assignments.service.spec.ts`: Tests assignment creation, publishing, student submission, and score push to Results engine.
+  - `cbt.service.spec.ts`: Tests exam lifecycle, question authoring, time window validation, single-attempt policy, auto-grading, and score push to Results engine.
+- **Frontend UI Pages Integrated:**
+  - `apps/web-app/src/app/dashboard/assignments/page.tsx`: Integrated with real `apiClient` and academic selectors (`useClasses`, `useArms`, `useSubjects`). Supports creation, publishing, submission modal, and grading score push.
+  - `apps/web-app/src/app/dashboard/cbt/page.tsx`: Integrated with real `apiClient` and academic selectors. Supports exam creation modal, question authoring modal, status transitions (DRAFT -> ACTIVE -> CLOSED), and student exam attempt view.
+- **Results Engine Integration Fix:**
+  - Updated `ResultsService.recordScore` to find existing `AssessmentScore` records by `assessmentComponentId` or `type` before updating by ID, avoiding unique constraint conflicts on `@@unique([tenantId, schoolId, subjectResultId, type])`.
+
+**Verification Gate:**
+- API TypeScript (`tsc --noEmit`): **PASSED**
+- Web TypeScript (`tsc --noEmit`): **PASSED**
+- API Gateway Build (`nest build`): **PASSED**
+- Web Production Build (`next build`): **PASSED**
+- Focused Assignments Unit Specs (`assignments.service.spec.ts`): **PASSED**
+- Focused CBT Unit Specs (`cbt.service.spec.ts`): **PASSED**
+- Live E2E Integration & Results Recording (`scratch/test-phase3-live-flow.js`): **PASSED**
+- Zero-Trust Cross-Tenant Authorization (Mismatched tenant header): **PASSED** (Returned HTTP 403 Forbidden)
+- `git diff --check`: **PASSED**
+
 ---
 
 ### CHECKPOINT: Attendance Register Eligible Roster Date Boundary Fix

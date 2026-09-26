@@ -128,50 +128,46 @@ export class ResultsService {
       }
 
       // Upsert AssessmentScore using the appropriate idempotency boundary
+      let existingScore = null;
       if (dto.assessmentComponentId) {
-        await tx.assessmentScore.upsert({
+        existingScore = await tx.assessmentScore.findFirst({
           where: {
-            tenantId_schoolId_subjectResultId_assessmentComponentId: {
-              tenantId,
-              schoolId,
-              subjectResultId: subjectResult.id,
-              assessmentComponentId: dto.assessmentComponentId,
-            },
+            tenantId,
+            schoolId,
+            subjectResultId: subjectResult.id,
+            assessmentComponentId: dto.assessmentComponentId,
           },
-          update: {
-            score: dto.score,
-            maxScore: dto.maxScore,
-            type: dto.type,
-          },
-          create: {
+        });
+      }
+      if (!existingScore) {
+        existingScore = await tx.assessmentScore.findFirst({
+          where: {
             tenantId,
             schoolId,
             subjectResultId: subjectResult.id,
             type: dto.type,
-            assessmentComponentId: dto.assessmentComponentId,
+          },
+        });
+      }
+
+      if (existingScore) {
+        await tx.assessmentScore.update({
+          where: { id: existingScore.id },
+          data: {
             score: dto.score,
             maxScore: dto.maxScore,
+            type: dto.type,
+            ...(dto.assessmentComponentId ? { assessmentComponentId: dto.assessmentComponentId } : {}),
           },
         });
       } else {
-        await tx.assessmentScore.upsert({
-          where: {
-            tenantId_schoolId_subjectResultId_type: {
-              tenantId,
-              schoolId,
-              subjectResultId: subjectResult.id,
-              type: dto.type,
-            },
-          },
-          update: {
-            score: dto.score,
-            maxScore: dto.maxScore,
-          },
-          create: {
+        await tx.assessmentScore.create({
+          data: {
             tenantId,
             schoolId,
             subjectResultId: subjectResult.id,
             type: dto.type,
+            assessmentComponentId: dto.assessmentComponentId || null,
             score: dto.score,
             maxScore: dto.maxScore,
           },

@@ -140,6 +140,59 @@ export function useClasses() {
   return { data, loading, error };
 }
 
+export function useArms(classId?: string | null) {
+  const [data, setData] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    let url = "api/v1/academics/arms?take=200";
+    if (classId) url += `&classId=${classId}`;
+
+    apiClient
+      .get(url)
+      .then((res: unknown) => {
+        if (!cancelled) setData(Array.isArray(res) ? res : []);
+      })
+      .catch((e: Error | unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load arms");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [classId]);
+
+  return { data, loading, error };
+}
+
+export function useSubjects() {
+  const [data, setData] = useState<{ id: string; name: string; code?: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiClient
+      .get("api/v1/academics/subjects?take=200")
+      .then((res: unknown) => {
+        if (!cancelled) setData(Array.isArray(res) ? res : []);
+      })
+      .catch((e: Error | unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load subjects");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  return { data, loading, error };
+}
+
 export function useFeeStructures(
   academicYearId: string | null,
   termId: string | null,

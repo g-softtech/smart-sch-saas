@@ -28,8 +28,8 @@ Transform a monolithic School Management System into an enterprise-grade SchoolO
 - Notifications (WhatsApp Outbox): **PARTIAL**
 - Timetables & Scheduling: **COMPLETE**
 - Results & Grades Engine: **COMPLETE**
-- Assignments & Assessments: **PLANNED**
-- Examinations & CBT: **PLANNED**
+- Assignments & Assessments: **COMPLETE**
+- Examinations & CBT: **COMPLETE**
 - Student Portal (BFF): **PLANNED**
 - Parent/Guardian Portal (BFF): **PLANNED**
 
@@ -73,10 +73,11 @@ Parent Portal (Consumes Finance, Results, Movement, Attendance, Identity)
 - **Status:** Checkpoint reached. Reconciled and verified end-to-end integration.
 - **Verification Gate:** Verified timetable class/arm visibility query, real student roster loading, and score recording flow.
 
-### Phase 3: Assessment Operations
+### Phase 3: Assessment Operations (COMPLETE & INTEGRATED)
 - **Objective:** Build the specific methods of assessment that feed into the Results engine.
 - **Prerequisites:** Phase 2 (Results Engine).
 - **Scope:** Assignments & Homework, Examinations & CBT.
+- **Status:** Checkpoint reached. Secured controllers with JwtAuthGuard and WorkspaceContextInterceptor, added unit test coverage, integrated frontend academic selectors, and verified auto-grading push to Results engine.
 
 ### Phase 4: Financial Core UI (CURRENTLY COMPLETE)
 - **Objective:** Enable billing, invoicing, and fee tracking.
