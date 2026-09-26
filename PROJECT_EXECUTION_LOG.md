@@ -11,13 +11,13 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `8bedbef3` |
-| **HEAD message** | `fix(academics): resolve Phase 2 Timetable visibility and Results roster integration gaps` |
-| **Remote sync** | `origin/main` — up to date (pushed 2026-09-25) |
+| **HEAD** | `fa9bc929` |
+| **HEAD message** | `test(attendance): add unit regression test for YYYY-MM-DD date parsing and roster eligibility` |
+| **Remote sync** | `origin/main` — up to date (pushed 2026-09-26) |
 | **Working tree** | Clean |
 | **Last completed phase** | Phase 2 — Academic Infrastructure (COMPLETE & INTEGRATED) |
-| **Last completed checkpoint** | Phase 2 Integration Completion |
-| **Current active workstream** | None. Phase 2 integration completion is verified. |
+| **Last verified defect fix** | Attendance Register same-day enrollment eligibility (**CLOSED — VERIFIED**) |
+| **Current active workstream** | None. Attendance Register defect is verified and closed. |
 | **Next authorized action** | **Phase 3: Assessment Operations** — Assignments & Homework, Examinations & CBT. See `CURRENT_MASTER_EXECUTION_PLAN.md § Phase 3`. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
@@ -28,6 +28,7 @@
 - Finance Core / Finance hardening
 - Finance Record Payment frontend correction
 - Migration encoding / ordering repair
+- Attendance Register Grade 1B single-student defect (VERIFIED & CLOSED)
 - `WorkspaceContextInterceptor` debug mock (reverted)
 - `ArrivalController` `JwtAuthGuard` comment-out (reverted)
 
@@ -39,18 +40,23 @@
 
 ### CHECKPOINT: Attendance Register Eligible Roster Date Boundary Fix
 
-**Status:** COMPLETE
+**Status:** CLOSED — VERIFIED
 **Period:** 2026-09-26
+**Commit:** `fa9bc929214ceaac8d886445b1e1cf5ed7abf4dc`
+**Push Status:** Successful (`origin/main`)
+**Working Tree:** Clean
 
-**Implementation summary:**
-- **Defect Reported:** Creating an Attendance Register for a class with 4 enrolled students drew only 1 student into the register.
-- **Root Cause:** `AttendanceRepository.getEligibleEnrollments` filtered active enrollments using `enrolledAt: { lte: date }` where `date` was normalized to `00:00:00.000Z` (start of UTC day). Students enrolled during the same calendar day (with timestamps `@default(now())` > 00:00:00Z) failed the `lte` check and were excluded.
-- **Fix Implemented:** Updated `AttendanceRepository.getEligibleEnrollments` to compare `enrolledAt: { lte: endOfDay }` (`23:59:59.999Z`), ensuring all students enrolled on or before the register date are included. Updated `AttendanceService.finalizeRegister` to reuse `this.repo.getEligibleEnrollments` with full campus context.
-- **Empirical Reproduction Evidence:**
-  - Total Database Enrollments = 4
-  - Buggy Query (`lte 00:00:00Z`) = 1
-  - Fixed Query (`lte 23:59:59Z`) = 4
-- **Unit Test Added:** `apps/api-gateway/src/modules/attendance/repositories/attendance.repository.spec.ts`.
+**Implementation & Verification summary:**
+- **Defect:** Attendance Register same-day enrollment eligibility (Grade 1B with 4 active students in DB populated only 1 student in register).
+- **Root Cause:** Midnight date boundary on `enrolledAt`. `AttendanceRepository.getEligibleEnrollments` filtered active enrollments using `enrolledAt: { lte: date }` where `date` evaluated to `00:00:00.000Z` (start of UTC day). Same-day enrolled students with timestamps `@default(now())` > 00:00:00Z failed the `lte` check and were excluded.
+- **Corrective Change:** Updated `AttendanceRepository.getEligibleEnrollments` to systematically compare `enrolledAt: { lte: endOfDay }` (`23:59:59.999Z`), ensuring all students enrolled on or before the register date are included. Consistently used across `getEligibleStudents`, `bulkCreateRegister`, and `finalizeRegister`.
+- **Live HTTP & Browser Verification:**
+  - Date `2026-09-24` $\rightarrow$ 0 students (PASS)
+  - Date `2026-09-25` $\rightarrow$ 1 student (Student1 Test) (PASS)
+  - Date `2026-09-26` $\rightarrow$ 4/4 students (Student1, Student2, Student3, Student4) (PASS on live API Gateway `http://localhost:3000` & Frontend Roster `http://localhost:3001`)
+- **Regression Tests Added:**
+  - Repository Unit Test: `apps/api-gateway/src/modules/attendance/repositories/attendance.repository.spec.ts`
+  - Service Unit Test: `apps/api-gateway/src/modules/attendance/services/attendance.service.spec.ts` (exited code 0)
 
 ---
 
