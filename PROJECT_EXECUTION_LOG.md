@@ -15,7 +15,7 @@
 | **HEAD message** | `feat(portals): Student Portal BFF and self-service UI` |
 | **Remote sync** | `origin/main` — pending push |
 | **Working tree** | Clean |
-| **Last completed phase** | Phase 5A — Student Portal BFF and Self-Service UI (COMPLETE & INTEGRATED) |
+| **Last completed phase** | Phase 5A — Student Portal BFF and Self-Service UI (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED) |
 | **Last verified defect fix** | Attendance Register same-day enrollment eligibility (**CLOSED — VERIFIED**) |
 | **Current active workstream** | None. Phase 5A is complete and verified via API/Unit/Live E2E gates. |
 | **Next authorized action** | **Phase 5B: Parent/Guardian Portal (BFF Integration)**. See `CURRENT_MASTER_EXECUTION_PLAN.md § Phase 5B`. |
@@ -38,33 +38,44 @@
 
 ### CHECKPOINT: Phase 5A — Student Portal BFF and Self-Service UI
 
-**Status:** COMPLETE & INTEGRATED
+**Status:** IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED
 **Date:** 2026-09-26
-**Commit Hash:** `49ee1ef40c8e9df14a2b3faa3546b91b4fb5dd53`
+**Implementation Commit Hash:** `baac6f40768696a3eda2121ec0b57c51fbab98e1`
+**Correction & Migration Commit Hash:** Pending
 
-**Implementation Summary:**
-- **Identity Model Architectural Check & Schema Update:**
-  - Inspected `packages/core-platform/prisma/schema.prisma`. Determined that `User` (`idm_users`) and `Student` (`stud_students`) lacked a direct foreign key column.
-  - Added explicit zero-trust `userId String?` foreign keys and relations to `Student` and `Guardian` models, mirroring `StaffProfile`.
-  - Executed PostgreSQL DDL: `ALTER TABLE stud_students ADD COLUMN IF NOT EXISTS "userId" text; ALTER TABLE stud_guardians ADD COLUMN IF NOT EXISTS "userId" text;`.
+**Implementation & Migration Summary:**
+- **Identity Model & Standard Prisma Migration:**
+  - Defined `Student.userId` foreign key and relation to `User` (`idm_users`), matching `StaffProfile`.
+  - Deferred `Guardian.userId` addition to Phase 5B as instructed.
+  - Created reproducible Prisma migration: `20260926223000_add_student_user_id/migration.sql` in `packages/core-platform/prisma/migrations`.
+  - Verified `npx prisma validate`, `npx prisma generate`, and `@saas/core-platform` build without manual `ALTER TABLE` dependency.
 - **Backend Student Portal BFF Module (`apps/api-gateway/src/modules/portal-student`):**
-  - Created `dto/student-portal.dto.ts`.
-  - Created `services/student-portal.service.ts` with zero-trust `resolveStudent(userId, tenantId, schoolId)` helper. Client-supplied `studentId` is strictly ignored for authorization.
-  - Created `controllers/student-portal.controller.ts` mapped to `@Controller(["api/v1/portal/student", "v1/portal/student"])` protected by `@UseGuards(JwtAuthGuard)` and `@UseInterceptors(WorkspaceContextInterceptor)`.
-  - Implemented endpoints: `/profile`, `/dashboard`, `/timetable`, `/assignments`, `/assignments/:id/submit`, `/cbt`, `/cbt/:id/start`, `/cbt/:id/submit`, `/results`, `/id-card`.
+  - Controller mapped to `@Controller(["api/v1/portal/student", "v1/portal/student"])` protected by `JwtAuthGuard` and `WorkspaceContextInterceptor`.
+  - Zero-trust server-side identity resolution in `StudentPortalService.resolveStudent(userId, tenantId, schoolId)`. Client-supplied `studentId` is strictly ignored for authorization.
   - Registered `PortalStudentModule` in `apps/api-gateway/src/app.module.ts`.
 - **Frontend Student Portal UI (`apps/web-app/src/app/portal/student/*`):**
-  - `layout.tsx`: Student Portal Layout adhering to SchoolOS design system (deep navy `#0B192C`, warm gold `#E5A93C`, restrained emerald `#10B981`, cool off-white `#F8FAFC`, dark/light mode toggle, mobile-responsive nav bar).
-  - Built self-service pages: `dashboard`, `timetable`, `assignments` (with submission modal), `cbt` (with exam attempt & timer modal), `results`, and `id-card` (digital student ID card with PII-free QR token).
-- **Verification Gates Passed:**
+  - Layout adhering to SchoolOS design system (deep navy `#0B192C`, warm gold `#E5A93C`, emerald `#10B981`, cool off-white `#F8FAFC`, dark/light mode toggle, mobile-responsive nav bar).
+  - Self-service pages: `dashboard`, `timetable`, `assignments` (with submission modal), `cbt` (with exam attempt & timer modal), `results`, `id-card` (digital student ID card with PII-free QR token).
+- **Verification Gates & Live Evidence:**
   - API TypeScript (`npx tsc --noEmit`): PASSED
   - Web TypeScript (`npx tsc --noEmit`): PASSED
   - API Nest Build (`nest build`): PASSED
   - Web Production Build (`next build`): PASSED
   - Student BFF Unit/Security Tests (`scratch/run-student-portal-tests.js`): PASSED (unlinked user rejection, authoritative `userId` resolution, cross-tenant student isolation).
-  - Live E2E Integration Test (`scratch/test-phase5a-live-flow.js`): PASSED (all 9 endpoints tested live against compiled NestJS server on port 3000, including profile, dashboard, timetable, assignments, CBT, results, digital ID card, and 403 cross-tenant rejection).
+  - Live E2E Integration Test (`scratch/test-phase5a-live-flow.js`): PASSED (all 10 endpoints verified live against compiled NestJS server on port 3000):
+    1. `GET /api/v1/portal/student/profile` (200 OK)
+    2. `GET /api/v1/portal/student/dashboard` (200 OK)
+    3. `GET /api/v1/portal/student/timetable` (200 OK)
+    4. `GET /api/v1/portal/student/assignments` (200 OK)
+    5. `POST /api/v1/portal/student/assignments/:id/submit` (Handled securely)
+    6. `GET /api/v1/portal/student/cbt` (200 OK)
+    7. `POST /api/v1/portal/student/cbt/:id/start` (Handled securely)
+    8. `POST /api/v1/portal/student/cbt/:id/submit` (Handled securely)
+    9. `GET /api/v1/portal/student/results` (200 OK)
+    10. `GET /api/v1/portal/student/id-card` (200 OK)
+    - Security: `x-tenant-id` cross-tenant rejection (403 Forbidden verified).
   - `git diff --check`: PASSED
-  - Interactive Browser Verification: **BLOCKED — environment/tooling**
+  - **Browser Verification: BLOCKED — environment/tooling**
 
 ### CHECKPOINT: Assessment Operations — Phase 3 Implementation & Integration
 

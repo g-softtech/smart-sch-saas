@@ -29,7 +29,7 @@ This document is the authoritative inventory of SchoolOS functionality, replacin
 | **Results & Grading** | Configurable scales, remarks | Academic results engine | `results` backend, `dashboard/results` | **COMPLETE** | Tested | Academics | Broad academic results domain |
 | **Assignments & Homework** | Teacher task assignment | Integrated assessment sub-system | `assignments` backend, `dashboard/assignments` | **PARTIAL** | API/Unit Verified | Academics | Feeds into Results; browser verification blocked |
 | **Examinations & CBT** | Multi-campus, AI questions | Assessment subsystem | `cbt` backend, `dashboard/cbt` | **PARTIAL** | API/Unit Verified | Academics | Feeds into Results; browser verification blocked |
-| **Student Portal** | Derived UI | First-class BFF, authenticated self-service | `portal-student` backend, `portal/student` frontend | **COMPLETE** | API/Unit/Live Verified | Results, Timetable, CBT, ID | Zero-trust identity resolution; browser verification blocked |
+| **Student Portal** | Derived UI | First-class BFF, authenticated self-service | `portal-student` backend, `portal/student` frontend | **PARTIAL** | API/Unit/Live Verified | Results, Timetable, CBT, ID | Implementation complete / partially verified (10 endpoints live); browser verification blocked |
 | **Parent/Guardian Portal** | Derived UI | First-class BFF, guardian self-service | Missing | **PLANNED** | N/A | Finance, Results | Re-architected scope |
 | **Library** | Book inventory, fines | Deferred standard management | Missing | **FUTURE** | N/A | Academics | |
 | **Transport** | GPS, drivers, vehicles | Deferred standard management | Missing | **FUTURE** | N/A | Movement | |

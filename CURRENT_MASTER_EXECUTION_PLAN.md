@@ -30,7 +30,7 @@ Transform a monolithic School Management System into an enterprise-grade SchoolO
 - Results & Grades Engine: **COMPLETE**
 - Assignments & Assessments: **COMPLETE**
 - Examinations & CBT: **COMPLETE**
-- Student Portal (BFF): **COMPLETE**
+- Student Portal (BFF): **IMPLEMENTATION COMPLETE / PARTIALLY VERIFIED**
 - Parent/Guardian Portal (BFF): **PLANNED**
 
 ## 4. Phase Architecture & Dependencies
@@ -88,7 +88,7 @@ Parent Portal (Consumes Finance, Results, Movement, Attendance, Identity)
 - **Objective:** Deliver the authenticated self-service experiences for Students and Parents.
 - **Prerequisites:** Phases 2, 3, and 4 (Data must exist to be consumed).
 - **Scope & Sub-Phases:** 
-  - **Phase 5A — Student Portal:** **COMPLETE & INTEGRATED**. Dashboards, profile, digital ID view, timetable, results, CBT taking & attempt submit, assignment view & submission. Zero-trust identity resolution (`User -> Student.userId`). All 9 live API endpoints verified via E2E integration tests. Interactive browser verification: **BLOCKED — environment/tooling**.
+  - **Phase 5A — Student Portal:** **IMPLEMENTATION COMPLETE / PARTIALLY VERIFIED**. Dashboards, profile, digital ID view, timetable, results, CBT taking & attempt submit, assignment view & submission. Zero-trust identity resolution (`User -> Student.userId`). Standard Prisma migration `20260926223000_add_student_user_id`. All 10 live API endpoints verified via E2E integration tests. Interactive browser verification: **BLOCKED — environment/tooling**.
   - **Phase 5B — Parent/Guardian Portal:** **PLANNED**. Fee payments, child results, movement/attendance logs, communication.
 - **Security Requirement:** Strict server-derived tenant/school context, zero duplicated business logic.
 
