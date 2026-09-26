@@ -11,9 +11,9 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `49ee1ef4` |
-| **HEAD message** | `feat(portals): Student Portal BFF and self-service UI` |
-| **Remote sync** | `origin/main` — pending push |
+| **HEAD** | `1544a8b0` |
+| **HEAD message** | `fix(portals): formalize Prisma migration for Student userId and reconcile Phase 5A status` |
+| **Remote sync** | `origin/main` — synchronized |
 | **Working tree** | Clean |
 | **Last completed phase** | Phase 5A — Student Portal BFF and Self-Service UI (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED) |
 | **Last verified defect fix** | Attendance Register same-day enrollment eligibility (**CLOSED — VERIFIED**) |
@@ -41,7 +41,7 @@
 **Status:** IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED
 **Date:** 2026-09-26
 **Implementation Commit Hash:** `baac6f40768696a3eda2121ec0b57c51fbab98e1`
-**Correction & Migration Commit Hash:** Pending
+**Correction & Migration Commit Hash:** `1544a8b015f74e23a802d0e6c4f8da304562cc1e`
 
 **Implementation & Migration Summary:**
 - **Identity Model & Standard Prisma Migration:**
