@@ -30,7 +30,7 @@ Transform a monolithic School Management System into an enterprise-grade SchoolO
 - Results & Grades Engine: **COMPLETE**
 - Assignments & Assessments: **COMPLETE**
 - Examinations & CBT: **COMPLETE**
-- Student Portal (BFF): **PLANNED**
+- Student Portal (BFF): **COMPLETE**
 - Parent/Guardian Portal (BFF): **PLANNED**
 
 ## 4. Phase Architecture & Dependencies
@@ -87,9 +87,9 @@ Parent Portal (Consumes Finance, Results, Movement, Attendance, Identity)
 ### Phase 5: The Portals (BFF Integration)
 - **Objective:** Deliver the authenticated self-service experiences for Students and Parents.
 - **Prerequisites:** Phases 2, 3, and 4 (Data must exist to be consumed).
-- **Scope:** 
-  - **Student Portal:** Dashboards, profile, digital ID view, timetable, results, CBT taking, assignment submission.
-  - **Parent Portal:** Fee payments, child results, movement/attendance logs, communication.
+- **Scope & Sub-Phases:** 
+  - **Phase 5A — Student Portal:** **COMPLETE & INTEGRATED**. Dashboards, profile, digital ID view, timetable, results, CBT taking & attempt submit, assignment view & submission. Zero-trust identity resolution (`User -> Student.userId`). All 9 live API endpoints verified via E2E integration tests. Interactive browser verification: **BLOCKED — environment/tooling**.
+  - **Phase 5B — Parent/Guardian Portal:** **PLANNED**. Fee payments, child results, movement/attendance logs, communication.
 - **Security Requirement:** Strict server-derived tenant/school context, zero duplicated business logic.
 
 ### Phase 6: Future SaaS Expansion

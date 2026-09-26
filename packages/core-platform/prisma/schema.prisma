@@ -81,6 +81,8 @@ model User {
   memberships       UserTenantMembership[]
   schoolAccess      UserSchoolAccess[]
   staffProfiles     StaffProfile[]
+  students          Student[]
+  guardians         Guardian[]
 
   @@map("idm_users")
 }
@@ -476,6 +478,7 @@ model Student {
   id                   String                 @id @default(uuid())
   tenantId             String
   schoolId             String
+  userId               String?
   studentNumber        String
   firstName            String
   lastName             String
@@ -503,9 +506,11 @@ model Student {
   guardians            StudentGuardian[]
   school               School                 @relation(fields: [schoolId], references: [id])
   tenant               Tenant                 @relation(fields: [tenantId], references: [id])
+  user                 User?                  @relation(fields: [userId], references: [id])
 
   @@unique([tenantId, schoolId, studentNumber])
   @@index([tenantId])
+  @@index([tenantId, userId])
   @@index([tenantId, schoolId, status])
   @@map("stud_students")
 }
@@ -513,6 +518,7 @@ model Student {
 model Guardian {
   id                   String                @id @default(uuid())
   tenantId             String
+  userId               String?
   firstName            String
   lastName             String
   phone                String?
@@ -525,9 +531,11 @@ model Guardian {
   departures           StudentDeparture[]
   credentials          GuardianCredential[]
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  user                 User?                 @relation(fields: [userId], references: [id])
   students             StudentGuardian[]
 
   @@index([tenantId])
+  @@index([tenantId, userId])
   @@map("stud_guardians")
 }
 

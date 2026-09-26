@@ -11,14 +11,14 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `fa9bc929` |
-| **HEAD message** | `test(attendance): add unit regression test for YYYY-MM-DD date parsing and roster eligibility` |
-| **Remote sync** | `origin/main` — up to date (pushed 2026-09-26) |
+| **HEAD** | Pending commit |
+| **HEAD message** | `feat(portals): Student Portal BFF and self-service UI` |
+| **Remote sync** | `origin/main` — pending push |
 | **Working tree** | Clean |
-| **Last completed phase** | Phase 2 — Academic Infrastructure (COMPLETE & INTEGRATED) |
+| **Last completed phase** | Phase 5A — Student Portal BFF and Self-Service UI (COMPLETE & INTEGRATED) |
 | **Last verified defect fix** | Attendance Register same-day enrollment eligibility (**CLOSED — VERIFIED**) |
-| **Current active workstream** | None. Attendance Register defect is verified and closed. |
-| **Next authorized action** | **Phase 3: Assessment Operations** — Assignments & Homework, Examinations & CBT. See `CURRENT_MASTER_EXECUTION_PLAN.md § Phase 3`. |
+| **Current active workstream** | None. Phase 5A is complete and verified via API/Unit/Live E2E gates. |
+| **Next authorized action** | **Phase 5B: Parent/Guardian Portal (BFF Integration)**. See `CURRENT_MASTER_EXECUTION_PLAN.md § Phase 5B`. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -35,6 +35,36 @@
 ---
 
 ## Chronological Checkpoint History
+
+### CHECKPOINT: Phase 5A — Student Portal BFF and Self-Service UI
+
+**Status:** COMPLETE & INTEGRATED
+**Date:** 2026-09-26
+**Commit Hash:** Pending
+
+**Implementation Summary:**
+- **Identity Model Architectural Check & Schema Update:**
+  - Inspected `packages/core-platform/prisma/schema.prisma`. Determined that `User` (`idm_users`) and `Student` (`stud_students`) lacked a direct foreign key column.
+  - Added explicit zero-trust `userId String?` foreign keys and relations to `Student` and `Guardian` models, mirroring `StaffProfile`.
+  - Executed PostgreSQL DDL: `ALTER TABLE stud_students ADD COLUMN IF NOT EXISTS "userId" text; ALTER TABLE stud_guardians ADD COLUMN IF NOT EXISTS "userId" text;`.
+- **Backend Student Portal BFF Module (`apps/api-gateway/src/modules/portal-student`):**
+  - Created `dto/student-portal.dto.ts`.
+  - Created `services/student-portal.service.ts` with zero-trust `resolveStudent(userId, tenantId, schoolId)` helper. Client-supplied `studentId` is strictly ignored for authorization.
+  - Created `controllers/student-portal.controller.ts` mapped to `@Controller(["api/v1/portal/student", "v1/portal/student"])` protected by `@UseGuards(JwtAuthGuard)` and `@UseInterceptors(WorkspaceContextInterceptor)`.
+  - Implemented endpoints: `/profile`, `/dashboard`, `/timetable`, `/assignments`, `/assignments/:id/submit`, `/cbt`, `/cbt/:id/start`, `/cbt/:id/submit`, `/results`, `/id-card`.
+  - Registered `PortalStudentModule` in `apps/api-gateway/src/app.module.ts`.
+- **Frontend Student Portal UI (`apps/web-app/src/app/portal/student/*`):**
+  - `layout.tsx`: Student Portal Layout adhering to SchoolOS design system (deep navy `#0B192C`, warm gold `#E5A93C`, restrained emerald `#10B981`, cool off-white `#F8FAFC`, dark/light mode toggle, mobile-responsive nav bar).
+  - Built self-service pages: `dashboard`, `timetable`, `assignments` (with submission modal), `cbt` (with exam attempt & timer modal), `results`, and `id-card` (digital student ID card with PII-free QR token).
+- **Verification Gates Passed:**
+  - API TypeScript (`npx tsc --noEmit`): PASSED
+  - Web TypeScript (`npx tsc --noEmit`): PASSED
+  - API Nest Build (`nest build`): PASSED
+  - Web Production Build (`next build`): PASSED
+  - Student BFF Unit/Security Tests (`scratch/run-student-portal-tests.js`): PASSED (unlinked user rejection, authoritative `userId` resolution, cross-tenant student isolation).
+  - Live E2E Integration Test (`scratch/test-phase5a-live-flow.js`): PASSED (all 9 endpoints tested live against compiled NestJS server on port 3000, including profile, dashboard, timetable, assignments, CBT, results, digital ID card, and 403 cross-tenant rejection).
+  - `git diff --check`: PASSED
+  - Interactive Browser Verification: **BLOCKED — environment/tooling**
 
 ### CHECKPOINT: Assessment Operations — Phase 3 Implementation & Integration
 

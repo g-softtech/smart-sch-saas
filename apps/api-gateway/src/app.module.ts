@@ -17,6 +17,7 @@ import { MovementModule } from "./modules/movement/movement.module";
 import { AssignmentsModule } from "./modules/assignments/assignments.module";
 import { CBTModule } from "./modules/cbt/cbt.module";
 import { FinanceModule } from "./modules/finance/finance.module";
+import { PortalStudentModule } from "./modules/portal-student/portal-student.module";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { FinanceModule } from "./modules/finance/finance.module";
     AssignmentsModule,
     CBTModule,
     FinanceModule,
+    PortalStudentModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

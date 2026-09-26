@@ -16,16 +16,16 @@ interface RequestOptions extends RequestInit {
 }
 
 export const apiClient = {
-  get: (url: string, options?: RequestOptions) => request(url, { ...options, method: 'GET' }),
-  post: (url: string, data?: unknown, options?: RequestOptions) => request(url, { ...options, method: 'POST', body: data ? JSON.stringify(data) : undefined }),
-  put: (url: string, data?: unknown, options?: RequestOptions) => request(url, { ...options, method: 'PUT', body: data ? JSON.stringify(data) : undefined }),
-  patch: (url: string, data?: unknown, options?: RequestOptions) => request(url, { ...options, method: 'PATCH', body: data ? JSON.stringify(data) : undefined }),
-  delete: (url: string, options?: RequestOptions) => request(url, { ...options, method: 'DELETE' }),
-  postFormData: (url: string, formData: FormData, options?: RequestOptions) => request(url, { ...options, method: 'POST', body: formData }),
-  getBlob: (url: string, options?: RequestOptions) => request(url, { ...options, method: 'GET', _returnBlob: true } as any),
+  get: <T = any>(url: string, options?: RequestOptions): Promise<T> => request<T>(url, { ...options, method: 'GET' }),
+  post: <T = any>(url: string, data?: unknown, options?: RequestOptions): Promise<T> => request<T>(url, { ...options, method: 'POST', body: data ? JSON.stringify(data) : undefined }),
+  put: <T = any>(url: string, data?: unknown, options?: RequestOptions): Promise<T> => request<T>(url, { ...options, method: 'PUT', body: data ? JSON.stringify(data) : undefined }),
+  patch: <T = any>(url: string, data?: unknown, options?: RequestOptions): Promise<T> => request<T>(url, { ...options, method: 'PATCH', body: data ? JSON.stringify(data) : undefined }),
+  delete: <T = any>(url: string, options?: RequestOptions): Promise<T> => request<T>(url, { ...options, method: 'DELETE' }),
+  postFormData: <T = any>(url: string, formData: FormData, options?: RequestOptions): Promise<T> => request<T>(url, { ...options, method: 'POST', body: formData }),
+  getBlob: (url: string, options?: RequestOptions): Promise<Blob> => request(url, { ...options, method: 'GET', _returnBlob: true } as any),
 };
 
-async function request(endpoint: string, options: RequestOptions = {}) {
+async function request<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { requireAuth = true, headers = {}, ...customConfig } = options;
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:3000';
@@ -61,10 +61,10 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     const response = await fetch(url, config);
     
     // We expect 204 No Content to be empty
-    if (response.status === 204) return null;
+    if (response.status === 204) return null as unknown as T;
 
     if (response.ok && (customConfig as any)._returnBlob) {
-      return await response.blob();
+      return (await response.blob()) as unknown as T;
     }
 
     let data;
@@ -78,9 +78,9 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     if (response.ok) {
       // Handle the canonical { success, data } envelope if it exists
       if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-        return data.data;
+        return data.data as T;
       }
-      return data;
+      return data as T;
     }
 
     if (response.status === 401) {
