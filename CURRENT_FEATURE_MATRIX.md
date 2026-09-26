@@ -27,8 +27,8 @@ This document is the authoritative inventory of SchoolOS functionality, replacin
 | **Finance/Payments** | Invoices, Accounting, Paystack | Ledger, transactions, invoicing | `payments` backend APIs | **PARTIAL** | APIs exist | Students | No frontend UI for admins/parents |
 | **Timetable / Scheduling** | Tenant-aware scheduling | Academic infrastructure domain | `timetable` backend, `dashboard/timetable` | **COMPLETE** | Tested | Academics | Prerequisite for Portals |
 | **Results & Grading** | Configurable scales, remarks | Academic results engine | `results` backend, `dashboard/results` | **COMPLETE** | Tested | Academics | Broad academic results domain |
-| **Assignments & Homework** | Teacher task assignment | Integrated assessment sub-system | `assignments` backend, `dashboard/assignments` | **COMPLETE** | Tested | Academics | Feeds into Results |
-| **Examinations & CBT** | Multi-campus, AI questions | Assessment subsystem | `cbt` backend, `dashboard/cbt` | **COMPLETE** | Tested | Academics | Feeds into Results |
+| **Assignments & Homework** | Teacher task assignment | Integrated assessment sub-system | `assignments` backend, `dashboard/assignments` | **PARTIAL** | API/Unit Verified | Academics | Feeds into Results; browser verification blocked |
+| **Examinations & CBT** | Multi-campus, AI questions | Assessment subsystem | `cbt` backend, `dashboard/cbt` | **PARTIAL** | API/Unit Verified | Academics | Feeds into Results; browser verification blocked |
 | **Student Portal** | Derived UI | First-class BFF, authenticated self-service | Missing | **PLANNED** | N/A | Results, Timetable, ID| Re-architected scope |
 | **Parent/Guardian Portal** | Derived UI | First-class BFF, guardian self-service | Missing | **PLANNED** | N/A | Finance, Results | Re-architected scope |
 | **Library** | Book inventory, fines | Deferred standard management | Missing | **FUTURE** | N/A | Academics | |

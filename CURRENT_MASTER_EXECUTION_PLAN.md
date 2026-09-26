@@ -73,11 +73,11 @@ Parent Portal (Consumes Finance, Results, Movement, Attendance, Identity)
 - **Status:** Checkpoint reached. Reconciled and verified end-to-end integration.
 - **Verification Gate:** Verified timetable class/arm visibility query, real student roster loading, and score recording flow.
 
-### Phase 3: Assessment Operations (COMPLETE & INTEGRATED)
+### Phase 3: Assessment Operations (IMPLEMENTATION COMPLETE / PARTIALLY VERIFIED)
 - **Objective:** Build the specific methods of assessment that feed into the Results engine.
 - **Prerequisites:** Phase 2 (Results Engine).
 - **Scope:** Assignments & Homework, Examinations & CBT.
-- **Status:** Checkpoint reached. Secured controllers with JwtAuthGuard and WorkspaceContextInterceptor, added unit test coverage, integrated frontend academic selectors, and verified auto-grading push to Results engine.
+- **Status:** IMPLEMENTATION COMPLETE / PARTIALLY VERIFIED (`d9ebf276`). Secured controllers with JwtAuthGuard and WorkspaceContextInterceptor, added unit test coverage, integrated frontend academic selectors, and verified auto-grading push to Results engine. Interactive browser verification: **BLOCKED — environment/tooling**.
 
 ### Phase 4: Financial Core UI (CURRENTLY COMPLETE)
 - **Objective:** Enable billing, invoicing, and fee tracking.
