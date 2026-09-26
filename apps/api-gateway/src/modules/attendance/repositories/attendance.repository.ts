@@ -25,8 +25,13 @@ export class AttendanceRepository {
     classId: string,
     armId: string | null,
     date: Date,
+    tx?: typeof kernel.db,
   ) {
-    return kernel.db.enrollment.findMany({
+    const db = tx ?? kernel.db;
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    return db.enrollment.findMany({
       where: {
         tenantId,
         schoolId,
@@ -34,7 +39,7 @@ export class AttendanceRepository {
         classId,
         ...(armId ? { armId } : {}),
         status: "ACTIVE",
-        enrolledAt: { lte: date },
+        enrolledAt: { lte: endOfDay },
       },
       include: {
         student: true,

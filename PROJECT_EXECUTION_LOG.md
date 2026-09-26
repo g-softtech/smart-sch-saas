@@ -37,6 +37,23 @@
 
 ---
 
+### CHECKPOINT: Attendance Register Eligible Roster Date Boundary Fix
+
+**Status:** COMPLETE
+**Period:** 2026-09-26
+
+**Implementation summary:**
+- **Defect Reported:** Creating an Attendance Register for a class with 4 enrolled students drew only 1 student into the register.
+- **Root Cause:** `AttendanceRepository.getEligibleEnrollments` filtered active enrollments using `enrolledAt: { lte: date }` where `date` was normalized to `00:00:00.000Z` (start of UTC day). Students enrolled during the same calendar day (with timestamps `@default(now())` > 00:00:00Z) failed the `lte` check and were excluded.
+- **Fix Implemented:** Updated `AttendanceRepository.getEligibleEnrollments` to compare `enrolledAt: { lte: endOfDay }` (`23:59:59.999Z`), ensuring all students enrolled on or before the register date are included. Updated `AttendanceService.finalizeRegister` to reuse `this.repo.getEligibleEnrollments` with full campus context.
+- **Empirical Reproduction Evidence:**
+  - Total Database Enrollments = 4
+  - Buggy Query (`lte 00:00:00Z`) = 1
+  - Fixed Query (`lte 23:59:59Z`) = 4
+- **Unit Test Added:** `apps/api-gateway/src/modules/attendance/repositories/attendance.repository.spec.ts`.
+
+---
+
 ### CHECKPOINT: Phase 2 Academic Infrastructure — Integration Completion
 
 **Status:** VERIFIED COMPLETE

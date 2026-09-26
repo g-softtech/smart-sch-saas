@@ -165,16 +165,15 @@ export class AttendanceService {
       });
 
       // 3. Derive eligible population again
-      const enrollments = await tx.enrollment.findMany({
-        where: {
-          tenantId,
-          schoolId,
-          classId: register.classId,
-          ...(register.armId ? { armId: register.armId } : {}),
-          status: "ACTIVE",
-          enrolledAt: { lte: register.date },
-        },
-      });
+      const enrollments = await this.repo.getEligibleEnrollments(
+        tenantId,
+        schoolId,
+        register.campusId ?? undefined,
+        register.classId,
+        register.armId,
+        register.date,
+        tx as any,
+      );
 
       if (records.length !== enrollments.length) {
         throw new BadRequestException(
