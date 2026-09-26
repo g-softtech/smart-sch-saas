@@ -101,7 +101,39 @@ export class StudentCredentialService {
     let studentInfo = null;
 
     try {
-      // 1. Hash the token
+      // Support Digital Student Pass QR format (SCHOS:<studentId>:<tenantId>)
+      if (rawToken.startsWith("SCHOS:")) {
+        const parts = rawToken.split(":");
+        const digitalStudentId = parts[1];
+        const digitalTenantId = parts[2];
+
+        if (digitalTenantId === tenantId && digitalStudentId) {
+          const student = await kernel.db.student.findFirst({
+            where: {
+              id: digitalStudentId,
+              tenantId,
+              schoolId,
+              status: "ACTIVE",
+            },
+          });
+
+          if (student) {
+            auditStatus = "SUCCESS";
+            auditReason = "VERIFIED";
+            return {
+              student: {
+                id: student.id,
+                firstName: student.firstName,
+                lastName: student.lastName,
+                studentNumber: student.studentNumber,
+                status: student.status,
+              },
+            };
+          }
+        }
+      }
+
+      // 1. Hash the physical card token
       const credentialHash = this.hashToken(rawToken);
 
       // 2. Lookup scoped by workspace (tenant/school)
