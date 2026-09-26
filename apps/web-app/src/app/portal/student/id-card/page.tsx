@@ -18,8 +18,8 @@ export default function StudentIdCardPage() {
           apiClient.get<any>("/api/v1/portal/student/profile"),
           apiClient.get<any>("/api/v1/portal/student/id-card").catch(() => null),
         ]);
-        setStudent(profRes.data);
-        if (credRes) setCredential(credRes.data);
+        setStudent(profRes?.data || profRes);
+        if (credRes) setCredential(credRes?.data || credRes);
       } catch (err: any) {
         console.error("Failed to load student credential:", err);
         setError(err.message || "Failed to load digital ID card");

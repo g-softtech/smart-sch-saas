@@ -24,7 +24,7 @@ export default function StudentCBTPage() {
     try {
       setLoading(true);
       const res = await apiClient.get<any>("/api/v1/portal/student/cbt");
-      setExams(res.data || []);
+      setExams(Array.isArray(res) ? res : res?.data || []);
     } catch (err: any) {
       console.error("Failed to load CBT exams:", err);
       setError(err.message || "Failed to load CBT examinations");

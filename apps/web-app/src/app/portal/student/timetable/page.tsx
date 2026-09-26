@@ -14,7 +14,7 @@ export default function StudentTimetablePage() {
       try {
         setLoading(true);
         const res = await apiClient.get<any>("/api/v1/portal/student/timetable");
-        setTimetable(res.data || []);
+        setTimetable(Array.isArray(res) ? res : res?.data || []);
       } catch (err: any) {
         console.error("Failed to load timetable:", err);
         setError(err.message || "Failed to load timetable");

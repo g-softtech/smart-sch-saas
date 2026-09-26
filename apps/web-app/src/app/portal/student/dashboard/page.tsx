@@ -15,7 +15,7 @@ export default function StudentDashboardPage() {
       try {
         setLoading(true);
         const res = await apiClient.get<any>("/api/v1/portal/student/dashboard");
-        setData(res.data);
+        setData(res?.data || res);
       } catch (err: any) {
         console.error("Failed to load student dashboard:", err);
         setError(err.message || "Failed to load dashboard data");

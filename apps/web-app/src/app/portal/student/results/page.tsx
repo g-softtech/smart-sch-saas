@@ -14,7 +14,7 @@ export default function StudentResultsPage() {
       try {
         setLoading(true);
         const res = await apiClient.get<any>("/api/v1/portal/student/results");
-        setResults(res.data || []);
+        setResults(Array.isArray(res) ? res : res?.data || []);
       } catch (err: any) {
         console.error("Failed to load results:", err);
         setError(err.message || "Failed to load academic results");

@@ -22,7 +22,7 @@ export default function StudentAssignmentsPage() {
     try {
       setLoading(true);
       const res = await apiClient.get<any>("/api/v1/portal/student/assignments");
-      setAssignments(res.data || []);
+      setAssignments(Array.isArray(res) ? res : res?.data || []);
     } catch (err: any) {
       console.error("Failed to load assignments:", err);
       setError(err.message || "Failed to load homework assignments");
