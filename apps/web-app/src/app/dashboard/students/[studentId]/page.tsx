@@ -103,6 +103,39 @@ export default function StudentProfilePage() {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
+  // Portal Provisioning
+  const [provisionLoading, setProvisionLoading] = useState(false);
+  const [provisionSuccess, setProvisionSuccess] = useState<string | null>(null);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
+
+  const handleProvisionStudent = async () => {
+    setProvisionLoading(true);
+    setProvisionSuccess(null);
+    setProvisionError(null);
+    try {
+      const res: any = await apiClient.post(`api/v1/portal/account/students/${studentId}/provision`, {});
+      setProvisionSuccess(`Portal invitation successfully sent! Activation link emailed to ${res.email || 'student'}.`);
+    } catch (err: any) {
+      setProvisionError(err.message || 'Failed to provision student portal account');
+    } finally {
+      setProvisionLoading(false);
+    }
+  };
+
+  const handleProvisionGuardian = async (guardianId: string) => {
+    setProvisionLoading(true);
+    setProvisionSuccess(null);
+    setProvisionError(null);
+    try {
+      const res: any = await apiClient.post(`api/v1/portal/account/guardians/${guardianId}/provision`, {});
+      setProvisionSuccess(`Portal invitation successfully sent! Activation link emailed to guardian (${res.email}).`);
+    } catch (err: any) {
+      setProvisionError(err.message || 'Failed to provision guardian portal account');
+    } finally {
+      setProvisionLoading(false);
+    }
+  };
+
   const fetchProfile = useCallback(async (isRefresh = false) => {
     if (!studentId) return;
     try {
@@ -447,12 +480,21 @@ export default function StudentProfilePage() {
                         {link.guardian.phone && <p>{link.guardian.phone}</p>}
                         {link.guardian.email && <p>{link.guardian.email}</p>}
                       </div>
-                      <Link
-                        href={`/dashboard/students/${studentId}/guardians/${link.guardian.id}`}
-                        className="mt-3 inline-block text-brand-teal hover:text-brand-navy dark:hover:text-white font-medium text-xs bg-brand-teal/10 hover:bg-brand-teal/20 px-3 py-1.5 rounded transition-colors"
-                      >
-                        Manage Authorizations &rarr;
-                      </Link>
+                      <div className="mt-3 flex items-center gap-2 justify-end">
+                        <button
+                          onClick={() => handleProvisionGuardian(link.guardian.id)}
+                          disabled={provisionLoading}
+                          className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200 font-medium text-xs bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+                        >
+                          Invite to Portal
+                        </button>
+                        <Link
+                          href={`/dashboard/students/${studentId}/guardians/${link.guardian.id}`}
+                          className="inline-block text-brand-teal hover:text-brand-navy dark:hover:text-white font-medium text-xs bg-brand-teal/10 hover:bg-brand-teal/20 px-3 py-1.5 rounded transition-colors"
+                        >
+                          Manage Authorizations &rarr;
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -519,6 +561,38 @@ export default function StudentProfilePage() {
           {/* ID Card & Security Actions */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-brand-navy dark:text-white mb-4">Security & Access</h2>
+            {provisionSuccess && (
+              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-xs rounded-xl">
+                {provisionSuccess}
+              </div>
+            )}
+            {provisionError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs rounded-xl">
+                {provisionError}
+              </div>
+            )}
+
+            <button
+              onClick={handleProvisionStudent}
+              disabled={provisionLoading}
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors group mb-3 disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg group-hover:scale-110 transition-transform">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Invite to Student Portal</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Provision account & send activation email</p>
+                </div>
+              </div>
+              <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
             <Link
               href={`/dashboard/students/${studentId}/id-cards`}
               className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group mb-3"
