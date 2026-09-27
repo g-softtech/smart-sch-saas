@@ -15,9 +15,9 @@
 | **HEAD message** | `feat(portals): Parent/Guardian Portal BFF and self-service UI` |
 | **Remote sync** | `origin/main` — synchronized |
 | **Working tree** | Clean |
-| **Last completed phase** | Phase 5C — Portal Account Provisioning & Smart Portal Access (VERIFIED & COMPLETE) |
+| **Last completed phase** | Phase 5C — Portal Account Provisioning & Smart Portal Access (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED) |
 | **Last verified defect fix** | Attendance Register same-day enrollment eligibility (**CLOSED — VERIFIED**) |
-| **Current active workstream** | Phase 5C Complete. Ready for Phase 5D or next authorized user direction. |
+| **Current active workstream** | None. Phase 5C implementation complete. API/Build/Migration verified. Awaiting user direction. |
 | **Next authorized action** | Phase 5C Checkpoint reached. Awaiting explicit user direction for next phase. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
@@ -33,25 +33,27 @@
 - `ArrivalController` `JwtAuthGuard` comment-out (reverted)
 - Phase 5A Student Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
 - Phase 5B Parent Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
+- Phase 5C Portal Account Provisioning & Smart Access (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
 
 ---
 
 ## Recent Execution Record
 
 ### Phase 5C — Portal Account Provisioning & Smart Portal Access
-- **Status:** VERIFIED & COMPLETE (E2E Live Flow Passed 10/10)
+- **Status:** IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED
 - **Changes Implemented:**
-  - **Prisma Schema & Migration:** Added `PortalInvitation` model with `PortalTargetType` (`STUDENT`, `GUARDIAN`) enum in `packages/core-platform/prisma/schema.prisma` and executed migration `20260927090000_add_portal_invitations`.
+  - **Prisma Schema & Migration:** Added `PortalInvitation` model with `PortalTargetType` (`STUDENT`, `GUARDIAN`) enum in `packages/core-platform/prisma/schema.prisma` and applied migration `20260927090000_add_portal_invitations`. Database migration status verified clean (`npx prisma migrate status`).
   - **Provisioning & Activation BFF (`apps/api-gateway/src/modules/portal-account`):** Created `PortalAccountService`, `PortalAccountController`, DTOs, and `PortalAccountModule`. Endpoints `POST /api/v1/portal/account/students/:id/provision`, `POST /api/v1/portal/account/guardians/:id/provision`, and `POST /api/v1/portal/account/activate`.
   - **Zero Automatic Matching:** Enforced strict Admin-provisioned invitation model with 72-hour single-use secure HMAC-SHA256 tokens and zero email/phone auto-linking.
   - **Authoritative Identity Context:** Updated `AuthenticationService.getIdentityContext` and `AuthController` with `GET /api/v1/auth/me`.
   - **Smart Portal Routing:** Integrated identity discovery in frontend `/login` and `/workspaces` for automatic Student (`/portal/student/dashboard`) and Guardian (`/portal/parent/dashboard`) routing. Created activation UI `/activate`.
 - **Verification Summary:**
-  - Database Schema & Migration: Applied and verified.
-  - Backend Build (`apps/api-gateway`): PASSED (`nest build`).
-  - Frontend Build (`apps/web-app`): PASSED (`tsc --noEmit`).
-  - E2E Live Test Suite (`scratch/test-phase5c-live-flow.js`): PASSED (10/10 lifecycle & security scenarios verified including single-use token consumption, duplicate rejection, cross-tenant isolation, and smart routing).
-  - Code Quality (`git diff --check`): PASSED with 0 errors.
+  - **Database Migration Integrity:** Migration `20260927090000_add_portal_invitations` verified against PostgreSQL (`npx prisma migrate status` returned "Database schema is up to date!").
+  - **Backend Build (`apps/api-gateway`):** PASSED (`nest build`).
+  - **Frontend Production Build (`apps/web-app`):** PASSED (`npm run build` completed cleanly, prerendering 37 static/dynamic pages).
+  - **Live E2E Integration Suite (`scratch/test-phase5c-live-flow.js`):** PASSED (10/10 lifecycle & security scenarios verified including single-use token consumption, duplicate rejection, cross-tenant isolation, and smart routing).
+  - **Interactive Browser Verification:** `BLOCKED — environment/tooling` (dev server not active).
+  - **Code Quality & Git State:** `git diff --check` clean, working tree clean, synced with `origin/main` at `0ff6f57f`.
 - **Status:** IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED
 - **Changes Implemented:**
   - **Prisma Schema & Migration:** Created migration `packages/core-platform/prisma/migrations/20260927050000_add_guardian_user_id/migration.sql` adding `userId` column and index to `stud_guardians`.
