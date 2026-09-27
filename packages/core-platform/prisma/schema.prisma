@@ -82,6 +82,7 @@ model User {
   schoolAccess      UserSchoolAccess[]
   staffProfiles     StaffProfile[]
   students          Student[]
+  guardians         Guardian[]
 
   @@map("idm_users")
 }
@@ -517,6 +518,7 @@ model Student {
 model Guardian {
   id                   String                @id @default(uuid())
   tenantId             String
+  userId               String?
   firstName            String
   lastName             String
   phone                String?
@@ -529,9 +531,11 @@ model Guardian {
   departures           StudentDeparture[]
   credentials          GuardianCredential[]
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  user                 User?                 @relation(fields: [userId], references: [id])
   students             StudentGuardian[]
 
   @@index([tenantId])
+  @@index([tenantId, userId])
   @@map("stud_guardians")
 }
 

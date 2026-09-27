@@ -11,14 +11,14 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `1544a8b0` |
-| **HEAD message** | `fix(portals): formalize Prisma migration for Student userId and reconcile Phase 5A status` |
-| **Remote sync** | `origin/main` — synchronized |
-| **Working tree** | Clean |
-| **Last completed phase** | Phase 5A — Student Portal BFF and Self-Service UI (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED) |
+| **HEAD** | Pending commit |
+| **HEAD message** | `feat(portals): Parent/Guardian Portal BFF and self-service UI` |
+| **Remote sync** | Sync pending push |
+| **Working tree** | Modified |
+| **Last completed phase** | Phase 5B — Parent/Guardian Portal BFF and Self-Service UI (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED) |
 | **Last verified defect fix** | Attendance Register same-day enrollment eligibility (**CLOSED — VERIFIED**) |
-| **Current active workstream** | None. Phase 5A is complete and verified via API/Unit/Live E2E gates. |
-| **Next authorized action** | **Phase 5B: Parent/Guardian Portal (BFF Integration)**. See `CURRENT_MASTER_EXECUTION_PLAN.md § Phase 5B`. |
+| **Current active workstream** | None. Phase 5B is implementation-complete and verified via API/Unit/Live E2E gates. |
+| **Next authorized action** | Checkpoint reached after Phase 5B. Awaiting explicit user direction for next phase. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -31,8 +31,28 @@
 - Attendance Register Grade 1B single-student defect (VERIFIED & CLOSED)
 - `WorkspaceContextInterceptor` debug mock (reverted)
 - `ArrivalController` `JwtAuthGuard` comment-out (reverted)
+- Phase 5A Student Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
+- Phase 5B Parent Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
 
 ---
+
+## Recent Execution Record
+
+### Phase 5B — Parent/Guardian Portal (BFF Integration)
+- **Status:** IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED
+- **Changes Implemented:**
+  - **Prisma Schema & Migration:** Created migration `packages/core-platform/prisma/migrations/20260927050000_add_guardian_user_id/migration.sql` adding `userId` column and index to `stud_guardians`.
+  - **BFF Module (`apps/api-gateway/src/modules/portal-parent`):** Implemented `ParentPortalService` and `ParentPortalController` with 9 endpoints: `/profile`, `/dashboard`, `/children`, `/children/:childId/results`, `/children/:childId/attendance`, `/children/:childId/movement`, `/children/:childId/movement/authorizations`, `/invoices`, `/invoices/:invoiceId/pay`.
+  - **Zero-Trust Security:** Server-side identity resolution (`resolveGuardian` via `Guardian.userId`) and strict child authorization check (`verifyChildAuthorization`) preventing unauthorized child data access (403 Forbidden).
+  - **UI Routes (`apps/web-app/src/app/portal/parent`):** Developed complete self-service UI pages for profile, dashboard, child details, results, attendance, movement logs, pickup authorization forms, invoice listing, and payment processing.
+- **Verification Summary:**
+  - API TypeScript (`apps/api-gateway`): PASSED (`tsc --noEmit`).
+  - API Build (`apps/api-gateway`): PASSED (`nest build`).
+  - Web TypeScript (`apps/web-app`): PASSED (`tsc --noEmit`).
+  - Web Build (`apps/web-app`): PASSED (`npm run build`, 36 routes generated).
+  - Live E2E Integration Suite (`scratch/test-phase5b-live-flow.js`): PASSED with clean exit code 0 across all 9 endpoint tests including 403 Forbidden on unlinked child and cross-tenant isolation.
+  - `git diff --check`: PASSED.
+  - Interactive Browser Verification: **BLOCKED — environment/tooling**.
 
 ## Chronological Checkpoint History
 

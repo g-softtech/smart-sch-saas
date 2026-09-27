@@ -89,7 +89,7 @@ Parent Portal (Consumes Finance, Results, Movement, Attendance, Identity)
 - **Prerequisites:** Phases 2, 3, and 4 (Data must exist to be consumed).
 - **Scope & Sub-Phases:** 
   - **Phase 5A — Student Portal:** **IMPLEMENTATION COMPLETE / PARTIALLY VERIFIED**. Dashboards, profile, digital ID view, timetable, results, CBT taking & attempt submit, assignment view & submission. Zero-trust identity resolution (`User -> Student.userId`). Standard Prisma migration `20260926223000_add_student_user_id`. All 10 live API endpoints verified via E2E integration tests. Interactive browser verification: **BLOCKED — environment/tooling**.
-  - **Phase 5B — Parent/Guardian Portal:** **PLANNED**. Fee payments, child results, movement/attendance logs, communication.
+  - **Phase 5B — Parent/Guardian Portal:** **IMPLEMENTATION COMPLETE / PARTIALLY VERIFIED**. Guardian self-service portal, child linked profile/dashboard, fee payments, child results, attendance logs, movement logs, pickup authorizations. Zero-trust server-side identity resolution (`User -> Guardian.userId`). Standard Prisma migration `20260927050000_add_guardian_user_id`. All 9 live API endpoints verified via E2E integration tests (`scratch/test-phase5b-live-flow.js`). Interactive browser verification: **BLOCKED — environment/tooling**.
 - **Security Requirement:** Strict server-derived tenant/school context, zero duplicated business logic.
 
 ### Phase 6: Future SaaS Expansion
