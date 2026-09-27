@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Delete,
   Body,
   Param,
@@ -27,7 +28,9 @@ import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspa
 import { ApiResponseDto } from "../../identity/dto/auth.dto";
 import {
   CreateStudentDto,
+  UpdateStudentDto,
   CreateGuardianDto,
+  UpdateGuardianDto,
   LinkGuardianDto,
   CreateEnrollmentDto,
   TransferEnrollmentDto,
@@ -127,6 +130,16 @@ export class StudentsController {
     return { success: true, data: student };
   }
 
+  @Patch(":studentId")
+  @ApiOperation({ summary: "Update student details (including email)" })
+  async updateStudent(
+    @Param("studentId") studentId: string,
+    @Body() dto: UpdateStudentDto,
+  ): Promise<ApiResponseDto<any>> {
+    const updated = await this.studentsService.updateStudent(studentId, dto);
+    return { success: true, data: updated };
+  }
+
   // ─── Student Photo ─────────────────────────────────────────────────────────
 
   @Post(":studentId/photo")
@@ -197,6 +210,16 @@ export class StudentsController {
   ): Promise<ApiResponseDto<any>> {
     const guardian = await this.studentsService.createGuardian(dto);
     return { success: true, data: guardian };
+  }
+
+  @Patch("guardians/:guardianId")
+  @ApiOperation({ summary: "Update guardian details (including email)" })
+  async updateGuardian(
+    @Param("guardianId") guardianId: string,
+    @Body() dto: UpdateGuardianDto,
+  ): Promise<ApiResponseDto<any>> {
+    const updated = await this.studentsService.updateGuardian(guardianId, dto);
+    return { success: true, data: updated };
   }
 
   @Get("guardians/list")

@@ -11,6 +11,26 @@ export type CreateStudentInput = {
   gender: "MALE" | "FEMALE" | "OTHER";
   nationality?: string;
   admissionDate: Date;
+  email?: string;
+};
+
+export type UpdateStudentInput = {
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  dateOfBirth?: Date;
+  gender?: "MALE" | "FEMALE" | "OTHER";
+  nationality?: string;
+  email?: string;
+};
+
+export type UpdateGuardianInput = {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  occupation?: string;
 };
 
 export type CreateGuardianInput = {
@@ -177,6 +197,58 @@ export class StudentsRepository {
         gender: data.gender,
         nationality: data.nationality,
         admissionDate: data.admissionDate,
+        email: data.email,
+      },
+    });
+  }
+
+  async updateStudent(studentId: string, data: UpdateStudentInput, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    const student = await db.student.findUnique({ where: { id: studentId } });
+    if (!student) return null;
+
+    if (data.email && student.userId) {
+      await db.user.update({
+        where: { id: student.userId },
+        data: { email: data.email.toLowerCase() },
+      });
+    }
+
+    return db.student.update({
+      where: { id: studentId },
+      data: {
+        ...(data.firstName && { firstName: data.firstName }),
+        ...(data.lastName && { lastName: data.lastName }),
+        ...(data.middleName !== undefined && { middleName: data.middleName }),
+        ...(data.dateOfBirth !== undefined && { dateOfBirth: data.dateOfBirth }),
+        ...(data.gender && { gender: data.gender }),
+        ...(data.nationality !== undefined && { nationality: data.nationality }),
+        ...(data.email !== undefined && { email: data.email ? data.email.toLowerCase() : null }),
+      },
+    });
+  }
+
+  async updateGuardian(guardianId: string, data: UpdateGuardianInput, tx?: typeof kernel.db) {
+    const db = tx ?? kernel.db;
+    const guardian = await db.guardian.findUnique({ where: { id: guardianId } });
+    if (!guardian) return null;
+
+    if (data.email && guardian.userId) {
+      await db.user.update({
+        where: { id: guardian.userId },
+        data: { email: data.email.toLowerCase() },
+      });
+    }
+
+    return db.guardian.update({
+      where: { id: guardianId },
+      data: {
+        ...(data.firstName && { firstName: data.firstName }),
+        ...(data.lastName && { lastName: data.lastName }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.email !== undefined && { email: data.email ? data.email.toLowerCase() : null }),
+        ...(data.address !== undefined && { address: data.address }),
+        ...(data.occupation !== undefined && { occupation: data.occupation }),
       },
     });
   }
@@ -188,7 +260,7 @@ export class StudentsRepository {
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
-        email: data.email,
+        email: data.email ? data.email.toLowerCase() : null,
         address: data.address,
         occupation: data.occupation,
       },

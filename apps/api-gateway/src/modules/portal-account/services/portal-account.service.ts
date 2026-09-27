@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   BadRequestException,
   NotFoundException,
   ForbiddenException,
@@ -20,6 +21,7 @@ import {
 
 @Injectable()
 export class PortalAccountService {
+  private readonly logger = new Logger(PortalAccountService.name);
   private readonly SECRET_KEY =
     process.env.INVITATION_SECRET || "fallback-portal-invitation-secret-key-2026";
 
@@ -81,8 +83,23 @@ export class PortalAccountService {
     }
 
     // 3. Resolve email address
-    const studentCode = (student.studentNumber || student.id).toLowerCase();
-    const email = (dto.email || existingUserEmail || `stu.${studentCode}@school.internal`).toLowerCase();
+    const email = (dto.email || existingUserEmail || student.email)?.toLowerCase()?.trim();
+    if (!email) {
+      throw new BadRequestException("Email address is required to provision student portal access");
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || email.endsWith("@school.internal")) {
+      throw new BadRequestException("A valid recipient email address is required");
+    }
+
+    // Save/sync Student email
+    if (student.email !== email) {
+      await kernel.db.student.update({
+        where: { id: studentId },
+        data: { email },
+      });
+    }
 
     // 4. Duplicate email / User resolution
     let user = await kernel.db.user.findUnique({
@@ -163,6 +180,9 @@ export class PortalAccountService {
     const activationUrl = `/activate?token=${rawToken}`;
 
     // Send transactional invitation email if notifications service is available
+    let emailSent = false;
+    let emailError: string | undefined;
+
     if (this.notificationsService) {
       try {
         const school = await kernel.db.school.findUnique({ where: { id: schoolId } });
@@ -183,8 +203,11 @@ export class PortalAccountService {
           `Activate your Student Portal Account - ${schoolName}`,
           html
         );
-      } catch (emailErr) {
-        // Log & proceed safely
+        emailSent = true;
+      } catch (emailErr: any) {
+        this.logger.error(`Failed to dispatch student portal invitation email to ${email}`, emailErr);
+        emailSent = false;
+        emailError = "Portal account was prepared, but we could not send the invitation email. Please retry.";
       }
     }
 
@@ -197,6 +220,8 @@ export class PortalAccountService {
       token: rawToken,
       activationUrl,
       expiresAt: invitation.expiresAt,
+      emailSent,
+      emailError: emailSent ? undefined : emailError,
     };
   }
 
@@ -231,9 +256,22 @@ export class PortalAccountService {
     }
 
     // 3. Resolve email address
-    const email = (dto.email || existingUserEmail || guardian.email)?.toLowerCase();
+    const email = (dto.email || existingUserEmail || guardian.email)?.toLowerCase()?.trim();
     if (!email) {
       throw new BadRequestException("Email address is required to provision guardian portal access");
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || email.endsWith("@school.internal")) {
+      throw new BadRequestException("A valid recipient email address is required");
+    }
+
+    // Save/sync Guardian email
+    if (guardian.email !== email) {
+      await kernel.db.guardian.update({
+        where: { id: guardianId },
+        data: { email },
+      });
     }
 
     // 4. Duplicate email / User resolution
@@ -315,6 +353,9 @@ export class PortalAccountService {
     const activationUrl = `/activate?token=${rawToken}`;
 
     // Send transactional invitation email if notifications service is available
+    let emailSent = false;
+    let emailError: string | undefined;
+
     if (this.notificationsService) {
       try {
         const school = await kernel.db.school.findUnique({ where: { id: schoolId } });
@@ -335,8 +376,11 @@ export class PortalAccountService {
           `Activate your Parent/Guardian Portal Account - ${schoolName}`,
           html
         );
-      } catch (emailErr) {
-        // Log & proceed safely
+        emailSent = true;
+      } catch (emailErr: any) {
+        this.logger.error(`Failed to dispatch guardian portal invitation email to ${email}`, emailErr);
+        emailSent = false;
+        emailError = "Portal account was prepared, but we could not send the invitation email. Please retry.";
       }
     }
 
@@ -349,6 +393,8 @@ export class PortalAccountService {
       token: rawToken,
       activationUrl,
       expiresAt: invitation.expiresAt,
+      emailSent,
+      emailError: emailSent ? undefined : emailError,
     };
   }
 

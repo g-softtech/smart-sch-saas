@@ -95,9 +95,55 @@ export class CreateStudentDto {
   @IsOptional()
   nationality?: string;
 
+  @ApiPropertyOptional({ example: "student@example.com" })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
   @ApiProperty({ example: "2026-09-01" })
   @IsISO8601()
   admissionDate!: string;
+}
+
+export class UpdateStudentDto {
+  @ApiPropertyOptional({ example: "Ada" })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: "Okonkwo" })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  lastName?: string;
+
+  @ApiPropertyOptional({ example: "Chisom" })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  middleName?: string;
+
+  @ApiPropertyOptional({ example: "student@example.com" })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional({ example: "2010-05-15" })
+  @IsISO8601()
+  @IsOptional()
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional({ enum: GenderEnumDto })
+  @IsEnum(GenderEnumDto)
+  @IsOptional()
+  gender?: GenderEnumDto;
+
+  @ApiPropertyOptional({ example: "Nigerian" })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  nationality?: string;
 }
 
 // ─── Guardian DTOs ───────────────────────────────────────────────────────────
@@ -114,6 +160,43 @@ export class CreateGuardianDto {
   @IsNotEmpty()
   @MaxLength(100)
   lastName!: string;
+
+  @ApiPropertyOptional({ example: "+2348012345678" })
+  @IsString()
+  @MaxLength(30)
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: "emeka@example.com" })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional({ example: "12 Lagos Street, Abuja" })
+  @IsString()
+  @MaxLength(255)
+  @IsOptional()
+  address?: string;
+
+  @ApiPropertyOptional({ example: "Engineer" })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  occupation?: string;
+}
+
+export class UpdateGuardianDto {
+  @ApiPropertyOptional({ example: "Emeka" })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: "Okonkwo" })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  lastName?: string;
 
   @ApiPropertyOptional({ example: "+2348012345678" })
   @IsString()

@@ -10,6 +10,7 @@ interface Student {
   firstName: string;
   lastName: string;
   middleName?: string;
+  email?: string;
   gender: string;
   status: string;
   admissionDate: string;
@@ -27,6 +28,8 @@ interface LinkedGuardian {
     lastName: string;
     email?: string;
     phone?: string;
+    address?: string;
+    occupation?: string;
   };
 }
 
@@ -78,6 +81,44 @@ export default function StudentProfilePage() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
+  // Invite Modal State
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteTarget, setInviteTarget] = useState<{
+    type: 'STUDENT' | 'GUARDIAN';
+    id: string;
+    name: string;
+    currentEmail?: string;
+  } | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [inviteWarning, setInviteWarning] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [lastActivationUrl, setLastActivationUrl] = useState<string | null>(null);
+
+  // Edit Student Modal State
+  const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
+  const [editStudentForm, setEditStudentForm] = useState({
+    firstName: '',
+    lastName: '',
+    middleName: '',
+    email: '',
+  });
+  const [editStudentLoading, setEditStudentLoading] = useState(false);
+  const [editStudentError, setEditStudentError] = useState<string | null>(null);
+
+  // Edit Guardian Modal State
+  const [isEditGuardianModalOpen, setIsEditGuardianModalOpen] = useState(false);
+  const [editGuardianForm, setEditGuardianForm] = useState({
+    id: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  });
+  const [editGuardianLoading, setEditGuardianLoading] = useState(false);
+  const [editGuardianError, setEditGuardianError] = useState<string | null>(null);
+
   // Enroll Form
   const [enrollYearId, setEnrollYearId] = useState('');
   const [enrollClassId, setEnrollClassId] = useState('');
@@ -102,39 +143,6 @@ export default function StudentProfilePage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-
-  // Portal Provisioning
-  const [provisionLoading, setProvisionLoading] = useState(false);
-  const [provisionSuccess, setProvisionSuccess] = useState<string | null>(null);
-  const [provisionError, setProvisionError] = useState<string | null>(null);
-
-  const handleProvisionStudent = async () => {
-    setProvisionLoading(true);
-    setProvisionSuccess(null);
-    setProvisionError(null);
-    try {
-      const res: any = await apiClient.post(`api/v1/portal/account/students/${studentId}/provision`, {});
-      setProvisionSuccess(`Portal invitation successfully sent! Activation link emailed to ${res.email || 'student'}.`);
-    } catch (err: any) {
-      setProvisionError(err.message || 'Failed to provision student portal account');
-    } finally {
-      setProvisionLoading(false);
-    }
-  };
-
-  const handleProvisionGuardian = async (guardianId: string) => {
-    setProvisionLoading(true);
-    setProvisionSuccess(null);
-    setProvisionError(null);
-    try {
-      const res: any = await apiClient.post(`api/v1/portal/account/guardians/${guardianId}/provision`, {});
-      setProvisionSuccess(`Portal invitation successfully sent! Activation link emailed to guardian (${res.email}).`);
-    } catch (err: any) {
-      setProvisionError(err.message || 'Failed to provision guardian portal account');
-    } finally {
-      setProvisionLoading(false);
-    }
-  };
 
   const fetchProfile = useCallback(async (isRefresh = false) => {
     if (!studentId) return;
@@ -190,30 +198,154 @@ export default function StudentProfilePage() {
   }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProfile();
     loadPhoto();
   }, [fetchProfile, loadPhoto]);
+
+  // Open Invitation Modal
+  const openInviteStudentModal = () => {
+    if (!student) return;
+    setInviteTarget({
+      type: 'STUDENT',
+      id: student.id,
+      name: `${student.firstName} ${student.lastName}`,
+      currentEmail: student.email,
+    });
+    setInviteEmail(student.email || '');
+    setInviteSuccess(null);
+    setInviteWarning(null);
+    setInviteError(null);
+    setLastActivationUrl(null);
+    setIsInviteModalOpen(true);
+  };
+
+  const openInviteGuardianModal = (link: LinkedGuardian) => {
+    setInviteTarget({
+      type: 'GUARDIAN',
+      id: link.guardian.id,
+      name: `${link.guardian.firstName} ${link.guardian.lastName}`,
+      currentEmail: link.guardian.email,
+    });
+    setInviteEmail(link.guardian.email || '');
+    setInviteSuccess(null);
+    setInviteWarning(null);
+    setInviteError(null);
+    setLastActivationUrl(null);
+    setIsInviteModalOpen(true);
+  };
+
+  const handleSendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteTarget || !inviteEmail.trim()) return;
+
+    setInviteLoading(true);
+    setInviteSuccess(null);
+    setInviteWarning(null);
+    setInviteError(null);
+    setLastActivationUrl(null);
+
+    const endpoint = inviteTarget.type === 'STUDENT'
+      ? `api/v1/portal/account/students/${inviteTarget.id}/provision`
+      : `api/v1/portal/account/guardians/${inviteTarget.id}/provision`;
+
+    try {
+      const res: any = await apiClient.post(endpoint, { email: inviteEmail.trim() });
+      if (res.emailSent) {
+        setInviteSuccess(`Portal invitation successfully sent! Activation link emailed to ${res.email}.`);
+      } else {
+        setInviteWarning(res.emailError || 'Portal account prepared, but invitation email could not be sent. Please retry.');
+        if (res.activationUrl) setLastActivationUrl(res.activationUrl);
+      }
+      fetchProfile(true);
+    } catch (err: any) {
+      setInviteError(err.message || 'Failed to dispatch portal invitation');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  // Open & Handle Edit Student Modal
+  const openEditStudentModal = () => {
+    if (!student) return;
+    setEditStudentForm({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      middleName: student.middleName || '',
+      email: student.email || '',
+    });
+    setEditStudentError(null);
+    setIsEditStudentModalOpen(true);
+  };
+
+  const handleEditStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditStudentLoading(true);
+    setEditStudentError(null);
+    try {
+      await apiClient.patch(`api/v1/students/${studentId}`, {
+        firstName: editStudentForm.firstName.trim(),
+        lastName: editStudentForm.lastName.trim(),
+        middleName: editStudentForm.middleName.trim() || undefined,
+        email: editStudentForm.email.trim() || undefined,
+      });
+      setIsEditStudentModalOpen(false);
+      fetchProfile(true);
+    } catch (err: any) {
+      setEditStudentError(err.message || 'Failed to update student profile');
+    } finally {
+      setEditStudentLoading(false);
+    }
+  };
+
+  // Open & Handle Edit Guardian Modal
+  const openEditGuardianModal = (link: LinkedGuardian) => {
+    setEditGuardianForm({
+      id: link.guardian.id,
+      firstName: link.guardian.firstName,
+      lastName: link.guardian.lastName,
+      email: link.guardian.email || '',
+      phone: link.guardian.phone || '',
+    });
+    setEditGuardianError(null);
+    setIsEditGuardianModalOpen(true);
+  };
+
+  const handleEditGuardianSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditGuardianLoading(true);
+    setEditGuardianError(null);
+    try {
+      await apiClient.patch(`api/v1/students/guardians/${editGuardianForm.id}`, {
+        firstName: editGuardianForm.firstName.trim(),
+        lastName: editGuardianForm.lastName.trim(),
+        email: editGuardianForm.email.trim() || undefined,
+        phone: editGuardianForm.phone.trim() || undefined,
+      });
+      setIsEditGuardianModalOpen(false);
+      fetchProfile(true);
+    } catch (err: any) {
+      setEditGuardianError(err.message || 'Failed to update guardian profile');
+    } finally {
+      setEditGuardianLoading(false);
+    }
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setPhotoError('File size must be less than 5MB');
-      return;
-    }
+    setPhotoLoading(true);
+    setPhotoError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
 
     try {
-      setPhotoError(null);
-      setPhotoLoading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      
       await apiClient.postFormData(`api/v1/students/${studentId}/photo`, formData);
-      await loadPhoto();
-    } catch (err: any) {
-      setPhotoError(err.message || 'Failed to upload photo');
+      loadPhoto();
+    } catch (err: unknown) {
+      if (err instanceof ApiError) setPhotoError(err.message);
+      else setPhotoError('Failed to upload photo');
     } finally {
       setPhotoLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -221,15 +353,18 @@ export default function StudentProfilePage() {
   };
 
   const handlePhotoDelete = async () => {
-    if (!confirm('Are you sure you want to remove the official student photo?')) return;
-    
+    if (!confirm('Are you sure you want to remove the profile photo?')) return;
+
+    setPhotoLoading(true);
+    setPhotoError(null);
+
     try {
-      setPhotoError(null);
-      setPhotoLoading(true);
       await apiClient.delete(`api/v1/students/${studentId}/photo`);
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
       setPhotoUrl(null);
-    } catch (err: any) {
-      setPhotoError(err.message || 'Failed to remove photo');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) setPhotoError(err.message);
+      else setPhotoError('Failed to remove photo');
     } finally {
       setPhotoLoading(false);
     }
@@ -238,14 +373,15 @@ export default function StudentProfilePage() {
   const fetchAcademics = useCallback(async () => {
     try {
       setAcademicsError(null);
-      const [ayRes, clsRes, armRes] = await Promise.all([
-        apiClient.get('api/v1/academics/academic-years?limit=100'),
-        apiClient.get('api/v1/academics/classes?limit=100'),
-        apiClient.get('api/v1/academics/arms?limit=100')
+      const [yearsRes, classesRes, armsRes] = await Promise.all([
+        apiClient.get('api/v1/academics/academic-years'),
+        apiClient.get('api/v1/academics/classes'),
+        apiClient.get('api/v1/academics/arms')
       ]);
-      setAcademicYears(Array.isArray(ayRes) ? ayRes : (ayRes as { data?: AcademicYear[] })?.data || []);
-      setClasses(Array.isArray(clsRes) ? clsRes : (clsRes as { data?: ClassObj[] })?.data || []);
-      setArms(Array.isArray(armRes) ? armRes : (armRes as { data?: ArmObj[] })?.data || []);
+
+      setAcademicYears(Array.isArray(yearsRes) ? yearsRes : []);
+      setClasses(Array.isArray(classesRes) ? classesRes : []);
+      setArms(Array.isArray(armsRes) ? armsRes : []);
     } catch (err: unknown) {
       if (err instanceof ApiError) setAcademicsError(err.message);
       else setAcademicsError('Failed to load academic data');
@@ -254,7 +390,6 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     if (isEnrollModalOpen || isTransferModalOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (classes.length === 0) fetchAcademics();
     }
   }, [isEnrollModalOpen, isTransferModalOpen, classes.length, fetchAcademics]);
@@ -358,35 +493,49 @@ export default function StudentProfilePage() {
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 pb-6">
-        <Link
-          href="/dashboard/students"
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500"
-          title="Back to Students"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {student.firstName} {student.middleName} {student.lastName}
-          </h1>
-          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400">
-            <span className="font-medium text-brand-teal">{student.studentNumber}</span>
-            <span>&bull;</span>
-            <span className="capitalize">{student.gender.toLowerCase()}</span>
-            <span>&bull;</span>
-            <span>Admitted: {new Date(student.admissionDate).toLocaleDateString()}</span>
-            <span>&bull;</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-              student.status === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-              student.status === 'WITHDRAWN' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-            }`}>
-              {student.status}
-            </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-6 gap-4">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/dashboard/students"
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500"
+            title="Back to Students"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {student.firstName} {student.middleName} {student.lastName}
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-medium text-brand-teal">{student.studentNumber}</span>
+              <span>&bull;</span>
+              <span className="capitalize">{student.gender.toLowerCase()}</span>
+              <span>&bull;</span>
+              <span>Admitted: {new Date(student.admissionDate).toLocaleDateString()}</span>
+              <span>&bull;</span>
+              <span className="text-gray-700 dark:text-gray-300 font-mono">
+                {student.email || 'No email registered'}
+              </span>
+              <span>&bull;</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                student.status === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                student.status === 'WITHDRAWN' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+              }`}>
+                {student.status}
+              </span>
+            </div>
           </div>
+        </div>
+        <div>
+          <button
+            onClick={openEditStudentModal}
+            className="px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
+          >
+            Edit Profile
+          </button>
         </div>
       </div>
 
@@ -473,26 +622,33 @@ export default function StudentProfilePage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{link.relationship.toLowerCase()}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 capitalize mb-1">{link.relationship.toLowerCase()}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 font-mono">
+                        {link.guardian.email || 'No email registered'}
+                      </p>
                     </div>
                     <div className="mt-3 sm:mt-0 sm:text-right text-sm text-gray-600 dark:text-gray-300 flex flex-col justify-between h-full">
                       <div>
                         {link.guardian.phone && <p>{link.guardian.phone}</p>}
-                        {link.guardian.email && <p>{link.guardian.email}</p>}
                       </div>
-                      <div className="mt-3 flex items-center gap-2 justify-end">
+                      <div className="mt-3 flex flex-wrap items-center gap-2 justify-end">
                         <button
-                          onClick={() => handleProvisionGuardian(link.guardian.id)}
-                          disabled={provisionLoading}
-                          className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200 font-medium text-xs bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+                          onClick={() => openEditGuardianModal(link)}
+                          className="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white font-medium text-xs bg-gray-200 dark:bg-gray-700 px-2.5 py-1.5 rounded transition-colors"
                         >
-                          Invite to Portal
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => openInviteGuardianModal(link)}
+                          className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200 font-medium text-xs bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 px-3 py-1.5 rounded transition-colors"
+                        >
+                          Invite Guardian
                         </button>
                         <Link
                           href={`/dashboard/students/${studentId}/guardians/${link.guardian.id}`}
                           className="inline-block text-brand-teal hover:text-brand-navy dark:hover:text-white font-medium text-xs bg-brand-teal/10 hover:bg-brand-teal/20 px-3 py-1.5 rounded transition-colors"
                         >
-                          Manage Authorizations &rarr;
+                          Authorizations &rarr;
                         </Link>
                       </div>
                     </div>
@@ -561,21 +717,10 @@ export default function StudentProfilePage() {
           {/* ID Card & Security Actions */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-brand-navy dark:text-white mb-4">Security & Access</h2>
-            {provisionSuccess && (
-              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-xs rounded-xl">
-                {provisionSuccess}
-              </div>
-            )}
-            {provisionError && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs rounded-xl">
-                {provisionError}
-              </div>
-            )}
 
             <button
-              onClick={handleProvisionStudent}
-              disabled={provisionLoading}
-              className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors group mb-3 disabled:opacity-50"
+              onClick={openInviteStudentModal}
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors group mb-3"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg group-hover:scale-110 transition-transform">
@@ -618,14 +763,14 @@ export default function StudentProfilePage() {
               className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-teal hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors group"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-teal-100 dark:bg-teal-900/30 text-brand-teal dark:text-teal-400 rounded-lg group-hover:scale-110 transition-transform">
+                <div className="p-2 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-lg group-hover:scale-110 transition-transform">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-brand-teal dark:group-hover:text-teal-400">Movement History</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">View arrivals and departures</p>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-brand-teal dark:group-hover:text-teal-400">Campus Movement Logs</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">View gate entry and exit events</p>
                 </div>
               </div>
               <svg className="w-5 h-5 text-gray-400 group-hover:text-brand-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -634,79 +779,277 @@ export default function StudentProfilePage() {
             </Link>
           </div>
 
-          {/* Enrollment History Card */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
-            <h2 className="text-xl font-semibold text-brand-navy dark:text-white mb-6">Enrollment History</h2>
-
-            {enrollments.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">No enrollment records found.</p>
-            ) : (
-              <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-8 pb-4">
-                {enrollments.map((enr) => (
-                  <div key={enr.id} className="relative pl-6">
-                    <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 ${
-                      enr.status === 'ACTIVE' ? 'bg-green-500' :
-                      enr.status === 'TRANSFERRED' ? 'bg-brand-teal' :
-                      enr.status === 'WITHDRAWN' ? 'bg-red-500' :
-                      enr.status === 'GRADUATED' ? 'bg-brand-gold' :
-                      'bg-gray-400'
-                    }`}></div>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          {enr.academicYear.name}
-                        </span>
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${
-                          enr.status === 'ACTIVE' ? 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30' :
-                          enr.status === 'TRANSFERRED' ? 'text-brand-navy bg-brand-teal/20 dark:text-brand-teal dark:bg-brand-teal/10' :
-                          enr.status === 'WITHDRAWN' ? 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30' :
-                          'text-gray-700 bg-gray-100 dark:text-gray-400 dark:bg-gray-800'
-                        }`}>
-                          {enr.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        {enr.class.name} {enr.arm ? `- ${enr.arm.name}` : ''}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        {new Date(enr.enrolledAt).toLocaleDateString()}
-                      </p>
-                      {enr.notes && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 italic">
-                          &quot;{enr.notes}&quot;
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
         </div>
       </div>
 
-      {/* Modals */}
+      {/* ─── MODALS ─── */}
+
+      {/* Portal Invitation Modal */}
+      {isInviteModalOpen && inviteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-gray-800">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-indigo-50 dark:bg-indigo-900/20">
+              <h2 className="text-xl font-semibold text-indigo-900 dark:text-indigo-300">
+                Invite {inviteTarget.name}
+              </h2>
+              <p className="text-xs text-indigo-700 dark:text-indigo-400 mt-1">
+                {inviteTarget.type === 'STUDENT' ? 'Student Portal Account' : 'Guardian Portal Account'}
+              </p>
+            </div>
+            <form onSubmit={handleSendInvitation} className="p-6 space-y-4">
+              {inviteSuccess && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm border border-green-200 dark:border-green-800">
+                  {inviteSuccess}
+                </div>
+              )}
+
+              {inviteWarning && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-sm border border-amber-200 dark:border-amber-800 space-y-2">
+                  <p className="font-semibold">{inviteWarning}</p>
+                  {lastActivationUrl && (
+                    <div className="pt-2 border-t border-amber-200 dark:border-amber-700/50">
+                      <p className="text-xs font-mono break-all bg-white dark:bg-gray-800 p-2 rounded border">
+                        {window.location.origin}{lastActivationUrl}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {inviteError && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm border border-red-200 dark:border-red-800">
+                  {inviteError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Recipient Email Address
+                </label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="e.g. user@example.com"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none dark:text-white transition-all font-mono"
+                  required
+                />
+                {!inviteTarget.currentEmail && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
+                    Please enter the recipient&apos;s email address to send the Portal Invitation.
+                  </p>
+                )}
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  disabled={inviteLoading}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={inviteLoading || !inviteEmail.trim()}
+                  className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center"
+                >
+                  {inviteLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  ) : null}
+                  Send Invitation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Profile Modal */}
+      {isEditStudentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-gray-800">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Student Profile</h2>
+            </div>
+            <form onSubmit={handleEditStudentSubmit} className="p-6 space-y-4">
+              {editStudentError && (
+                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
+                  {editStudentError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                <input
+                  type="text"
+                  value={editStudentForm.firstName}
+                  onChange={e => setEditStudentForm(f => ({ ...f, firstName: e.target.value }))}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Middle Name (Optional)</label>
+                <input
+                  type="text"
+                  value={editStudentForm.middleName}
+                  onChange={e => setEditStudentForm(f => ({ ...f, middleName: e.target.value }))}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  value={editStudentForm.lastName}
+                  onChange={e => setEditStudentForm(f => ({ ...f, lastName: e.target.value }))}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student Email Address</label>
+                <input
+                  type="email"
+                  value={editStudentForm.email}
+                  onChange={e => setEditStudentForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="student@example.com"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditStudentModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  disabled={editStudentLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editStudentLoading}
+                  className="px-6 py-2 bg-brand-navy text-white font-medium rounded-lg hover:bg-brand-teal transition-colors disabled:opacity-50 flex items-center"
+                >
+                  {editStudentLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  ) : null}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Guardian Profile Modal */}
+      {isEditGuardianModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-gray-800">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Guardian Profile</h2>
+            </div>
+            <form onSubmit={handleEditGuardianSubmit} className="p-6 space-y-4">
+              {editGuardianError && (
+                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
+                  {editGuardianError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                <input
+                  type="text"
+                  value={editGuardianForm.firstName}
+                  onChange={e => setEditGuardianForm(f => ({ ...f, firstName: e.target.value }))}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  value={editGuardianForm.lastName}
+                  onChange={e => setEditGuardianForm(f => ({ ...f, lastName: e.target.value }))}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Guardian Email Address</label>
+                <input
+                  type="email"
+                  value={editGuardianForm.email}
+                  onChange={e => setEditGuardianForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="guardian@example.com"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number (Optional)</label>
+                <input
+                  type="tel"
+                  value={editGuardianForm.phone}
+                  onChange={e => setEditGuardianForm(f => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-teal outline-none dark:text-white"
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditGuardianModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  disabled={editGuardianLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editGuardianLoading}
+                  className="px-6 py-2 bg-brand-navy text-white font-medium rounded-lg hover:bg-brand-teal transition-colors disabled:opacity-50 flex items-center"
+                >
+                  {editGuardianLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  ) : null}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isEnrollModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-xl font-semibold text-brand-navy dark:text-white">Enroll Student</h2>
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-brand-navy text-white">
+              <h2 className="text-xl font-semibold">Enroll Student</h2>
             </div>
             <form onSubmit={handleEnrollSubmit} className="p-6 space-y-4">
-              {academicsError && (
-                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
-                  {academicsError}
-                </div>
-              )}
               {enrollError && (
                 <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
                   {enrollError}
                 </div>
               )}
+              {academicsError && (
+                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
+                  {academicsError}
+                </div>
+              )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Academic Year *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Academic Year</label>
                 <select
                   value={enrollYearId}
                   onChange={e => setEnrollYearId(e.target.value)}
@@ -714,14 +1057,14 @@ export default function StudentProfilePage() {
                   required
                 >
                   <option value="">Select Academic Year</option>
-                  {academicYears.map(ay => (
-                    <option key={ay.id} value={ay.id}>{ay.name}</option>
+                  {academicYears.map(y => (
+                    <option key={y.id} value={y.id}>{y.name}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class</label>
                 <select
                   value={enrollClassId}
                   onChange={e => {
@@ -769,7 +1112,7 @@ export default function StudentProfilePage() {
                   {enrollLoading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                   ) : null}
-                  Enroll Student
+                  Confirm Enrollment
                 </button>
               </div>
             </form>
@@ -780,15 +1123,10 @@ export default function StudentProfilePage() {
       {isTransferModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-xl font-semibold text-brand-navy dark:text-white">Transfer Student</h2>
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-brand-navy text-white">
+              <h2 className="text-xl font-semibold">Transfer Student</h2>
             </div>
             <form onSubmit={handleTransferSubmit} className="p-6 space-y-4">
-              {academicsError && (
-                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
-                  {academicsError}
-                </div>
-              )}
               {transferError && (
                 <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
                   {transferError}
@@ -796,7 +1134,7 @@ export default function StudentProfilePage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Class *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Class</label>
                 <select
                   value={transferClassId}
                   onChange={e => {

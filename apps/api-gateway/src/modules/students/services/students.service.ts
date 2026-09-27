@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  NotFoundException,
   ConflictException,
   ForbiddenException,
 } from "@nestjs/common";
@@ -80,6 +81,14 @@ export class StudentsService {
     return this.repo.createStudent({ ...input, studentNumber, tenantId }, tx);
   }
 
+  async updateStudent(studentId: string, input: any, tx?: typeof kernel.db) {
+    const student = await this.repo.findStudent(studentId, tx);
+    if (!student) {
+      throw new NotFoundException("Student not found");
+    }
+    return this.repo.updateStudent(studentId, input, tx);
+  }
+
   // ─── Guardian Management ───────────────────────────────────────────────────
 
   /**
@@ -88,6 +97,14 @@ export class StudentsService {
   async createGuardian(input: CreateGuardianInput) {
     const tenantId = this.getActiveTenantId();
     return this.repo.createGuardian({ ...input, tenantId });
+  }
+
+  async updateGuardian(guardianId: string, input: any, tx?: typeof kernel.db) {
+    const guardian = await this.repo.findGuardian(guardianId, tx);
+    if (!guardian) {
+      throw new NotFoundException("Guardian not found");
+    }
+    return this.repo.updateGuardian(guardianId, input, tx);
   }
 
   /**

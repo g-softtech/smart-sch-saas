@@ -569,6 +569,7 @@ model Student {
   firstName            String
   lastName             String
   middleName           String?
+  email                String?
   dateOfBirth          DateTime?
   gender               GenderEnum
   nationality          String?
