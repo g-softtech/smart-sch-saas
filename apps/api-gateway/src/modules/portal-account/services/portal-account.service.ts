@@ -343,13 +343,18 @@ export class PortalAccountService {
       throw new NotFoundException("User not found");
     }
 
-    // 1. Authoritative Student resolution
-    const student = await kernel.db.student.findFirst({
-      where: { userId },
-      include: { school: true },
-    });
+    // 1. Authoritative Student resolution (cross-tenant system lookup)
+    const students = await kernel.$queryRaw<
+      Array<{ id: string; schoolId: string; tenantId: string }>
+    >`
+      SELECT id, "schoolId", "tenantId"
+      FROM stud_students
+      WHERE "userId" = ${userId}
+      LIMIT 1
+    `;
 
-    if (student) {
+    if (students && students.length > 0) {
+      const student = students[0];
       return {
         userId: user.id,
         email: user.email,
@@ -361,12 +366,18 @@ export class PortalAccountService {
       };
     }
 
-    // 2. Authoritative Guardian resolution
-    const guardian = await kernel.db.guardian.findFirst({
-      where: { userId },
-    });
+    // 2. Authoritative Guardian resolution (cross-tenant system lookup)
+    const guardians = await kernel.$queryRaw<
+      Array<{ id: string; tenantId: string }>
+    >`
+      SELECT id, "tenantId"
+      FROM stud_guardians
+      WHERE "userId" = ${userId}
+      LIMIT 1
+    `;
 
-    if (guardian) {
+    if (guardians && guardians.length > 0) {
+      const guardian = guardians[0];
       return {
         userId: user.id,
         email: user.email,

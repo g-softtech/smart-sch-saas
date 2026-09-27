@@ -145,11 +145,18 @@ export class AuthenticationService {
       throw new UnauthorizedException("User not found");
     }
 
-    // Check Student
-    const student = await kernel.db.student.findFirst({
-      where: { userId },
-    });
-    if (student) {
+    // System-level cross-tenant Student identity query
+    const students = await kernel.$queryRaw<
+      Array<{ id: string; schoolId: string; tenantId: string }>
+    >`
+      SELECT id, "schoolId", "tenantId"
+      FROM stud_students
+      WHERE "userId" = ${userId}
+      LIMIT 1
+    `;
+
+    if (students && students.length > 0) {
+      const student = students[0];
       return {
         userId: user.id,
         email: user.email,
@@ -161,11 +168,18 @@ export class AuthenticationService {
       };
     }
 
-    // Check Guardian
-    const guardian = await kernel.db.guardian.findFirst({
-      where: { userId },
-    });
-    if (guardian) {
+    // System-level cross-tenant Guardian identity query
+    const guardians = await kernel.$queryRaw<
+      Array<{ id: string; tenantId: string }>
+    >`
+      SELECT id, "tenantId"
+      FROM stud_guardians
+      WHERE "userId" = ${userId}
+      LIMIT 1
+    `;
+
+    if (guardians && guardians.length > 0) {
+      const guardian = guardians[0];
       return {
         userId: user.id,
         email: user.email,

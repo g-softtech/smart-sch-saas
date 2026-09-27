@@ -45,14 +45,19 @@ export default function WorkspacesPage() {
     const fetchWorkspaces = async () => {
       try {
         // Check authoritative identity first for portal redirection
-        const meRes = await apiClient.get<any>('api/v1/auth/me');
-        if (meRes?.primaryType === 'STUDENT') {
-          router.push('/portal/student/dashboard');
-          return;
-        }
-        if (meRes?.primaryType === 'GUARDIAN') {
-          router.push('/portal/parent/dashboard');
-          return;
+        try {
+          const meRes = await apiClient.get<any>('api/v1/auth/me');
+          if (meRes?.portalType === 'STUDENT' || meRes?.redirectUrl === '/portal/student/dashboard') {
+            router.push('/portal/student/dashboard');
+            return;
+          }
+          if (meRes?.portalType === 'PARENT' || meRes?.redirectUrl === '/portal/parent/dashboard') {
+            router.push('/portal/parent/dashboard');
+            return;
+          }
+        } catch (meErr) {
+          // If auth/me fails silently fallback to workspace list
+          console.warn('Identity discovery check failed:', meErr);
         }
 
         const response = await apiClient.get('api/v1/identity/me/workspaces');
