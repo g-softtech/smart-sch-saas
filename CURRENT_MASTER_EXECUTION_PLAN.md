@@ -108,6 +108,7 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       1. `validateToken`: Wrapped public student/guardian/school lookup queries in `tenantContext.run({ tenantId: invitation.tenantId }, ...)` to eliminate `Zero-Trust Violation` errors when no auth header is present.
       2. `activateAccount`: Wrapped public `UserTenantMembership` state update in `tenantContext.run({ tenantId: invitation.tenantId }, ...)` to resolve `Zero-Trust Violation` on public account activation calls.
     - **Production Configuration Requirements:** `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, `NEXT_PUBLIC_API_URL` configured for transactional email delivery and frontend API communication.
+    - **Git Commit:** `433bbbbf` (pushed to `main`)
     - **Status:** **COMPLETE**
 
 ### Phase 6: Future SaaS Expansion
