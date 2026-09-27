@@ -113,5 +113,22 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
 
 ### Phase 6: Future SaaS Expansion
 - **Objective:** Value-add features beyond core operations.
-- **Status:** **NEXT APPROVED ROADMAP PHASE**.
-- **Scope:** Library, Transport, Hostel, Website Builder, Marketplace, Advanced AI Integrations.
+- **Sub-Phases Execution & Status:**
+  - **Phase 6A — Entitlements, Module Configuration & Shared SaaS Infrastructure:** **COMPLETE & FULLY VERIFIED**.
+    - **Scope Completed:** Tenant-scoped `TenantEntitlement` model and School-scoped `SchoolModuleSetting` model (`sys_tenant_entitlements` and `sys_school_module_settings` tables via migration `20260927173000_add_entitlements_and_module_settings`). Added composite key `@@unique([tenantId, id])` to `School`. Implemented `EntitlementsModule`, `EntitlementsRepository`, `EntitlementsService`, `EntitlementsController` (`GET /api/v1/entitlements`, `PATCH /api/v1/entitlements/:moduleKey`), `SchoolModuleSettingsController` (`GET /api/v1/schools/module-settings/:moduleKey`, `PATCH /api/v1/schools/module-settings/:moduleKey`), `@RequireModule(ModuleKey)` decorator, and `ModuleEntitlementGuard`. Seeded canonical permissions `tenant:manage_entitlements` and `school:manage_module_settings`. Integrated audit logging (`ENTITLEMENT_UPDATED`, `SCHOOL_MODULE_SETTING_UPDATED`). Created Module Management dashboard UI (`/dashboard/settings/modules`).
+    - **Security Architecture:** Enforced zero-trust workspace authorization inside `ModuleEntitlementGuard` before evaluating entitlement data. Validates JWT `user.sub`, `UserTenantMembership`, and `UserSchoolAccess` inside `tenantContext.run({ tenantId }, ...)`. Prevented arbitrary header spoofing with `403 Forbidden` checks. Preserved undecorated Phase 1–5 core controllers with 100% backward compatibility.
+    - **Verification Evidence:**
+      - **Live E2E & Security Suite:** `13/13 PASSED` (`scratch/test-phase6a-live-flow.js`)
+      - **Unit Test Suite:** `6/6 PASSED` (`apps/api-gateway/src/modules/entitlements/services/entitlements.service.spec.ts`)
+      - **Production Frontend Build:** `npm run build` passed (`40/40` static/dynamic pages)
+      - **Production Backend Build:** `npm run build` passed (0 errors)
+      - **Database Migration Status:** `npx prisma migrate status` ("Database schema is up to date!")
+      - **Whitespace Check:** `git diff --check` passed (0 errors)
+    - **Status:** **COMPLETE & VERIFIED**
+  - **Phase 6B — Library Management:** **NEXT APPROVED ROADMAP SUB-PHASE** (Book catalog, physical copy tracking, loans, borrowing limits, and overdue fine billing via `FinanceService`).
+  - **Phase 6C — Transport & Fleet Management:** PLANNED
+  - **Phase 6D — Hostel & Boarding Management:** PLANNED
+  - **Phase 6E — School Website Builder & Public CMS:** PLANNED
+  - **Phase 6F — Marketplace & Subscription Billing Engine:** PLANNED
+  - **Phase 6G — Advanced School AI Engine (Sandboxed & Advisory):** PLANNED
+

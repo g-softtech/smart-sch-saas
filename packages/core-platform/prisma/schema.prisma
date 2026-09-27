@@ -8,6 +8,23 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum ModuleKey {
+  LIBRARY
+  TRANSPORT
+  HOSTEL
+  CMS
+  MARKETPLACE
+  AI
+}
+
+enum EntitlementStatus {
+  ACTIVE
+  TRIAL
+  SUSPENDED
+  EXPIRED
+}
+
+
 model Tenant {
   id                    String                   @id @default(uuid())
   name                  String
@@ -62,6 +79,8 @@ model Tenant {
   guardians             Guardian[]
   studentPhotos         StudentPhoto[]
   students              Student[]
+  entitlements          TenantEntitlement[]
+  schoolModuleSettings  SchoolModuleSetting[]
 
   @@map("plt_tenants")
 }
@@ -235,7 +254,46 @@ model School {
   StudentCredential     StudentCredential[]
   studentPhotos         StudentPhoto[]
   students              Student[]
+  moduleSettings        SchoolModuleSetting[]
+
+  @@unique([tenantId, id])
 }
+
+model TenantEntitlement {
+  id          String            @id @default(uuid())
+  tenantId    String
+  moduleKey   ModuleKey
+  status      EntitlementStatus @default(ACTIVE)
+  validUntil  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, moduleKey])
+  @@index([tenantId])
+  @@map("sys_tenant_entitlements")
+}
+
+model SchoolModuleSetting {
+  id            String    @id @default(uuid())
+  tenantId      String
+  schoolId      String
+  moduleKey     ModuleKey
+  isEnabled     Boolean   @default(false)
+  schemaVersion Int       @default(1)
+  configJson    Json      @default("{}")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  school        School    @relation(fields: [tenantId, schoolId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([schoolId, moduleKey])
+  @@index([tenantId, schoolId])
+  @@map("sys_school_module_settings")
+}
+
 
 model StudentPhoto {
   id        String   @id @default(uuid())

@@ -36,6 +36,8 @@ function buildScopedExtension(base: PrismaClient) {
             'Student', 'Guardian', 'StudentGuardian', 'Enrollment',
             // Admissions (Batch 3C)
             'PublishedAdmissionForm', 'Applicant', 'AdmissionApplication', 'AdmissionReview',
+            // Phase 6A SaaS Entitlements
+            'TenantEntitlement', 'SchoolModuleSetting',
           ];
           
           if (tenantScopedModels.includes(model)) {

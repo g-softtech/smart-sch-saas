@@ -11,14 +11,14 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `a5968fce` |
-| **HEAD message** | `feat(portals): Parent/Guardian Portal BFF and self-service UI` |
-| **Remote sync** | `origin/main` — synchronized |
+| **HEAD** | Pending Commit |
+| **HEAD message** | `feat(entitlements): complete Phase 6A entitlements and module settings` |
+| **Remote sync** | Synchronizing |
 | **Working tree** | Clean |
-| **Last completed phase** | Phase 5C — Portal Account Provisioning & Smart Portal Access (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED) |
-| **Last verified defect fix** | Attendance Register same-day enrollment eligibility (**CLOSED — VERIFIED**) |
-| **Current active workstream** | None. Phase 5C implementation complete. API/Build/Migration verified. Awaiting user direction. |
-| **Next authorized action** | Phase 5C Checkpoint reached. Awaiting explicit user direction for next phase. |
+| **Last completed phase** | Phase 6A — Entitlements, Module Configuration & Shared SaaS Infrastructure (**COMPLETE & VERIFIED**) |
+| **Last verified defect fix** | ModuleEntitlementGuard Zero-Trust Workspace Authorization Verification (**CLOSED — VERIFIED**) |
+| **Current active workstream** | None. Phase 6A implementation & verification complete. Awaiting user direction for Phase 6B. |
+| **Next authorized action** | Phase 6A Checkpoint reached. Awaiting explicit user authorization for Phase 6B (Library Management). |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -38,6 +38,25 @@
 ---
 
 ## Recent Execution Record
+
+### Phase 6A — Entitlements, Module Configuration & Shared SaaS Infrastructure
+- **Status:** **COMPLETE & FULLY VERIFIED**
+- **Changes Implemented:**
+  - **Database Models & Migration:** Created `TenantEntitlement` (`sys_tenant_entitlements`) and `SchoolModuleSetting` (`sys_school_module_settings`) models with `ModuleKey` and `EntitlementStatus` enums in `packages/core-platform/prisma/schema.prisma`. Added composite key `@@unique([tenantId, id])` to `School`. Applied migration `20260927173000_add_entitlements_and_module_settings`.
+  - **Core Platform Extension:** Registered `TenantEntitlement` and `SchoolModuleSetting` in kernel `tenantScopedModels` array (`packages/core-platform/src/index.ts`).
+  - **Entitlements Module (`apps/api-gateway/src/modules/entitlements`):** Implemented `EntitlementsRepository`, `EntitlementsService`, `EntitlementsController` (`GET /api/v1/entitlements`, `PATCH /api/v1/entitlements/:moduleKey`), `SchoolModuleSettingsController` (`GET /api/v1/schools/module-settings/:moduleKey`, `PATCH /api/v1/schools/module-settings/:moduleKey`), `@RequireModule(ModuleKey)` decorator, and `ModuleEntitlementGuard`.
+  - **Zero-Trust Guard Security:** `ModuleEntitlementGuard` authenticates user identity (`req.user.sub`), validates workspace membership (`UserTenantMembership`), and verifies school access (`UserSchoolAccess`) inside `tenantContext.run({ tenantId }, ...)` *before* reading entitlement records. Header spoofing returns `403 Forbidden`.
+  - **Audit Logging:** Logs entitlement updates (`ENTITLEMENT_UPDATED`) and school setting toggles (`SCHOOL_MODULE_SETTING_UPDATED`) to `AuditLog`.
+  - **Frontend Interface:** Built Module Management dashboard UI (`apps/web-app/src/app/dashboard/settings/modules/page.tsx`).
+- **Verification Summary:**
+  - **Live E2E Integration Suite (`scratch/test-phase6a-live-flow.js`):** 13/13 scenarios PASSED.
+  - **Unit Test Suite (`apps/api-gateway/src/modules/entitlements/services/entitlements.service.spec.ts`):** 6/6 scenarios PASSED.
+  - **Database Migration Integrity:** `npx prisma migrate status` returned "Database schema is up to date!".
+  - **Backend Build:** PASSED (`npm run build` in `apps/api-gateway`).
+  - **Frontend Build:** PASSED (`npm run build` in `apps/web-app`, 40 static/dynamic pages).
+  - **Code Quality:** `git diff --check` PASSED (0 errors).
+
+---
 
 ### Phase 5C — Portal Account Provisioning & Smart Portal Access
 - **Status:** IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED

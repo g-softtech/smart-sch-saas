@@ -20,6 +20,7 @@ import { FinanceModule } from "./modules/finance/finance.module";
 import { PortalStudentModule } from "./modules/portal-student/portal-student.module";
 import { PortalParentModule } from "./modules/portal-parent/portal-parent.module";
 import { PortalAccountModule } from "./modules/portal-account/portal-account.module";
+import { EntitlementsModule } from "./modules/entitlements/entitlements.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PortalAccountModule } from "./modules/portal-account/portal-account.mod
     PortalStudentModule,
     PortalParentModule,
     PortalAccountModule,
+    EntitlementsModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
