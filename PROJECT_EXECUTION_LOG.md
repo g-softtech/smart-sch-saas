@@ -564,6 +564,34 @@ Duplicate scan now correctly shows yellow "Already Arrived" notice.
 
 ---
 
+### CHECKPOINT: Phase 5E — Real-World Onboarding & Product Workflow Completion
+
+**Status:** COMPLETE & FULLY VERIFIED
+**Date:** 2026-09-27
+**Commit Hash:** `31b1dc07` — `feat(portal): implement Phase 5E real-world email onboarding & honest delivery status`
+**Push Status:** Pushed to `origin/main`
+**Working Tree:** Clean
+
+**Implementation Summary:**
+- **Synthetic Email Elimination:** Removed `stu.${studentCode}@school.internal` production fallback in `PortalAccountService.provisionStudentPortal()`. Portal account invitations now strictly require a real, syntactically valid email address.
+- **Student Email Schema & Lifecycle:** Added `email String?` to `Student` model (`stud_students` table) via Prisma migration `20260927223000_add_student_email`. Established canonical authority lifecycle: before provisioning, `Student.email` holds prospective email; when provisioned and during profile edits, `Student.email` and `User.email` are synchronized.
+- **Student & Guardian Profile Management:** Added `updateStudent` and `updateGuardian` to `StudentsRepository` and `StudentsService`. Added `PATCH /api/v1/students/:studentId` and `PATCH /api/v1/students/guardians/:guardianId` controller endpoints.
+- **Admin UI Invitation Modal & Profile Editing:** Updated `StudentProfilePage` (`apps/web-app/src/app/dashboard/students/[studentId]/page.tsx`):
+  - Added Portal Invitation Modal for Students and Guardians prompting for or confirming target email address.
+  - Added Edit Student Profile modal with email field.
+  - Added Edit Guardian Profile modal with email and phone fields.
+  - Displayed student & guardian emails directly on profile cards.
+- **Honest Email Delivery Reporting:** In `PortalAccountService.provisionStudentPortal` and `provisionGuardianPortal`, caught email dispatch errors and returned explicit `emailSent: boolean` and `emailError: string | undefined` status. Discarded silent exception swallowing. Admin UI displays a green success notice when `emailSent === true`, and an amber warning banner with copy activation link and retry options when `emailSent === false`.
+
+**Verification Evidence:**
+- **Prisma Migration Deploy:** `20260927223000_add_student_email` applied; `npx prisma migrate status` ("26 migrations found. Database schema is up to date!")
+- **Live Onboarding & Safety Suite:** `22/22 PASSED` (`scratch/test-phase5e-live-onboarding.js`)
+- **Backend Production Build (`nest build`):** PASSED (0 errors)
+- **Frontend Production Build (`next build`):** PASSED (`40/40` pages prerendered)
+- **Git Whitespace Check (`git diff --check`):** PASSED (0 errors)
+
+---
+
 ## Deployment History
 
 | Event | Approx. Date | Status | Evidence |

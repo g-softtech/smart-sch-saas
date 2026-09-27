@@ -110,6 +110,16 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Production Configuration Requirements:** `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, `NEXT_PUBLIC_API_URL` configured for transactional email delivery and frontend API communication.
     - **Git Commit:** `433bbbbf` (pushed to `main`)
     - **Status:** **COMPLETE**
+  - **Phase 5E — Real-World Onboarding & Product Workflow Completion:** **COMPLETE & FULLY VERIFIED**.
+    - **Scope Completed:** Removed synthetic `stu.${studentCode}@school.internal` fallback. Added optional `email String?` to `Student` model (`stud_students` table via migration `20260927223000_add_student_email`). Resolved email authority lifecycle (Student.email stores prospective email before provisioning, syncs to User.email when provisioned and during profile edits). Added `updateStudent` and `updateGuardian` repository/service methods and `PATCH /api/v1/students/:studentId` & `PATCH /api/v1/students/guardians/:guardianId` endpoints. Built Admin Portal Invitation Modal for Students and Guardians (`/dashboard/students/[studentId]`), prompting for/confirming recipient email address. Implemented honest delivery status reporting (`emailSent: boolean`, `emailError: string | undefined`) preventing swallowed SMTP failures. Created Edit Student and Edit Guardian profile modals.
+    - **Verification Evidence:**
+      - **Live Onboarding & Safety Verification Suite:** `22/22 PASSED` (`scratch/test-phase5e-live-onboarding.js`)
+      - **Production Frontend Build:** `npm run build` passed (`40/40` static/dynamic pages prerendered)
+      - **Production Backend Build:** `npm run build` passed (0 errors)
+      - **Database Migration Status:** `npx prisma migrate status` ("26 migrations found. Database schema is up to date!")
+      - **Whitespace Check:** `git diff --check` passed (0 errors)
+      - **Git Commit:** `31b1dc07` (pushed to `origin/main`)
+    - **Status:** **COMPLETE & FULLY VERIFIED**
 
 ### Phase 6: Future SaaS Expansion
 - **Objective:** Value-add features beyond core operations.
