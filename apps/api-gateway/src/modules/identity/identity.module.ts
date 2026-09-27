@@ -20,9 +20,12 @@ import { JwtAuthGuard } from "./security/jwt-auth.guard";
 import { AuthController } from "./controllers/auth.controller";
 import { IdentityController } from "./controllers/identity.controller";
 
+import { NotificationsModule } from "../notifications/notifications.module";
+
 @Global()
 @Module({
   imports: [
+    NotificationsModule,
     JwtModule.register({
       global: true,
       secret:

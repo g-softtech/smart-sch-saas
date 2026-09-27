@@ -1,11 +1,14 @@
 import {
   Controller,
   Post,
+  Get,
+  Query,
   Body,
   Param,
   Req,
   UseGuards,
   HttpCode,
+  UseInterceptors,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { PortalAccountService } from "../services/portal-account.service";
@@ -16,12 +19,17 @@ import {
 } from "../dto/portal-account.dto";
 import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
 import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
-import { UseInterceptors } from "@nestjs/common";
 
 @ApiTags("Portal Account Management")
 @Controller("api/v1/portal/account")
 export class PortalAccountController {
   constructor(private readonly portalAccountService: PortalAccountService) {}
+
+  @Get("validate-token")
+  @ApiOperation({ summary: "Validate activation token and fetch recipient info" })
+  async validateToken(@Query("token") token: string) {
+    return this.portalAccountService.validateToken(token);
+  }
 
   @Post("students/:studentId/provision")
   @UseGuards(JwtAuthGuard)
@@ -65,6 +73,70 @@ export class PortalAccountController {
       createdById,
       dto
     );
+  }
+
+  @Post("invitations/:id/resend")
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(WorkspaceContextInterceptor)
+  @ApiOperation({ summary: "Resend activation token for student or guardian" })
+  async resendInvitation(
+    @Param("id") targetId: string,
+    @Query("type") targetType: "STUDENT" | "GUARDIAN",
+    @Req() req: any
+  ) {
+    const tenantId = req.workspace.tenantId;
+    const schoolId = req.workspace.schoolId;
+    const createdById = req.user.sub;
+
+    return this.portalAccountService.resendInvitation(
+      tenantId,
+      schoolId,
+      targetId,
+      targetType || "STUDENT",
+      createdById
+    );
+  }
+
+  @Post("invitations/:id/revoke")
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(WorkspaceContextInterceptor)
+  @ApiOperation({ summary: "Revoke active portal invitation" })
+  async revokeInvitation(
+    @Param("id") targetId: string,
+    @Query("type") targetType: "STUDENT" | "GUARDIAN",
+    @Req() req: any
+  ) {
+    const tenantId = req.workspace.tenantId;
+    const schoolId = req.workspace.schoolId;
+
+    return this.portalAccountService.revokeInvitation(
+      tenantId,
+      schoolId,
+      targetId,
+      targetType || "STUDENT"
+    );
+  }
+
+  @Get("students/:studentId/invitation-status")
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(WorkspaceContextInterceptor)
+  @ApiOperation({ summary: "Fetch student portal invitation status" })
+  async getStudentStatus(@Param("studentId") studentId: string, @Req() req: any) {
+    const tenantId = req.workspace.tenantId;
+    const schoolId = req.workspace.schoolId;
+
+    return this.portalAccountService.getStudentInvitationStatus(tenantId, schoolId, studentId);
+  }
+
+  @Get("guardians/:guardianId/invitation-status")
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(WorkspaceContextInterceptor)
+  @ApiOperation({ summary: "Fetch guardian portal invitation status" })
+  async getGuardianStatus(@Param("guardianId") guardianId: string, @Req() req: any) {
+    const tenantId = req.workspace.tenantId;
+    const schoolId = req.workspace.schoolId;
+
+    return this.portalAccountService.getGuardianInvitationStatus(tenantId, schoolId, guardianId);
   }
 
   @Post("activate")

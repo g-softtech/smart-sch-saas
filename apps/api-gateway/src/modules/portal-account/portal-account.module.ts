@@ -2,9 +2,10 @@ import { Module } from "@nestjs/common";
 import { PortalAccountService } from "./services/portal-account.service";
 import { PortalAccountController } from "./controllers/portal-account.controller";
 import { IdentityModule } from "../identity/identity.module";
+import { NotificationsModule } from "../notifications/notifications.module";
 
 @Module({
-  imports: [IdentityModule],
+  imports: [IdentityModule, NotificationsModule],
   controllers: [PortalAccountController],
   providers: [PortalAccountService],
   exports: [PortalAccountService],

@@ -51,3 +51,20 @@ export class ApiResponseDto<T> {
   @ApiProperty()
   errors?: any[];
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: "user@school.edu" })
+  @IsEmail()
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty()
+  @IsString()
+  token: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8, { message: "Password must be at least 8 characters long" })
+  newPassword: string;
+}

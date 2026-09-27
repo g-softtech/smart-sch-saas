@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Body,
+  Query,
   Req,
   UseGuards,
   HttpCode,
@@ -10,7 +11,13 @@ import {
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { AuthenticationService } from "../services/authentication.service";
 import { RegistrationService } from "../services/registration.service";
-import { RegisterUserDto, LoginDto, ApiResponseDto } from "../dto/auth.dto";
+import {
+  RegisterUserDto,
+  LoginDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ApiResponseDto,
+} from "../dto/auth.dto";
 import { JwtAuthGuard } from "../security/jwt-auth.guard";
 
 @ApiTags("Authentication")
@@ -47,6 +54,26 @@ export class AuthController {
       success: true,
       data: { accessToken: result.accessToken },
     };
+  }
+
+  @Post("forgot-password")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Request password reset email (enumeration shielded)" })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Get("validate-reset-token")
+  @ApiOperation({ summary: "Validate password reset token" })
+  async validateResetToken(@Query("token") token: string) {
+    return this.authService.validateResetToken(token);
+  }
+
+  @Post("reset-password")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Reset password using valid reset token" })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Get("workspaces")
