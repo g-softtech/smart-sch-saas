@@ -196,10 +196,17 @@ export class AuthenticationService {
         if (
           !userMembership ||
           userMembership.isRevoked ||
-          userMembership.state !== "ACTIVE"
+          (userMembership.state !== "ACTIVE" && userMembership.state !== "PROVISIONED")
         ) {
           return;
         }
+
+        const roleName = userMembership.role?.name?.toUpperCase() || "";
+        const isAdminRole = roleName.includes("ADMIN") || roleName.includes("SUPER") || roleName.includes("OWNER");
+
+        const anySchoolAccess = await kernel.db.userSchoolAccess.findFirst({
+          where: { userId, tenantId: active.tenantId },
+        });
 
         const schoolsData = [];
         for (const school of active.schools) {
@@ -238,6 +245,15 @@ export class AuthenticationService {
               id: car.campus.id,
               name: car.campus.name,
             }));
+          }
+
+          // Fallback: If no explicit restrictive entries exist for this user, or if user is an Admin, grant full school access
+          if (!hasFullSchoolAccess && campuses.length === 0 && (!anySchoolAccess || isAdminRole)) {
+            accessLevel = "FULL_SCHOOL";
+            campuses = await kernel.db.campus.findMany({
+              where: { tenantId: active.tenantId, schoolId: school.id },
+              select: { id: true, name: true },
+            });
           }
 
           if (accessLevel === "FULL_SCHOOL" || campuses.length > 0) {

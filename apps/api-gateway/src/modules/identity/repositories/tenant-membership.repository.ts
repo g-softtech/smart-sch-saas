@@ -70,7 +70,7 @@ export class TenantMembershipRepository {
       LEFT JOIN "School"  s ON s."tenantId" = m."tenantId"
       WHERE
         m."userId"     = ${userId}
-        AND m.state    = 'ACTIVE'
+        AND m.state    IN ('ACTIVE', 'PROVISIONED')
         AND m."isRevoked" = false
       ORDER BY t.name ASC, s.name ASC
     `;
