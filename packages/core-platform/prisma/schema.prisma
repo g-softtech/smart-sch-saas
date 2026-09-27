@@ -126,6 +126,33 @@ model UserSchoolAccess {
   @@map("idm_user_school_access")
 }
 
+model PortalInvitation {
+  id           String           @id @default(uuid())
+  tenantId     String
+  schoolId     String
+  userId       String
+  tokenHash    String           @unique
+  targetType   PortalTargetType
+  studentId    String?
+  guardianId   String?
+  expiresAt    DateTime
+  isConsumed   Boolean          @default(false)
+  consumedAt   DateTime?
+  createdById  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([tenantId, userId])
+  @@index([tenantId, studentId])
+  @@index([tenantId, guardianId])
+  @@map("idm_portal_invitations")
+}
+
+enum PortalTargetType {
+  STUDENT
+  GUARDIAN
+}
+
 model Role {
   id          String                 @id @default(uuid())
   tenantId    String

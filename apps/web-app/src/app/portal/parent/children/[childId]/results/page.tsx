@@ -32,7 +32,7 @@ export default function ParentChildResultsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12 text-slate-400">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D2AD36]"></div>
       </div>
     );
   }
@@ -50,8 +50,8 @@ export default function ParentChildResultsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center space-x-2">
-            <FileText className="h-6 w-6 text-amber-400" />
+          <h1 className="text-2xl font-bold text-slate-100 dark:text-slate-100 text-slate-900 flex items-center space-x-2">
+            <FileText className="h-6 w-6 text-[#D2AD36]" />
             <span>Academic Results & Report Cards</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
@@ -63,14 +63,14 @@ export default function ParentChildResultsPage() {
       <div className="space-y-4">
         {results.length > 0 ? (
           results.map((res: any) => (
-            <div key={res.id} className="p-6 rounded-3xl bg-[#0B192C] border border-slate-800/80 shadow-lg space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div key={res.id} className="p-6 rounded-3xl bg-[#112240] dark:bg-[#112240] bg-white border border-[#1E3A5F] dark:border-[#1E3A5F] border-slate-200 shadow-lg space-y-4">
+              <div className="flex items-center justify-between border-b border-[#1E3A5F]/60 dark:border-[#1E3A5F]/60 border-slate-200 pb-3">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                  <div className="p-2 rounded-xl bg-[#D2AD36]/10 text-[#D2AD36]">
                     <Award className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-100">{res.subject?.name || "Subject"}</h3>
+                    <h3 className="text-base font-bold text-slate-100 dark:text-slate-100 text-slate-900">{res.subject?.name || "Subject"}</h3>
                     <p className="text-xs text-slate-400">
                       {res.academicYear?.name} — {res.term?.name}
                     </p>
@@ -78,16 +78,16 @@ export default function ParentChildResultsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-xs text-slate-400">Final Score:</span>
-                  <p className="text-xl font-extrabold text-amber-300">{res.finalScore ?? "N/A"} pts</p>
+                  <p className="text-xl font-extrabold text-[#D2AD36]">{res.finalScore ?? "N/A"} pts</p>
                 </div>
               </div>
 
               {res.scores && res.scores.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                   {res.scores.map((sc: any) => (
-                    <div key={sc.id} className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/60">
+                    <div key={sc.id} className="p-3 rounded-2xl bg-[#0A192E]/60 dark:bg-[#0A192E]/60 bg-slate-50 border border-[#1E3A5F]/60 dark:border-[#1E3A5F]/60 border-slate-200">
                       <span className="text-slate-400 text-[10px] uppercase font-semibold">{sc.type}</span>
-                      <p className="font-bold text-slate-200 text-sm mt-0.5">{sc.score} pts</p>
+                      <p className="font-bold text-slate-200 dark:text-slate-200 text-slate-800 text-sm mt-0.5">{sc.score} pts</p>
                     </div>
                   ))}
                 </div>
@@ -95,7 +95,7 @@ export default function ParentChildResultsPage() {
             </div>
           ))
         ) : (
-          <div className="p-12 text-center bg-[#0B192C] border border-slate-800/80 rounded-3xl text-slate-400 text-sm">
+          <div className="p-12 text-center bg-[#112240] dark:bg-[#112240] bg-white border border-[#1E3A5F] dark:border-[#1E3A5F] border-slate-200 rounded-3xl text-slate-400 text-sm">
             No published academic results found for this child.
           </div>
         )}

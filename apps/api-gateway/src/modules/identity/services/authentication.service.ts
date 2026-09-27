@@ -137,4 +137,51 @@ export class AuthenticationService {
 
     return result;
   }
+
+  async getIdentityContext(userId: string) {
+    const { kernel } = require("@saas/core-platform");
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException("User not found");
+    }
+
+    // Check Student
+    const student = await kernel.db.student.findFirst({
+      where: { userId },
+    });
+    if (student) {
+      return {
+        userId: user.id,
+        email: user.email,
+        portalType: "STUDENT",
+        studentId: student.id,
+        schoolId: student.schoolId,
+        tenantId: student.tenantId,
+        redirectUrl: "/portal/student/dashboard",
+      };
+    }
+
+    // Check Guardian
+    const guardian = await kernel.db.guardian.findFirst({
+      where: { userId },
+    });
+    if (guardian) {
+      return {
+        userId: user.id,
+        email: user.email,
+        portalType: "PARENT",
+        guardianId: guardian.id,
+        tenantId: guardian.tenantId,
+        redirectUrl: "/portal/parent/dashboard",
+      };
+    }
+
+    // Default to Staff/Admin
+    return {
+      userId: user.id,
+      email: user.email,
+      portalType: "STAFF",
+      redirectUrl: "/workspaces",
+    };
+  }
 }

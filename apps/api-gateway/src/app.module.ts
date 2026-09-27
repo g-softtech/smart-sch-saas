@@ -19,6 +19,7 @@ import { CBTModule } from "./modules/cbt/cbt.module";
 import { FinanceModule } from "./modules/finance/finance.module";
 import { PortalStudentModule } from "./modules/portal-student/portal-student.module";
 import { PortalParentModule } from "./modules/portal-parent/portal-parent.module";
+import { PortalAccountModule } from "./modules/portal-account/portal-account.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PortalParentModule } from "./modules/portal-parent/portal-parent.module
     FinanceModule,
     PortalStudentModule,
     PortalParentModule,
+    PortalAccountModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

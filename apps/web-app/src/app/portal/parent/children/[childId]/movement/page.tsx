@@ -63,7 +63,7 @@ export default function ParentChildMovementPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12 text-slate-400">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D2AD36]"></div>
       </div>
     );
   }
@@ -83,8 +83,8 @@ export default function ParentChildMovementPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center space-x-2">
-            <ShieldCheck className="h-6 w-6 text-teal-400" />
+          <h1 className="text-2xl font-bold text-slate-100 dark:text-slate-100 text-slate-900 flex items-center space-x-2">
+            <ShieldCheck className="h-6 w-6 text-[#D2AD36]" />
             <span>Pickup Passes & Departure Logs</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
@@ -94,7 +94,7 @@ export default function ParentChildMovementPage() {
 
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-slate-950 font-bold text-xs transition shadow-lg flex items-center space-x-2"
+          className="px-4 py-2.5 rounded-2xl bg-[#D2AD36] hover:bg-[#b8952b] text-[#0A192E] font-bold text-xs transition shadow-lg shadow-[#D2AD36]/20 flex items-center space-x-2 shrink-0"
         >
           <Plus className="h-4 w-4" />
           <span>Add Pickup Person</span>
@@ -102,7 +102,7 @@ export default function ParentChildMovementPage() {
       </div>
 
       {successMsg && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 text-sm flex items-center space-x-2">
+        <div className="p-4 bg-[#039771]/10 border border-[#039771]/30 rounded-2xl text-[#039771] text-sm flex items-center space-x-2">
           <CheckCircle className="h-5 w-5 shrink-0" />
           <span>{successMsg}</span>
         </div>
@@ -110,43 +110,43 @@ export default function ParentChildMovementPage() {
 
       {/* Add Authorization Form */}
       {showForm && (
-        <div className="p-6 rounded-3xl bg-[#0B192C] border border-teal-500/30 shadow-xl space-y-4">
-          <h3 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-            <UserCheck className="h-5 w-5 text-teal-400" />
+        <div className="p-6 rounded-3xl bg-[#112240] dark:bg-[#112240] bg-white border border-[#D2AD36]/40 shadow-xl space-y-4">
+          <h3 className="text-base font-bold text-slate-100 dark:text-slate-100 text-slate-900 flex items-center space-x-2">
+            <UserCheck className="h-5 w-5 text-[#D2AD36]" />
             <span>Authorize New Pickup Person</span>
           </h3>
 
           <form onSubmit={handleCreateAuth} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+              <label className="block text-xs font-semibold text-slate-300 dark:text-slate-300 text-slate-700 mb-1">Full Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. John Doe"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-teal-400"
+                className="w-full px-4 py-2.5 rounded-xl bg-[#0A192E] dark:bg-[#0A192E] bg-slate-50 border border-[#1E3A5F] text-white dark:text-white text-slate-900 text-xs focus:outline-none focus:border-[#D2AD36]"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Relationship</label>
+              <label className="block text-xs font-semibold text-slate-300 dark:text-slate-300 text-slate-700 mb-1">Relationship</label>
               <input
                 type="text"
                 value={relationship}
                 onChange={(e) => setRelationship(e.target.value)}
                 placeholder="e.g. Uncle / Driver / Aunt"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-teal-400"
+                className="w-full px-4 py-2.5 rounded-xl bg-[#0A192E] dark:bg-[#0A192E] bg-slate-50 border border-[#1E3A5F] text-white dark:text-white text-slate-900 text-xs focus:outline-none focus:border-[#D2AD36]"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number</label>
+              <label className="block text-xs font-semibold text-slate-300 dark:text-slate-300 text-slate-700 mb-1">Phone Number</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g. +234..."
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-teal-400"
+                className="w-full px-4 py-2.5 rounded-xl bg-[#0A192E] dark:bg-[#0A192E] bg-slate-50 border border-[#1E3A5F] text-white dark:text-white text-slate-900 text-xs focus:outline-none focus:border-[#D2AD36]"
               />
             </div>
 
@@ -154,14 +154,14 @@ export default function ParentChildMovementPage() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-[#1E3A5F]/50 text-slate-300 text-xs font-semibold"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-5 py-2 rounded-xl bg-teal-500 hover:bg-teal-600 text-slate-950 font-bold text-xs transition"
+                className="px-5 py-2 rounded-xl bg-[#D2AD36] hover:bg-[#b8952b] text-[#0A192E] font-bold text-xs transition"
               >
                 {submitting ? "Saving..." : "Save Authorization"}
               </button>
@@ -171,20 +171,20 @@ export default function ParentChildMovementPage() {
       )}
 
       {/* Authorized Pickup Persons */}
-      <div className="p-6 rounded-3xl bg-[#0B192C] border border-slate-800/80 shadow-lg space-y-4">
-        <h2 className="text-base font-bold text-slate-100">Authorized Pickup Persons</h2>
+      <div className="p-6 rounded-3xl bg-[#112240] dark:bg-[#112240] bg-white border border-[#1E3A5F] dark:border-[#1E3A5F] border-slate-200 shadow-lg space-y-4">
+        <h2 className="text-base font-bold text-slate-100 dark:text-slate-100 text-slate-900">Authorized Pickup Persons</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {pickupAuthorizations && pickupAuthorizations.length > 0 ? (
             pickupAuthorizations.map((auth: any) => (
-              <div key={auth.id} className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/60 space-y-1 text-xs">
+              <div key={auth.id} className="p-4 rounded-2xl bg-[#0A192E]/60 dark:bg-[#0A192E]/60 bg-slate-50 border border-[#1E3A5F]/60 dark:border-[#1E3A5F]/60 border-slate-200 space-y-1 text-xs">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-200 text-sm">{auth.authorizedPersonName}</h4>
-                  <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 text-[10px] font-semibold">
+                  <h4 className="font-bold text-slate-200 dark:text-slate-200 text-slate-800 text-sm">{auth.authorizedPersonName}</h4>
+                  <span className="px-2 py-0.5 rounded-full bg-[#039771]/10 text-[#039771] border border-[#039771]/30 text-[10px] font-semibold">
                     {auth.status}
                   </span>
                 </div>
-                <p className="text-slate-400">Relationship: <span className="text-slate-200">{auth.relationship}</span></p>
-                {auth.phone && <p className="text-slate-400">Phone: <span className="text-slate-200">{auth.phone}</span></p>}
+                <p className="text-slate-400">Relationship: <span className="text-slate-200 dark:text-slate-200 text-slate-800">{auth.relationship}</span></p>
+                {auth.phone && <p className="text-slate-400">Phone: <span className="text-slate-200 dark:text-slate-200 text-slate-800">{auth.phone}</span></p>}
               </div>
             ))
           ) : (

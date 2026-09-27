@@ -60,4 +60,16 @@ export class AuthController {
       data: workspaces,
     };
   }
+
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Get current user identity context and portal routing" })
+  @ApiResponse({ status: 200 })
+  async getMe(@Req() req: any) {
+    const context = await this.authService.getIdentityContext(req.user.sub);
+    return {
+      success: true,
+      data: context,
+    };
+  }
 }

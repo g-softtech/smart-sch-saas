@@ -44,6 +44,17 @@ export default function WorkspacesPage() {
 
     const fetchWorkspaces = async () => {
       try {
+        // Check authoritative identity first for portal redirection
+        const meRes = await apiClient.get<any>('api/v1/auth/me');
+        if (meRes?.primaryType === 'STUDENT') {
+          router.push('/portal/student/dashboard');
+          return;
+        }
+        if (meRes?.primaryType === 'GUARDIAN') {
+          router.push('/portal/parent/dashboard');
+          return;
+        }
+
         const response = await apiClient.get('api/v1/identity/me/workspaces');
         
         // Ensure response is an array before setting

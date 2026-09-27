@@ -15,7 +15,18 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
-      router.push('/workspaces');
+      apiClient.get<any>('api/v1/auth/me')
+        .then((res) => {
+          const identity = res?.data || res;
+          if (identity?.redirectUrl) {
+            router.push(identity.redirectUrl);
+          } else {
+            router.push('/workspaces');
+          }
+        })
+        .catch(() => {
+          router.push('/workspaces');
+        });
     }
   }, [isAuthLoading, isAuthenticated, router]);
 
@@ -25,10 +36,22 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiClient.post('api/v1/auth/login', { email, password }, { requireAuth: false });
+      const response = await apiClient.post<any>('api/v1/auth/login', { email, password }, { requireAuth: false });
       
-      if (response && response.accessToken) {
-        authLogin(response.accessToken);
+      const token = response?.accessToken || response?.data?.accessToken;
+      if (token) {
+        authLogin(token);
+        // Fetch authoritative identity context
+        try {
+          const meRes = await apiClient.get<any>('api/v1/auth/me');
+          const identity = meRes?.data || meRes;
+          if (identity?.redirectUrl) {
+            router.push(identity.redirectUrl);
+            return;
+          }
+        } catch {
+          // Fallback to workspaces
+        }
         router.push('/workspaces');
       } else {
         setError('Invalid response from server.');

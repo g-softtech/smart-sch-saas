@@ -29,7 +29,7 @@ export default function ParentChildrenPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12 text-slate-400">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D2AD36]"></div>
       </div>
     );
   }
@@ -47,8 +47,8 @@ export default function ParentChildrenPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center space-x-2">
-            <Users className="h-6 w-6 text-amber-400" />
+          <h1 className="text-2xl font-bold text-slate-100 dark:text-slate-100 text-slate-900 flex items-center space-x-2">
+            <Users className="h-6 w-6 text-[#D2AD36]" />
             <span>My Linked Children</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
@@ -62,72 +62,72 @@ export default function ParentChildrenPage() {
           children.map((child: any) => (
             <div
               key={child.id}
-              className="p-6 rounded-3xl bg-[#0B192C] border border-slate-800/80 shadow-lg space-y-4"
+              className="p-6 rounded-3xl bg-[#112240] dark:bg-[#112240] bg-white border border-[#1E3A5F] dark:border-[#1E3A5F] border-slate-200 shadow-lg space-y-4 hover:border-[#D2AD36]/40 transition"
             >
               <div className="flex items-center space-x-4">
-                <div className="h-14 w-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-xl shrink-0">
+                <div className="h-14 w-14 rounded-2xl bg-[#D2AD36]/10 border border-[#D2AD36]/30 flex items-center justify-center text-[#D2AD36] font-bold text-xl shrink-0">
                   {child.firstName[0]}
                   {child.lastName[0]}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100">
+                  <h3 className="text-lg font-bold text-slate-100 dark:text-slate-100 text-slate-900">
                     {child.firstName} {child.lastName}
                   </h3>
                   <p className="text-xs text-slate-400">ID: {child.studentNumber}</p>
-                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-semibold">
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-[#1E3A5F]/50 dark:bg-[#1E3A5F]/50 bg-slate-100 text-[#D2AD36] text-[10px] font-semibold border border-[#D2AD36]/30">
                     Relationship: {child.relationship || "Guardian"}
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-900/60 p-4 rounded-2xl border border-slate-800/60">
+              <div className="grid grid-cols-2 gap-3 text-xs bg-[#0A192E]/60 dark:bg-[#0A192E]/60 bg-slate-50 p-4 rounded-2xl border border-[#1E3A5F]/60 dark:border-[#1E3A5F]/60 border-slate-200">
                 <div>
                   <span className="text-slate-400">School:</span>
-                  <p className="font-semibold text-slate-200">{child.school?.name || "N/A"}</p>
+                  <p className="font-semibold text-slate-200 dark:text-slate-200 text-slate-800">{child.school?.name || "N/A"}</p>
                 </div>
                 <div>
                   <span className="text-slate-400">Class:</span>
-                  <p className="font-semibold text-amber-300">
+                  <p className="font-semibold text-[#D2AD36]">
                     {child.class?.name || "N/A"} {child.arm?.name ? `(${child.arm.name})` : ""}
                   </p>
                 </div>
                 <div>
                   <span className="text-slate-400">Gender:</span>
-                  <p className="font-semibold text-slate-200">{child.gender}</p>
+                  <p className="font-semibold text-slate-200 dark:text-slate-200 text-slate-800">{child.gender}</p>
                 </div>
                 <div>
                   <span className="text-slate-400">Primary Guardian:</span>
-                  <p className="font-semibold text-emerald-400">{child.isPrimary ? "Yes" : "No"}</p>
+                  <p className="font-semibold text-[#039771]">{child.isPrimary ? "Yes" : "No"}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/60">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#1E3A5F]/60 dark:border-[#1E3A5F]/60 border-slate-200">
                 <Link
                   href={`/portal/parent/children/${child.id}/results`}
-                  className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-center text-xs font-semibold text-slate-200 transition flex flex-col items-center justify-center space-y-1"
+                  className="p-3 rounded-2xl bg-[#1E3A5F]/50 dark:bg-[#1E3A5F]/50 bg-slate-100 hover:bg-[#1E3A5F] dark:hover:bg-[#1E3A5F] hover:text-white text-center text-xs font-semibold text-slate-200 dark:text-slate-200 text-slate-800 transition flex flex-col items-center justify-center space-y-1 border border-transparent hover:border-[#D2AD36]/30"
                 >
-                  <FileText className="h-4 w-4 text-amber-400" />
+                  <FileText className="h-4 w-4 text-[#D2AD36]" />
                   <span>Report Cards</span>
                 </Link>
                 <Link
                   href={`/portal/parent/children/${child.id}/attendance`}
-                  className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-center text-xs font-semibold text-slate-200 transition flex flex-col items-center justify-center space-y-1"
+                  className="p-3 rounded-2xl bg-[#1E3A5F]/50 dark:bg-[#1E3A5F]/50 bg-slate-100 hover:bg-[#1E3A5F] dark:hover:bg-[#1E3A5F] hover:text-white text-center text-xs font-semibold text-slate-200 dark:text-slate-200 text-slate-800 transition flex flex-col items-center justify-center space-y-1 border border-transparent hover:border-[#039771]/30"
                 >
-                  <Clock className="h-4 w-4 text-emerald-400" />
+                  <Clock className="h-4 w-4 text-[#039771]" />
                   <span>Attendance</span>
                 </Link>
                 <Link
                   href={`/portal/parent/children/${child.id}/movement`}
-                  className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-center text-xs font-semibold text-slate-200 transition flex flex-col items-center justify-center space-y-1"
+                  className="p-3 rounded-2xl bg-[#1E3A5F]/50 dark:bg-[#1E3A5F]/50 bg-slate-100 hover:bg-[#1E3A5F] dark:hover:bg-[#1E3A5F] hover:text-white text-center text-xs font-semibold text-slate-200 dark:text-slate-200 text-slate-800 transition flex flex-col items-center justify-center space-y-1 border border-transparent hover:border-[#D2AD36]/30"
                 >
-                  <ShieldCheck className="h-4 w-4 text-teal-400" />
+                  <ShieldCheck className="h-4 w-4 text-[#D2AD36]" />
                   <span>Pickup Passes</span>
                 </Link>
               </div>
             </div>
           ))
         ) : (
-          <div className="col-span-2 p-12 text-center bg-[#0B192C] border border-slate-800/80 rounded-3xl text-slate-400 text-sm">
+          <div className="col-span-2 p-12 text-center bg-[#112240] dark:bg-[#112240] bg-white border border-[#1E3A5F] dark:border-[#1E3A5F] border-slate-200 rounded-3xl text-slate-400 text-sm">
             No linked children found for your guardian account.
           </div>
         )}

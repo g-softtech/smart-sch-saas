@@ -10,6 +10,12 @@ export class UserRepository {
     });
   }
 
+  async findById(id: string): Promise<User | null> {
+    return kernel.db.user.findUnique({
+      where: { id },
+    });
+  }
+
   async create(data: Prisma.UserCreateInput): Promise<User> {
     return kernel.db.user.create({
       data,
