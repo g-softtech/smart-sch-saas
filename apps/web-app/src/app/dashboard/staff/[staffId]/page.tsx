@@ -174,8 +174,16 @@ export default function StaffProfilePage() {
     setEditLoading(true);
     setEditError(null);
 
+    const payload: Record<string, any> = {};
+    if (editForm.firstName?.trim()) payload.firstName = editForm.firstName.trim();
+    if (editForm.lastName?.trim()) payload.lastName = editForm.lastName.trim();
+    if (editForm.middleName?.trim()) payload.middleName = editForm.middleName.trim();
+    if (editForm.email?.trim()) payload.email = editForm.email.trim();
+    if (editForm.phone?.trim()) payload.phone = editForm.phone.trim();
+    if (editForm.designation?.trim()) payload.designation = editForm.designation.trim();
+
     try {
-      await apiClient.patch(`api/v1/staff/${staffId}`, editForm);
+      await apiClient.patch(`api/v1/staff/${staffId}`, payload);
       setIsEditModalOpen(false);
       fetchProfile(true);
     } catch (err: any) {

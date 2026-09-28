@@ -32,8 +32,25 @@ async function bootstrap() {
   }
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (
+        process.env.NODE_ENV !== "production" ||
+        allowedOrigins.length === 0 ||
+        allowedOrigins.includes(origin) ||
+        origin.includes("localhost") ||
+        origin.includes("127.0.0.1") ||
+        origin.endsWith(".onrender.com")
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(null, true);
+    },
     credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",
