@@ -35,7 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('access_token');
     localStorage.removeItem('x-tenant-id');
     localStorage.removeItem('x-school-id');
+    localStorage.removeItem('x-campus-id');
     setToken(null);
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   };
 
   return (

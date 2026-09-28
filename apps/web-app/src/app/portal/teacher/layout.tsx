@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   LayoutDashboard,
   User,
@@ -45,7 +46,8 @@ export default function TeacherPortalLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-[#070B14] text-slate-100 flex flex-col font-sans">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-[#070B14] text-slate-100 flex flex-col font-sans">
       {/* Navbar Header */}
       <header className="bg-[#0A192E]/95 border-b border-[#1E3A5F] sticky top-0 z-40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -142,5 +144,6 @@ export default function TeacherPortalLayout({
         <p>&copy; {new Date().getFullYear()} SchoolOS SaaS Platform. Zero-Trust Teacher Portal Context.</p>
       </footer>
     </div>
+  </ProtectedRoute>
   );
 }
