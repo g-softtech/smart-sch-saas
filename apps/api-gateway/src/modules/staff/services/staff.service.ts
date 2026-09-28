@@ -3,11 +3,13 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { StaffRepository } from "../repositories/staff.repository";
 import { CreateStaffDto } from "../dto/create-staff.dto";
+import { UpdateStaffDto } from "../dto/update-staff.dto";
 import { StaffStatus, StaffProfile } from "@saas/core-platform";
-import { kernel } from "@saas/core-platform";
+import { kernel, tenantContext } from "@saas/core-platform";
 import * as crypto from "crypto";
 import { IssueCredentialDto } from "../dto/issue-credential.dto";
 
@@ -76,6 +78,35 @@ export class StaffService {
     return staff;
   }
 
+  async updateStaff(
+    tenantId: string,
+    schoolId: string,
+    staffId: string,
+    dto: UpdateStaffDto,
+  ): Promise<StaffProfile> {
+    const existing = await this.getStaff(tenantId, schoolId, staffId);
+
+    // Sync email to User if staff is provisioned and email changed
+    if (dto.email && existing.userId && dto.email !== existing.email) {
+      const emailLower = dto.email.toLowerCase().trim();
+      const existingUserWithEmail = await kernel.db.user.findUnique({
+        where: { email: emailLower },
+      });
+      if (existingUserWithEmail && existingUserWithEmail.id !== existing.userId) {
+        throw new ConflictException("Another user already exists with this email address.");
+      }
+      await kernel.db.user.update({
+        where: { id: existing.userId },
+        data: { email: emailLower },
+      });
+    }
+
+    return this.staffRepo.updateStaff(tenantId, schoolId, staffId, {
+      ...dto,
+      email: dto.email ? dto.email.toLowerCase().trim() : undefined,
+    });
+  }
+
   async listStaff(tenantId: string, schoolId: string, campusId?: string, skip = 0, take = 50, search?: string) {
     return this.staffRepo.getStaffList(tenantId, schoolId, campusId, skip, take, search);
   }
@@ -116,6 +147,88 @@ export class StaffService {
       staffId,
       targetStatus,
     );
+  }
+
+  // ─── Staff Photo Avatar Management ────────────────────────────────────────
+
+  async uploadStaffPhoto(staffId: string, file: Express.Multer.File, schoolId: string) {
+    const store = tenantContext.getStore();
+    const tenantId = store?.tenantId;
+    if (!tenantId) {
+      throw new ForbiddenException("Tenant context required");
+    }
+
+    const staff = await this.staffRepo.findStaffInWorkspace(tenantId, schoolId, staffId);
+    if (!staff) {
+      throw new NotFoundException("Staff profile not found in active workspace");
+    }
+
+    // Dynamic import file-type to validate actual magic numbers
+    const fileType = await import("file-type");
+    const type = await (fileType.default || (fileType as any)).fromBuffer(file.buffer);
+    if (!type || !["image/jpeg", "image/png", "image/webp"].includes(type.mime)) {
+      throw new BadRequestException("Invalid or unsupported file type. Must be JPEG, PNG, or WebP.");
+    }
+
+    // Upsert the photo
+    const photo = await kernel.db.staffPhoto.upsert({
+      where: { staffId },
+      create: {
+        tenantId,
+        schoolId,
+        staffId,
+        mimeType: type.mime,
+        data: file.buffer,
+      },
+      update: {
+        mimeType: type.mime,
+        data: file.buffer,
+      },
+    });
+
+    return { id: photo.id, mimeType: photo.mimeType, updatedAt: photo.updatedAt };
+  }
+
+  async getStaffPhoto(staffId: string) {
+    const store = tenantContext.getStore();
+    const tenantId = store?.tenantId;
+
+    let photo: any = null;
+
+    if (tenantId) {
+      // Scoped workspace fetch
+      photo = await kernel.db.staffPhoto.findFirst({
+        where: { staffId, tenantId },
+      });
+    } else {
+      // Cross-tenant fallback for owner self-service: find unique staff photo
+      photo = await kernel.db.staffPhoto.findUnique({
+        where: { staffId },
+      });
+    }
+
+    if (!photo) {
+      return null;
+    }
+
+    return photo;
+  }
+
+  async deleteStaffPhoto(staffId: string, schoolId: string) {
+    const store = tenantContext.getStore();
+    const tenantId = store?.tenantId;
+    if (!tenantId) {
+      throw new ForbiddenException("Tenant context required");
+    }
+
+    const staff = await this.staffRepo.findStaffInWorkspace(tenantId, schoolId, staffId);
+    if (!staff) {
+      throw new ForbiddenException("Not authorized to modify this staff profile");
+    }
+
+    await kernel.db.staffPhoto.delete({
+      where: { staffId },
+    }).catch(() => null);
   }
 
   async issueCredential(

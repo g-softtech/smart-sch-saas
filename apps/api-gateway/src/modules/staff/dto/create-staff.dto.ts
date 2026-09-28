@@ -59,6 +59,14 @@ export class CreateStaffDto {
   @IsOptional()
   middleName?: string;
 
+  @IsString()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
   @IsDateString()
   @IsOptional()
   @MinAgeOnJoiningDate(18, {

@@ -12,6 +12,12 @@ export class ProvisionGuardianPortalDto {
   email?: string;
 }
 
+export class ProvisionStaffPortalDto {
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+}
+
 export class ActivateAccountDto {
   @IsString()
   @IsNotEmpty()

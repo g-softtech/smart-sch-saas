@@ -38,6 +38,8 @@ function buildScopedExtension(base: PrismaClient) {
             'PublishedAdmissionForm', 'Applicant', 'AdmissionApplication', 'AdmissionReview',
             // Phase 6A SaaS Entitlements
             'TenantEntitlement', 'SchoolModuleSetting',
+            // Phase 5F Staff Photos
+            'StaffPhoto',
           ];
           
           if (tenantScopedModels.includes(model)) {

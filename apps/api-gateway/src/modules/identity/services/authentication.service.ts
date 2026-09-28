@@ -344,7 +344,36 @@ export class AuthenticationService {
       };
     }
 
-    // 3. Default to Staff/Admin
+    // 3. System-level cross-tenant Teacher identity query
+    const staffMembers = await kernel.$queryRaw<
+      Array<{ id: string; schoolId: string; tenantId: string; type: string; firstName: string; lastName: string; staffNumber: string }>
+    >`
+      SELECT sp.id, sp."schoolId", sp."tenantId", sp.type, sp."firstName", sp."lastName", sp."staffNumber"
+      FROM stf_staff_profiles sp
+      WHERE sp."userId" = ${userId}
+        AND sp.status = 'ACTIVE'
+      LIMIT 1
+    `;
+
+    if (staffMembers && staffMembers.length > 0) {
+      const staff = staffMembers[0];
+      if (staff.type === "TEACHING") {
+        return {
+          userId: user.id,
+          email: user.email,
+          portalType: "TEACHER",
+          staffId: staff.id,
+          staffNumber: staff.staffNumber,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          schoolId: staff.schoolId,
+          tenantId: staff.tenantId,
+          redirectUrl: "/portal/teacher/dashboard",
+        };
+      }
+    }
+
+    // 4. Default to Admin Staff
     return {
       userId: user.id,
       email: user.email,

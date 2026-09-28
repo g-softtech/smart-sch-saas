@@ -78,6 +78,7 @@ model Tenant {
   StudentCredential     StudentCredential[]
   guardians             Guardian[]
   studentPhotos         StudentPhoto[]
+  staffPhotos           StaffPhoto[]
   students              Student[]
   entitlements          TenantEntitlement[]
   schoolModuleSettings  SchoolModuleSetting[]
@@ -155,22 +156,26 @@ model PortalInvitation {
   targetType   PortalTargetType
   studentId    String?
   guardianId   String?
+  staffId      String?
   expiresAt    DateTime
   isConsumed   Boolean          @default(false)
   consumedAt   DateTime?
   createdById  String
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  staff        StaffProfile?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId])
   @@index([tenantId, studentId])
   @@index([tenantId, guardianId])
+  @@index([tenantId, staffId])
   @@map("idm_portal_invitations")
 }
 
 enum PortalTargetType {
   STUDENT
   GUARDIAN
+  STAFF
 }
 
 model Role {
@@ -253,6 +258,7 @@ model School {
   staffProfiles         StaffProfile[]
   StudentCredential     StudentCredential[]
   studentPhotos         StudentPhoto[]
+  staffPhotos           StaffPhoto[]
   students              Student[]
   moduleSettings        SchoolModuleSetting[]
 
@@ -309,6 +315,22 @@ model StudentPhoto {
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("stud_photos")
+}
+
+model StaffPhoto {
+  id        String       @id @default(uuid())
+  tenantId  String
+  schoolId  String
+  staffId   String       @unique
+  mimeType  String
+  data      Bytes
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  school    School       @relation(fields: [schoolId], references: [id])
+  staff     StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  tenant    Tenant       @relation(fields: [tenantId], references: [id])
+
+  @@map("stf_photos")
 }
 
 model AuditLog {
@@ -846,6 +868,8 @@ model StaffProfile {
   firstName         String
   lastName          String
   middleName        String?
+  email             String?
+  phone             String?
   dateOfBirth       DateTime?
   gender            GenderEnum?
   joiningDate       DateTime
@@ -859,6 +883,8 @@ model StaffProfile {
   TimetableEntry    TimetableEntry[]
   campusAssignments StaffCampusAssignment[]
   credentials       StaffCredential[]
+  invitations       PortalInvitation[]
+  photo             StaffPhoto?
   department        Department?             @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   school            School                  @relation(fields: [schoolId], references: [id])
   tenant            Tenant                  @relation(fields: [tenantId], references: [id])

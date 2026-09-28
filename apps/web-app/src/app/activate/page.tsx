@@ -29,7 +29,7 @@ interface TokenValidationResult {
   recipientName?: string;
   schoolName?: string;
   maskedEmail?: string;
-  targetType?: 'STUDENT' | 'GUARDIAN';
+  targetType?: 'STUDENT' | 'GUARDIAN' | 'STAFF';
 }
 
 function ActivateContent() {
@@ -311,7 +311,7 @@ function ActivateContent() {
                 <div className="flex items-center justify-between pt-1 border-t border-[#1E3A5F]/60">
                   <span className="text-slate-400 font-medium">Portal Type:</span>
                   <span className="px-2 py-0.5 rounded-md bg-[#D2AD36]/10 text-[#D2AD36] font-semibold text-[10px] border border-[#D2AD36]/20 uppercase">
-                    {tokenInfo.targetType === 'STUDENT' ? 'Student Portal' : 'Parent / Guardian Portal'}
+                    {tokenInfo.targetType === 'STUDENT' ? 'Student Portal' : tokenInfo.targetType === 'STAFF' ? 'Teacher Portal' : 'Parent / Guardian Portal'}
                   </span>
                 </div>
               )}

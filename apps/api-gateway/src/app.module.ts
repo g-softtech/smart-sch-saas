@@ -20,6 +20,7 @@ import { FinanceModule } from "./modules/finance/finance.module";
 import { PortalStudentModule } from "./modules/portal-student/portal-student.module";
 import { PortalParentModule } from "./modules/portal-parent/portal-parent.module";
 import { PortalAccountModule } from "./modules/portal-account/portal-account.module";
+import { PortalTeacherModule } from "./modules/portal-teacher/portal-teacher.module";
 import { EntitlementsModule } from "./modules/entitlements/entitlements.module";
 
 @Module({
@@ -41,6 +42,7 @@ import { EntitlementsModule } from "./modules/entitlements/entitlements.module";
     PortalStudentModule,
     PortalParentModule,
     PortalAccountModule,
+    PortalTeacherModule,
     EntitlementsModule,
     EventEmitterModule.forRoot(),
   ],

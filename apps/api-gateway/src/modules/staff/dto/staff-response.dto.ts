@@ -6,6 +6,8 @@ export class StaffResponseDto {
   firstName: string;
   lastName: string;
   middleName: string | null;
+  email: string | null;
+  phone: string | null;
   designation: string | null;
   type: string;
   status: string;
@@ -15,14 +17,21 @@ export class StaffResponseDto {
   joiningDate: Date;
   dateOfBirth: Date | null;
   gender: string | null;
+  hasPhoto?: boolean;
+  photoUrl?: string | null;
 
-  constructor(partial: Partial<StaffProfile>) {
+  constructor(partial: Partial<StaffProfile> & { hasPhoto?: boolean; photoUrl?: string | null }) {
     Object.assign(this, partial);
-    // Don't leak internal IDs like userId unless explicitly requested, but keeping it simple here
   }
 
-  static fromEntity(entity: StaffProfile): StaffResponseDto {
-    const { userId, createdAt, updatedAt, ...safeFields } = entity;
-    return new StaffResponseDto(safeFields as any);
+  static fromEntity(entity: any): StaffResponseDto {
+    const { userId, createdAt, updatedAt, photo, ...safeFields } = entity;
+    const hasPhoto = !!photo || !!entity.hasPhoto;
+    const photoUrl = hasPhoto ? `/api/v1/staff/${entity.id}/photo` : null;
+    return new StaffResponseDto({
+      ...safeFields,
+      hasPhoto,
+      photoUrl,
+    });
   }
 }

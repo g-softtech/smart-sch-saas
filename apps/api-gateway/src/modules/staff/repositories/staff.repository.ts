@@ -63,6 +63,9 @@ export class StaffRepository {
             }))
           } : undefined,
         },
+        include: {
+          photo: { select: { id: true } },
+        },
       });
     });
   }
@@ -70,6 +73,9 @@ export class StaffRepository {
   async findStaffById(staffId: string): Promise<StaffProfile | null> {
     return kernel.db.staffProfile.findUnique({
       where: { id: staffId },
+      include: {
+        photo: { select: { id: true } },
+      },
     });
   }
 
@@ -84,6 +90,24 @@ export class StaffRepository {
         tenantId,
         schoolId,
       },
+      include: {
+        photo: { select: { id: true } },
+      },
+    });
+  }
+
+  async updateStaff(
+    tenantId: string,
+    schoolId: string,
+    staffId: string,
+    data: Prisma.StaffProfileUpdateInput,
+  ): Promise<StaffProfile> {
+    return kernel.db.staffProfile.update({
+      where: { id: staffId },
+      data,
+      include: {
+        photo: { select: { id: true } },
+      },
     });
   }
 
@@ -93,10 +117,12 @@ export class StaffRepository {
     staffId: string,
     status: StaffStatus,
   ): Promise<StaffProfile> {
-    // Relying on kernel.db automatic tenant scoping, but making it explicit for safety
     return kernel.db.staffProfile.update({
       where: { id: staffId },
       data: { status },
+      include: {
+        photo: { select: { id: true } },
+      },
     });
   }
 
@@ -130,6 +156,9 @@ export class StaffRepository {
       skip,
       take,
       orderBy: { createdAt: "desc" },
+      include: {
+        photo: { select: { id: true } },
+      },
     });
   }
 

@@ -16,6 +16,7 @@ import { validatePasswordPolicy } from "../../identity/utils/password-policy";
 import {
   ProvisionStudentPortalDto,
   ProvisionGuardianPortalDto,
+  ProvisionStaffPortalDto,
   ActivateAccountDto,
 } from "../dto/portal-account.dto";
 
@@ -400,6 +401,200 @@ export class PortalAccountService {
     };
   }
 
+  async provisionStaffPortal(
+    tenantId: string,
+    schoolId: string,
+    staffId: string,
+    createdById: string,
+    dto: ProvisionStaffPortalDto,
+  ) {
+    // 1. Authoritative staff check within tenant & school
+    const staff = await kernel.db.staffProfile.findUnique({
+      where: { id: staffId },
+      include: { school: true },
+    });
+
+    if (!staff || staff.tenantId !== tenantId) {
+      throw new NotFoundException("Staff member not found in active tenant");
+    }
+
+    if (staff.schoolId !== schoolId) {
+      throw new ForbiddenException("Staff member does not belong to active school");
+    }
+
+    // 2. Prevent duplicate provisioning if account is already activated
+    let existingUserEmail: string | undefined;
+    if (staff.userId) {
+      const existingUser = await kernel.db.user.findUnique({
+        where: { id: staff.userId },
+      });
+      if (existingUser && existingUser.passwordHash) {
+        throw new BadRequestException("Staff already has an active provisioned portal account");
+      }
+      if (existingUser) {
+        existingUserEmail = existingUser.email;
+      }
+    }
+
+    // 3. Resolve email address
+    const email = (dto.email || existingUserEmail || staff.email)?.toLowerCase()?.trim();
+    if (!email) {
+      throw new BadRequestException("Email address is required to provision teacher portal access");
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || email.endsWith("@school.internal")) {
+      throw new BadRequestException("A valid recipient email address is required");
+    }
+
+    // Save/sync Staff email
+    if (staff.email !== email) {
+      await kernel.db.staffProfile.update({
+        where: { id: staffId },
+        data: { email },
+      });
+    }
+
+    // 4. Duplicate email / User resolution
+    let user = await kernel.db.user.findUnique({
+      where: { email },
+    });
+
+    if (user) {
+      const otherStaff = await kernel.db.staffProfile.findFirst({
+        where: { userId: user.id, id: { not: staffId } },
+      });
+      if (otherStaff) {
+        throw new BadRequestException("User account with this email is already linked to another staff member");
+      }
+    } else {
+      user = await kernel.db.user.create({
+        data: {
+          email,
+          globalRole: "USER",
+        },
+      });
+    }
+
+    // 5. Link Staff record to User
+    await kernel.db.staffProfile.update({
+      where: { id: staffId },
+      data: { userId: user.id },
+    });
+
+    // 6. Ensure active tenant membership
+    const membership = await kernel.db.userTenantMembership.findUnique({
+      where: { userId_tenantId: { userId: user.id, tenantId } },
+    });
+
+    if (!membership) {
+      const teacherRole = (await kernel.db.role.findFirst({
+        where: { tenantId, name: "Teacher" },
+      })) || (await kernel.db.role.findFirst({
+        where: { tenantId, name: "Staff" },
+      })) || (await kernel.db.role.findFirst({
+        where: { tenantId },
+      }));
+
+      if (!teacherRole) {
+        throw new BadRequestException("No suitable role found for portal user");
+      }
+
+      await kernel.db.userTenantMembership.create({
+        data: {
+          userId: user.id,
+          tenantId,
+          roleId: teacherRole.id,
+        },
+      });
+    }
+
+    // 7. Ensure active school access
+    const schoolAccess = await kernel.db.userSchoolAccess.findFirst({
+      where: { userId: user.id, tenantId, schoolId },
+    });
+
+    if (!schoolAccess) {
+      await kernel.db.userSchoolAccess.create({
+        data: {
+          userId: user.id,
+          tenantId,
+          schoolId,
+        },
+      });
+    }
+
+    // 8. Revoke old pending staff invitations
+    await kernel.db.portalInvitation.deleteMany({
+      where: { tenantId, staffId, isConsumed: false },
+    });
+
+    // 9. Generate 72h single-use token
+    const rawToken = randomBytes(32).toString("hex");
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 72 * 3600 * 1000);
+
+    const invitation = await kernel.db.portalInvitation.create({
+      data: {
+        tenantId,
+        schoolId,
+        userId: user.id,
+        tokenHash,
+        targetType: "STAFF",
+        staffId,
+        expiresAt,
+        createdById,
+      },
+    });
+
+    const activationUrl = `/activate?token=${rawToken}`;
+    const schoolName = staff.school?.name || "SchoolOS";
+
+    let emailSent = false;
+    let emailError: string | undefined;
+
+    if (this.notificationsService) {
+      try {
+        const appBaseUrl = process.env.APP_URL || process.env.WEB_APP_URL || process.env.FRONTEND_URL || "https://smart-sch-saas-web.onrender.com";
+        const html = `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: #0F172A; color: #F8FAFC; padding: 32px; border-radius: 16px;">
+            <h2 style="color: #F59E0B;">SchoolOS Teacher Portal Invitation</h2>
+            <p>Hello ${staff.firstName},</p>
+            <p>You have been invited to activate your teacher portal account for <strong>${schoolName}</strong>.</p>
+            <p>Staff Number: <strong>${staff.staffNumber}</strong></p>
+            <div style="margin: 32px 0;">
+              <a href="${appBaseUrl}${activationUrl}" style="background: #F59E0B; color: #0F172A; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Activate Teacher Account</a>
+            </div>
+            <p style="color: #94A3B8; font-size: 14px;">This activation link will expire in 72 hours.</p>
+          </div>
+        `;
+        await this.notificationsService.sendTransactionalEmail(
+          email,
+          `Activate your Teacher Portal Account - ${schoolName}`,
+          html
+        );
+        emailSent = true;
+      } catch (emailErr: any) {
+        this.logger.error(`Failed to dispatch teacher portal invitation email to ${email}`, emailErr);
+        emailSent = false;
+        emailError = "Portal account was prepared, but we could not send the invitation email. Please retry.";
+      }
+    }
+
+    return {
+      success: true,
+      invitationId: invitation.id,
+      staffId,
+      userId: user.id,
+      email,
+      token: rawToken,
+      activationUrl,
+      expiresAt: invitation.expiresAt,
+      emailSent,
+      emailError: emailSent ? undefined : emailError,
+    };
+  }
+
   async validateToken(token: string) {
     if (!token || typeof token !== "string") {
       throw new BadRequestException("Token is required.");
@@ -452,6 +647,15 @@ export class PortalAccountService {
         if (school) {
           schoolName = school.name;
         }
+      } else if (invitation.targetType === "STAFF" && invitation.staffId) {
+        const staff = await kernel.db.staffProfile.findUnique({
+          where: { id: invitation.staffId },
+          include: { school: true },
+        });
+        if (staff) {
+          recipientName = `${staff.firstName} ${staff.lastName}`;
+          schoolName = staff.school?.name || "";
+        }
       }
     });
 
@@ -470,7 +674,7 @@ export class PortalAccountService {
     tenantId: string,
     schoolId: string,
     targetId: string,
-    targetType: "STUDENT" | "GUARDIAN",
+    targetType: "STUDENT" | "GUARDIAN" | "STAFF",
     createdById: string,
   ) {
     if (targetType === "STUDENT") {
@@ -479,6 +683,12 @@ export class PortalAccountService {
         throw new NotFoundException("Student not found in tenant");
       }
       return this.provisionStudentPortal(tenantId, schoolId, targetId, createdById, {});
+    } else if (targetType === "STAFF") {
+      const staff = await kernel.db.staffProfile.findUnique({ where: { id: targetId } });
+      if (!staff || staff.tenantId !== tenantId) {
+        throw new NotFoundException("Staff member not found in tenant");
+      }
+      return this.provisionStaffPortal(tenantId, schoolId, targetId, createdById, {});
     } else {
       const guardian = await kernel.db.guardian.findUnique({ where: { id: targetId } });
       if (!guardian || guardian.tenantId !== tenantId) {
@@ -492,11 +702,15 @@ export class PortalAccountService {
     tenantId: string,
     schoolId: string,
     targetId: string,
-    targetType: "STUDENT" | "GUARDIAN",
+    targetType: "STUDENT" | "GUARDIAN" | "STAFF",
   ) {
     if (targetType === "STUDENT") {
       await kernel.db.portalInvitation.deleteMany({
         where: { tenantId, studentId: targetId, isConsumed: false },
+      });
+    } else if (targetType === "STAFF") {
+      await kernel.db.portalInvitation.deleteMany({
+        where: { tenantId, staffId: targetId, isConsumed: false },
       });
     } else {
       await kernel.db.portalInvitation.deleteMany({
@@ -555,6 +769,40 @@ export class PortalAccountService {
 
     const invitation = await kernel.db.portalInvitation.findFirst({
       where: { tenantId, guardianId, isConsumed: false },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (invitation) {
+      if (new Date() > new Date(invitation.expiresAt)) {
+        return { isProvisioned: false, status: "EXPIRED", invitationId: invitation.id, expiresAt: invitation.expiresAt };
+      }
+      return {
+        isProvisioned: true,
+        status: "PENDING",
+        invitationId: invitation.id,
+        expiresAt: invitation.expiresAt,
+        createdAt: invitation.createdAt,
+      };
+    }
+
+    return { isProvisioned: false, status: "NOT_PROVISIONED" };
+  }
+
+  async getStaffInvitationStatus(tenantId: string, schoolId: string, staffId: string) {
+    const staff = await kernel.db.staffProfile.findUnique({ where: { id: staffId } });
+    if (!staff || staff.tenantId !== tenantId) {
+      throw new NotFoundException("Staff member not found in tenant");
+    }
+
+    if (staff.userId) {
+      const user = await kernel.db.user.findUnique({ where: { id: staff.userId } });
+      if (user && user.passwordHash) {
+        return { isProvisioned: true, status: "ACTIVE", userId: user.id, email: user.email };
+      }
+    }
+
+    const invitation = await kernel.db.portalInvitation.findFirst({
+      where: { tenantId, staffId, isConsumed: false },
       orderBy: { createdAt: "desc" },
     });
 
@@ -645,6 +893,8 @@ export class PortalAccountService {
     const redirectUrl =
       invitation.targetType === "STUDENT"
         ? "/portal/student/dashboard"
+        : invitation.targetType === "STAFF"
+        ? "/portal/teacher/dashboard"
         : "/portal/parent/dashboard";
 
     return {
