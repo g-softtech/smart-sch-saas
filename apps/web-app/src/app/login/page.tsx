@@ -22,6 +22,9 @@ export default function LoginPage() {
         .get<any>('api/v1/auth/me')
         .then((res) => {
           const identity = res?.data || res;
+          if (identity?.tenantId) localStorage.setItem('x-tenant-id', identity.tenantId);
+          if (identity?.schoolId) localStorage.setItem('x-school-id', identity.schoolId);
+
           if (identity?.redirectUrl) {
             router.push(identity.redirectUrl);
           } else {
@@ -53,6 +56,9 @@ export default function LoginPage() {
         try {
           const meRes = await apiClient.get<any>('api/v1/auth/me');
           const identity = meRes?.data || meRes;
+          if (identity?.tenantId) localStorage.setItem('x-tenant-id', identity.tenantId);
+          if (identity?.schoolId) localStorage.setItem('x-school-id', identity.schoolId);
+
           if (identity?.redirectUrl) {
             router.push(identity.redirectUrl);
             return;

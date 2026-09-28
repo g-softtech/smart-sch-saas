@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/api-client";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   LayoutDashboard,
@@ -21,6 +22,19 @@ export default function TeacherPortalLayout({
 }) {
   const pathname = usePathname();
   const { logout } = useAuth();
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("x-tenant-id")) {
+      apiClient
+        .get<any>("api/v1/auth/me")
+        .then((res) => {
+          const identity = res?.data || res;
+          if (identity?.tenantId) localStorage.setItem("x-tenant-id", identity.tenantId);
+          if (identity?.schoolId) localStorage.setItem("x-school-id", identity.schoolId);
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const navItems = [
     {

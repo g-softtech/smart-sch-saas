@@ -23,18 +23,29 @@ export class WorkspaceContextInterceptor implements NestInterceptor {
     const user = request.user; // Set by JwtAuthGuard
 
     // Obtain requested tenant from selector
-    const tenantId = request.headers["x-tenant-id"] as string;
+    let tenantId = request.headers["x-tenant-id"] as string;
 
     if (!user || !user.sub) {
       throw new UnauthorizedException("Authentication required");
     }
 
+    const { tenantContext, kernel } = require("@saas/core-platform");
+
     if (!tenantId) {
-      // Reject missing tenant selector on tenant-scoped requests
-      throw new BadRequestException("Missing x-tenant-id header");
+      // Auto-discover tenant for portal users from UserTenantMembership
+      const membership = await kernel.db.userTenantMembership.findFirst({
+        where: { userId: user.sub },
+      });
+      if (membership) {
+        tenantId = membership.tenantId;
+        request.headers["x-tenant-id"] = tenantId;
+      }
     }
 
-    const { tenantContext, kernel } = require("@saas/core-platform");
+    if (!tenantId) {
+      // Reject missing tenant selector on tenant-scoped requests if unresolvable
+      throw new BadRequestException("Missing x-tenant-id header");
+    }
 
     // Verify Tenant Membership to prevent cross-tenant pollution
     try {
@@ -49,8 +60,27 @@ export class WorkspaceContextInterceptor implements NestInterceptor {
 
       let validatedSchoolId: string | undefined = undefined;
       let validatedCampusId: string | undefined = undefined;
-      const requestedSchoolId = request.headers["x-school-id"] as string;
+      let requestedSchoolId = request.headers["x-school-id"] as string;
       const requestedCampusId = request.headers["x-campus-id"] as string;
+
+      if (!requestedSchoolId) {
+        // Auto-discover schoolId for portal users from Student or Staff profile
+        const student = await kernel.db.student.findFirst({
+          where: { userId: user.sub, tenantId: membership.tenantId },
+        });
+        if (student?.schoolId) {
+          requestedSchoolId = student.schoolId;
+          request.headers["x-school-id"] = requestedSchoolId;
+        } else {
+          const staff = await kernel.db.staffProfile.findFirst({
+            where: { userId: user.sub, tenantId: membership.tenantId },
+          });
+          if (staff?.schoolId) {
+            requestedSchoolId = staff.schoolId;
+            request.headers["x-school-id"] = requestedSchoolId;
+          }
+        }
+      }
 
       if (requestedSchoolId) {
         await tenantContext.run({ tenantId }, async () => {
