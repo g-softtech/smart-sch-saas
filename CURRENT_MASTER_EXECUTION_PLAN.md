@@ -139,6 +139,17 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Whitespace Check:** `git diff --check` passed (0 errors).
     - **Status:** **COMPLETE & FULLY VERIFIED**
 
+  - **Phase 5G — Academic Workflow & Results Engine Recovery:** **IN PROGRESS (STEP 1 & STEP 2 COMPLETED & VERIFIED)**.
+    - **Objective:** Establish authoritative teacher assignment modeling, gradebook aggregate submission, score entry, admin approval/publication gates, and portal result security remediation before proceeding to Phase 6B.
+    - **Step 1 — Prisma Schema & PostgreSQL Migration:** **COMPLETED & VERIFIED** (`21d25203`). Added `TeacherSubjectAssignment`, `ClassTeacherAssignment`, `GradebookSubmission`, `ScoreAuditLog`, `WorkflowAuditLog`, `AssignmentMigrationQuarantine` models, `AssignmentScope` & `WorkflowStatus` enums, and `AssessmentScore.isAbsent` column (`packages/core-platform/prisma/schema.prisma`). Applied migration `20260928193000_add_phase_5g_academic_workflow_models` containing 8 PostgreSQL partial unique indexes for `CLASS_WIDE` vs `ARM_SPECIFIC` uniqueness and primary teacher rules.
+    - **Step 2 — Auditable Timetable Backfill Pipeline:** **COMPLETED & VERIFIED** (`7bd365ee`). Implemented auditable backfill pipeline (`backfill-5g-001.ts`), test runner (`run-backfill-tests.ts`), and unit test suite (`backfill-5g-001.spec.ts`).
+      - **Primary-Teacher Safeguard Remediation:** Replaced row-ordering heuristic with strict primary determination rule: Single-teacher scopes deterministically receive `isPrimary = true`. Multi-teacher scopes with ambiguous gradebook authority are quarantined under `PRIMARY_TEACHER_AMBIGUOUS` (zero guessing/heuristics).
+      - **Production Database Finding:** Actual database source rows count `acd_timetable_entries = 0` (no fake data created).
+      - **Fixture Verification:** Executed controlled test fixture with 7 source rows: 1 migrated assignment, 1 reconciled duplicate slot, 4 quarantined rows (1 inactive staff + 1 mismatch staff + 2 multi-teacher ambiguous), 1 skipped null-teacher slot.
+      - **Source Accounting Invariant:** Proved `Total Source Rows = Migrated + Reconciled Duplicates + Quarantined + Skipped Null Slots` (`Unexplained rows = 0`).
+      - **Provenance & Rollback Isolation:** Tagged with `migrationBatchId = 'MIGRATION_5G_001'`. Proved rollback isolation: deleting batch records leaves manual assignments (`migrationBatchId = null`) completely untouched.
+    - **Current Status & Next Step:** **Step 3 — Teacher Assignment Backend Module, awaiting explicit authorization.** Phase 6B remains strictly paused.
+
 ### Phase 6: Future SaaS Expansion
 - **Objective:** Value-add features beyond core operations.
 - **Sub-Phases Execution & Status:**

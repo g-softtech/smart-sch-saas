@@ -625,6 +625,47 @@ Duplicate scan now correctly shows yellow "Already Arrived" notice.
 
 ---
 
+### CHECKPOINT: Phase 5G — Academic Workflow & Results Engine Recovery (Step 1 & Step 2)
+
+- **Phase:** Phase 5G — Academic Workflow & Results Engine Recovery
+- **Step 1 Status:** COMPLETED & VERIFIED (Commit: `21d25203`)
+- **Step 2 Status:** COMPLETED & VERIFIED (Commit: `7bd365ee`)
+- **Next Roadmap Position:** Step 3 — Teacher Assignment Backend Module, awaiting explicit authorization
+- **Date:** 2026-09-28
+- **Remote Branch:** `origin/main` (updated)
+- **Working-Tree Status:** Clean
+
+
+**Step 1 Implementation Summary (Prisma Schema & PostgreSQL Migration):**
+- Updated `packages/core-platform/prisma/schema.prisma` with `TeacherSubjectAssignment` (`stf_teacher_subject_assignments`), `ClassTeacherAssignment` (`stf_class_teacher_assignments`), `GradebookSubmission` (`acd_gradebook_submissions`), `ScoreAuditLog` (`acd_score_audit_logs`), `WorkflowAuditLog` (`acd_workflow_audit_logs`), and `AssignmentMigrationQuarantine` (`stf_assignment_migration_quarantine`) models.
+- Added `AssignmentScope` (`CLASS_WIDE`, `ARM_SPECIFIC`) and `WorkflowStatus` (`DRAFT`, `SUBMITTED`, `APPROVED`, `REJECTED`, `PUBLISHED`) enums.
+- Added `isAbsent Boolean @default(false)` column to `AssessmentScore`.
+- Created and applied migration `20260928193000_add_phase_5g_academic_workflow_models` with 8 raw SQL PostgreSQL partial unique indexes enforcing class-wide vs arm-specific uniqueness and primary teacher constraints.
+
+**Step 2 Implementation Summary (Auditable Timetable Backfill Pipeline):**
+- Built auditable backfill pipeline (`packages/core-platform/src/scripts/backfill-5g-001.ts`), test runner (`run-backfill-tests.ts`), and unit test suite (`backfill-5g-001.spec.ts`).
+- **Primary-Teacher Safeguard Remediation:** Replaced row-ordering heuristic with strict primary determination rule: Single-teacher scopes deterministically assigned `isPrimary = true`. Multi-teacher scopes with ambiguous gradebook authority quarantined under `PRIMARY_TEACHER_AMBIGUOUS` (zero guessing/heuristics).
+- **Actual Production Database Finding:** `acd_timetable_entries = 0` (No synthetic data fabricated).
+- **Controlled Fixture Execution Results (7 Source Rows):**
+  - Total Source Rows: 7
+  - Skipped Null-Teacher Slots: 1
+  - Valid Candidates Analyzed: 6
+  - Quarantined Rows: 4 (1 inactive staff + 1 mismatch staff + 2 multi-teacher ambiguous)
+  - Unique Assignments Derived: 1 (`isPrimary = true`, `scope = ARM_SPECIFIC`)
+  - Reconciled Duplicate Slots: 1
+  - Unaccounted / Unexplained Source Rows: 0
+- **Source Accounting Invariant:** Proved `Total Source Rows = Unique Migrated Assignments + Reconciled Duplicates + Quarantined Rows + Skipped Null Slots` (`Unexplained Rows = 0`).
+- **Provenance & Rollback Isolation:** Provenance tagged with `migrationBatchId = 'MIGRATION_5G_001'`. Proved rollback isolation: deleting batch records leaves manual assignments (`migrationBatchId = null`) completely untouched.
+
+**Verification Evidence:**
+- **Prisma Migration Status:** `npx prisma migrate status` ("28 migrations found in prisma/migrations. Database schema is up to date!")
+- **Core Platform Build (`npm run build`):** PASSED (0 errors)
+- **Backend Production Build (`nest build`):** PASSED (0 errors)
+- **Frontend Production Build (`next build`):** PASSED (`44/44` static/dynamic pages prerendered)
+- **Git Whitespace Check (`git diff --check`):** PASSED (0 errors)
+
+---
+
 ## Deployment History
 
 | Event | Approx. Date | Status | Evidence |
