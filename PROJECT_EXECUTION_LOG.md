@@ -592,6 +592,39 @@ Duplicate scan now correctly shows yellow "Already Arrived" notice.
 
 ---
 
+### CHECKPOINT: Phase 5F — Teacher Portal, Teacher Onboarding & Profile Media Architecture
+
+**Status:** COMPLETE & FULLY VERIFIED
+**Date:** 2026-09-28
+**Commit Hash:** Pending commit
+**Working Tree:** Ready for commit & push
+
+**Implementation Summary:**
+- **Database Architecture & Migration:**
+  - Added `email String?` and `phone String?` to `StaffProfile` (`stf_profiles`).
+  - Created binary `StaffPhoto` model (`stf_photos` table) with `mimeType`, `sizeBytes`, and raw `photoBytes` payload.
+  - Added `PortalTargetType.STAFF` and `PortalInvitation.staffId` foreign key.
+  - Registered `StaffPhoto` in Kernel `tenantScopedModels`.
+  - Applied migration `20260928110000_add_teacher_portal_and_staff_photos`.
+- **Backend API Gateway:**
+  - `StaffModule`: Updated repository, service, and controller for staff updates (`PATCH /api/v1/staff/:id`) and photo media management (`POST/GET/DELETE /api/v1/staff/:id/photo`).
+  - `PortalAccountModule`: Implemented staff portal provisioning (`POST /api/v1/portal/account/staff/:id/provision`), invitation status lookup (`GET /api/v1/portal/account/staff/:id/invitation-status`), activation token validation (`targetType: STAFF`), and account activation (`/portal/teacher/dashboard` redirect).
+  - `AuthenticationService`: Updated `getIdentityContext()` to discover `portalType: "TEACHER"` and `redirectUrl: "/portal/teacher/dashboard"` when user is linked to an active teaching `StaffProfile`.
+  - `PortalTeacherModule`: Implemented BFF module and endpoints for Teacher Portal (`/portal/teacher/dashboard`, `/portal/teacher/profile`, `/portal/teacher/profile/photo`, `/portal/teacher/timetable`, `/portal/teacher/classes`, `/portal/teacher/classes/:classId/students`).
+- **Frontend Web App:**
+  - Updated Admin Staff Details (`/dashboard/staff/[staffId]`) with avatar photo preview, photo upload modal, Edit Profile modal, "Invite to Teacher Portal" modal with honest email delivery reporting, and invitation status badge.
+  - Updated Activation page (`/activate`) to support `STAFF` portal target type ("Teacher Portal").
+  - Created Teacher Portal layout & pages: `/portal/teacher/layout.tsx`, `/portal/teacher/dashboard/page.tsx`, `/portal/teacher/profile/page.tsx`, `/portal/teacher/timetable/page.tsx`, `/portal/teacher/classes/page.tsx`.
+
+**Verification Evidence:**
+- **Prisma Migration Status:** `npx prisma migrate status` ("27 migrations found in prisma/migrations. Database schema is up to date!")
+- **Live Integration & E2E Test Suite:** `39/39 PASSED` (`scratch/test-phase5f-teacher-live-flow.js`)
+- **Backend Production Build (`nest build`):** PASSED (0 errors)
+- **Frontend Production Build (`next build`):** PASSED (`44/44` static/dynamic pages prerendered)
+- **Git Whitespace Check (`git diff --check`):** PASSED (0 errors)
+
+---
+
 ## Deployment History
 
 | Event | Approx. Date | Status | Evidence |

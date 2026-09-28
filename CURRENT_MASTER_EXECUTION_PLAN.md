@@ -32,6 +32,7 @@ Transform a monolithic School Management System into an enterprise-grade SchoolO
 - Student Portal (BFF): **COMPLETE & FULLY VERIFIED**
 - Parent/Guardian Portal (BFF): **COMPLETE & FULLY VERIFIED**
 - Portal Account Onboarding & Self-Service (Phase 5D): **COMPLETE & FULLY VERIFIED**
+- Teacher Portal & Staff Photo Architecture (Phase 5F): **COMPLETE & FULLY VERIFIED**
 
 ## 4. Phase Architecture & Dependencies
 
@@ -119,6 +120,23 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Database Migration Status:** `npx prisma migrate status` ("26 migrations found. Database schema is up to date!")
       - **Whitespace Check:** `git diff --check` passed (0 errors)
       - **Git Commit:** `31b1dc07` (pushed to `origin/main`)
+    - **Status:** **COMPLETE & FULLY VERIFIED**
+  - **Phase 5F — Teacher Portal, Teacher Onboarding & Profile Media Architecture:** **COMPLETE & FULLY VERIFIED**.
+    - **Scope Completed:**
+      - Canonical `StaffProfile` model updated with `email String?` and `phone String?` (`stf_profiles` via migration `20260928110000_add_teacher_portal_and_staff_photos`).
+      - Staff photo avatar architecture using binary `StaffPhoto` model (`stf_photos`), enforcing 5MB max file size limit, magic byte validation (JPEG, PNG, WebP), and inline content headers (`POST/GET/DELETE /api/v1/staff/:id/photo`).
+      - Dedicated Teacher Portal account provisioning (`POST /api/v1/portal/account/staff/:id/provision`), invitation status check (`GET /api/v1/portal/account/staff/:id/invitation-status`), activation token validation (`targetType: STAFF`), and account activation (`/portal/teacher/dashboard` redirect).
+      - Identity discovery in `AuthenticationService.getIdentityContext()` discovering `portalType: "TEACHER"` for users linked to teaching staff profiles.
+      - Teacher Portal BFF Module (`PortalTeacherModule`) and dedicated routes (`/portal/teacher/dashboard`, `/portal/teacher/profile`, `/portal/teacher/profile/photo`, `/portal/teacher/timetable`, `/portal/teacher/classes`, `/portal/teacher/classes/:classId/students`).
+      - Web App Admin Staff Details UI (`/dashboard/staff/[staffId]`) with photo avatar upload/preview, staff edit modal, invitation modal with real-world email delivery status reporting, and invitation status badge.
+      - Web App Activation UI (`/activate`) updated to support `STAFF` portal target type ("Teacher Portal").
+      - Web App Teacher Portal interface (`/portal/teacher/*`) with responsive layout, dashboard stats, profile management, timetable display, class roster viewing, and avatar display.
+    - **Verification Evidence:**
+      - **Live Integration & E2E Test Suite:** `39/39 PASSED` (`scratch/test-phase5f-teacher-live-flow.js`).
+      - **Production Frontend Build:** `npm run build` passed (`44/44` static/dynamic pages prerendered).
+      - **Production Backend Build:** `npm run build` passed (0 errors).
+      - **Database Migration Status:** `npx prisma migrate status` ("27 migrations found. Database schema is up to date!").
+      - **Whitespace Check:** `git diff --check` passed (0 errors).
     - **Status:** **COMPLETE & FULLY VERIFIED**
 
 ### Phase 6: Future SaaS Expansion
