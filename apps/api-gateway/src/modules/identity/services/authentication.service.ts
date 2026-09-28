@@ -88,12 +88,13 @@ export class AuthenticationService {
 
     if (this.notificationsService) {
       try {
+        const appBaseUrl = process.env.APP_URL || process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://smart-sch-saas-web.onrender.com';
         const html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: #0F172A; color: #F8FAFC; padding: 32px; border-radius: 16px;">
             <h2 style="color: #F59E0B;">SchoolOS Password Reset Request</h2>
             <p>You recently requested to reset your password for your SchoolOS account.</p>
             <div style="margin: 32px 0;">
-              <a href="${process.env.APP_URL || 'http://localhost:3000'}${resetUrl}" style="background: #F59E0B; color: #0F172A; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Reset Password</a>
+              <a href="${appBaseUrl}${resetUrl}" style="background: #F59E0B; color: #0F172A; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Reset Password</a>
             </div>
             <p style="color: #94A3B8; font-size: 14px;">This reset link is valid for 1 hour. If you did not request this, please ignore this email.</p>
           </div>

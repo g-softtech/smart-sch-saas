@@ -187,13 +187,14 @@ export class PortalAccountService {
       try {
         const school = await kernel.db.school.findUnique({ where: { id: schoolId } });
         const schoolName = school?.name || "SchoolOS";
+        const appBaseUrl = process.env.APP_URL || process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://smart-sch-saas-web.onrender.com';
         const html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: #0F172A; color: #F8FAFC; padding: 32px; borderRadius: 16px;">
             <h2 style="color: #F59E0B;">SchoolOS Student Portal Invitation</h2>
             <p>Hello ${student.firstName},</p>
             <p>You have been invited to activate your student portal account for <strong>${schoolName}</strong>.</p>
             <div style="margin: 32px 0;">
-              <a href="${process.env.APP_URL || 'http://localhost:3000'}${activationUrl}" style="background: #F59E0B; color: #0F172A; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Activate Student Account</a>
+              <a href="${appBaseUrl}${activationUrl}" style="background: #F59E0B; color: #0F172A; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Activate Student Account</a>
             </div>
             <p style="color: #94A3B8; font-size: 14px;">This activation link will expire in 72 hours.</p>
           </div>
@@ -360,13 +361,14 @@ export class PortalAccountService {
       try {
         const school = await kernel.db.school.findUnique({ where: { id: schoolId } });
         const schoolName = school?.name || "SchoolOS";
+        const appBaseUrl = process.env.APP_URL || process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://smart-sch-saas-web.onrender.com';
         const html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: #0F172A; color: #F8FAFC; padding: 32px; borderRadius: 16px;">
             <h2 style="color: #F59E0B;">SchoolOS Guardian Portal Invitation</h2>
             <p>Hello ${guardian.firstName},</p>
             <p>You have been invited to activate your Parent/Guardian portal account for <strong>${schoolName}</strong>.</p>
             <div style="margin: 32px 0;">
-              <a href="${process.env.APP_URL || 'http://localhost:3000'}${activationUrl}" style="background: #F59E0B; color: #0F172A; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Activate Guardian Account</a>
+              <a href="${appBaseUrl}${activationUrl}" style="background: #F59E0B; color: #0F172A; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Activate Guardian Account</a>
             </div>
             <p style="color: #94A3B8; font-size: 14px;">This activation link will expire in 72 hours.</p>
           </div>
