@@ -20,7 +20,7 @@ export class ResendEmailAdapter implements EmailProvider {
   async sendEmail(options: EmailOptions): Promise<void> {
     const defaultFrom =
       process.env.EMAIL_FROM_ADDRESS ||
-      "Acme Admissions <onboarding@resend.dev>";
+      "SchoolOS Onboarding <onboarding@thecortexsystems.com>";
 
     try {
       const { data, error } = await this.resend.emails.send({
