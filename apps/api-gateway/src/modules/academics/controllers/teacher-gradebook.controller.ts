@@ -30,7 +30,7 @@ export class TeacherGradebookController {
    * Fetches the assigned gradebook scope for the calling teacher in an academic year and term.
    */
   @Get("scope")
-  @RequirePermission("academics:read_assignments")
+  @RequirePermission("academics:read_gradebook")
   async getTeacherScope(
     @Req() req: any,
     @Query() query: GetTeacherScopeQueryDto,
@@ -52,7 +52,7 @@ export class TeacherGradebookController {
    * Fetches gradebook details, student roster, existing assessment scores, and submission workflow status.
    */
   @Get()
-  @RequirePermission("academics:read_assignments")
+  @RequirePermission("academics:read_gradebook")
   async getGradebook(
     @Req() req: any,
     @Query() query: GetGradebookQueryDto,
@@ -74,7 +74,7 @@ export class TeacherGradebookController {
    * Saves gradebook scores as DRAFT transactionally.
    */
   @Post("draft")
-  @RequirePermission("academics:read_assignments")
+  @RequirePermission("academics:enter_scores")
   async saveGradebookDraft(
     @Req() req: any,
     @Body() dto: SaveGradebookDraftDto,
@@ -94,10 +94,12 @@ export class TeacherGradebookController {
 
   /**
    * Submits a gradebook for administrative review.
-   * STRICT SAFEGUARD: Only primary teachers (isPrimary = true) can submit.
+   * STRICT SAFEGUARDS:
+   * 1. Requires `academics:submit_gradebook` permission at controller level.
+   * 2. Only primary teachers (isPrimary = true) can submit at domain level.
    */
   @Post("submit")
-  @RequirePermission("academics:read_assignments")
+  @RequirePermission("academics:submit_gradebook")
   async submitGradebook(
     @Req() req: any,
     @Body() dto: SubmitGradebookDto,

@@ -694,36 +694,40 @@ Duplicate scan now correctly shows yellow "Already Arrived" notice.
   17. Quarantined migration records do NOT grant authority → PASSED
   18. Tenant/school isolation on list/read endpoints → PASSED
 
-**Step 4 Implementation Summary (Teacher Portal Gradebook BFF):**
+**Step 4 Implementation Summary (Teacher Portal Gradebook BFF & Fine-Grained Permission Guards):**
 - Built `TeacherGradebookController` (`apps/api-gateway/src/modules/academics/controllers/teacher-gradebook.controller.ts`).
 - Built `TeacherGradebookService` (`apps/api-gateway/src/modules/academics/services/teacher-gradebook.service.ts`).
 - Built DTO definitions (`apps/api-gateway/src/modules/academics/dto/teacher-gradebook.dto.ts`).
 - Registered `TeacherGradebookController` and `TeacherGradebookService` in `AcademicsModule`.
-- Implemented `/scope` endpoint returning active teacher subject/class/arm assignments.
-- Implemented `/` endpoint loading gradebook student roster, academic context, assessment scores, and submission workflow status.
-- Implemented `/draft` endpoint for saving/upserting draft assessment scores, supporting `isAbsent` flags, recalculating total scores, and logging `ScoreAuditLog`.
-- Implemented `/submit` endpoint enforcing primary-teacher submission safeguard (`isPrimary = true`), updating `GradebookSubmission` status to `SUBMITTED`, and logging `WorkflowAuditLog`.
+- Implemented `/scope` endpoint returning active teacher subject/class/arm assignments (`@RequirePermission("academics:read_gradebook")`).
+- Implemented `/` endpoint loading gradebook student roster, academic context, assessment scores, and submission workflow status (`@RequirePermission("academics:read_gradebook")`).
+- Implemented `/draft` endpoint for saving/upserting draft assessment scores (`@RequirePermission("academics:enter_scores")`), supporting `isAbsent` flags, recalculating total scores, and logging `ScoreAuditLog`.
+- Implemented `/submit` endpoint (`@RequirePermission("academics:submit_gradebook")`) enforcing primary-teacher submission safeguard (`isPrimary = true`), updating `GradebookSubmission` status to `SUBMITTED`, and logging `WorkflowAuditLog`.
 
-**Adversarial Security & Integration Test Results (18 Scenarios):**
-- Executed `packages/core-platform/src/scripts/test-step4-gradebook.ts`: `18/18 PASSED`.
-  1. Primary teacher fetches assigned scope → PASSED
-  2. Primary teacher fetches gradebook roster & context → PASSED
-  3. Teacher with NO subject assignment rejected → PASSED
-  4. Teacher assigned to another class rejected → PASSED
-  5. ClassTeacherAssignment alone yields zero grading authority → PASSED
-  6. Quarantined migration record yields zero authority → PASSED
-  7. CLASS_WIDE teacher operates across arms within same school → PASSED
-  8. Cross-school gradebook access rejected → PASSED
-  9. Cross-tenant gradebook access rejected → PASSED
-  10. Wrong academic year / term request rejected → PASSED
-  11. Non-primary co-teacher saves draft scores → PASSED
-  12. Primary teacher saves draft with isAbsent flag → PASSED
-  13. Score entry for non-enrolled student rejected → PASSED
-  14. Non-primary co-teacher submission rejected → PASSED
-  15. Primary teacher submits gradebook → PASSED
-  16. Editing submitted gradebook rejected → PASSED
-  17. Resubmitting submitted gradebook rejected → PASSED
-  18. REJECTED gradebook state recovery & resubmission → PASSED
+**Adversarial & Fine-Grained Permission Security Test Results (22 Scenarios):**
+- Executed `packages/core-platform/src/scripts/test-step4-gradebook.ts`: `22/22 PASSED`.
+  1. Permission Test 1: Teacher WITH `academics:read_gradebook` can read scope and gradebook → PASSED
+  2. Permission Test 2: Teacher WITHOUT `academics:read_gradebook` is REJECTED on GET endpoints → PASSED
+  3. Permission Test 3: Teacher WITH `academics:enter_scores` can save DRAFT scores → PASSED
+  4. Permission Test 4: Teacher WITHOUT `academics:enter_scores` is REJECTED on POST /draft → PASSED
+  5. Permission Test 5: Authorized primary teacher WITH `academics:submit_gradebook` can submit gradebook → PASSED
+  6. Permission Test 6: Primary teacher WITHOUT `academics:submit_gradebook` is REJECTED on POST /submit → PASSED
+  7. Scenario 7: Teacher with NO subject assignment is REJECTED from gradebook → PASSED
+  8. Scenario 8: Teacher assigned to another class is REJECTED → PASSED
+  9. Scenario 9: ClassTeacherAssignment alone yields ZERO grading authority → PASSED
+  10. Scenario 10: Quarantined migration record yields ZERO authority → PASSED
+  11. Scenario 11: CLASS_WIDE teacher operates across arms within same school → PASSED
+  12. Scenario 12: Cross-school gradebook access attempt is REJECTED → PASSED
+  13. Scenario 13: Cross-tenant gradebook access attempt is REJECTED → PASSED
+  14. Scenario 14: Wrong academic year / term request is REJECTED → PASSED
+  15. Scenario 15: Non-primary co-teacher saves DRAFT scores (allowed) → PASSED
+  16. Scenario 16: Primary teacher saves DRAFT with isAbsent flag → PASSED
+  17. Scenario 17: Attempting score entry for non-enrolled student is REJECTED → PASSED
+  18. Scenario 18: Non-primary co-teacher submission attempt is REJECTED at domain level → PASSED
+  19. Scenario 19: Primary teacher SUBMITS gradebook successfully → PASSED
+  20. Scenario 20: Editing an already SUBMITTED gradebook is REJECTED → PASSED
+  21. Scenario 21: Resubmitting an already SUBMITTED gradebook is REJECTED → PASSED
+  22. Scenario 22: REJECTED gradebook state recovery (Admin rejects -> Teacher edits DRAFT -> Resubmits) → PASSED
 
 **Verification Evidence:**
 - **Prisma Migration Status:** `npx prisma migrate status` ("28 migrations found in prisma/migrations. Database schema is up to date!")
