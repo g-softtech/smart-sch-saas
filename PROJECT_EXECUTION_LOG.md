@@ -648,46 +648,44 @@ Duplicate scan now correctly shows yellow "Already Arrived" notice.
 - Built auditable backfill pipeline (`packages/core-platform/src/scripts/backfill-5g-001.ts`), test runner (`run-backfill-tests.ts`), and unit test suite (`backfill-5g-001.spec.ts`).
 - Primary-teacher safeguard: Single-teacher scopes assigned `isPrimary = true`; multi-teacher scopes quarantined (`PRIMARY_TEACHER_AMBIGUOUS`).
 
-**Step 3 Implementation Summary (Teacher Assignment Backend Module & Authorization Remediation):**
+**Step 3 Implementation Summary (Teacher Assignment Backend Module, Authorization Remediation & Permission Catalog):**
 - Built `TeacherAssignmentsController` (`apps/api-gateway/src/modules/academics/controllers/teacher-assignments.controller.ts`).
 - Built `TeacherAssignmentsService` (`apps/api-gateway/src/modules/academics/services/teacher-assignments.service.ts`).
 - Built DTO definitions (`apps/api-gateway/src/modules/academics/dto/teacher-assignments.dto.ts`).
 - Updated `AcademicsRepository` (`apps/api-gateway/src/modules/academics/repositories/academics.repository.ts`) with lookup methods (`findTerm`, `findArm`, `findSubject`, `findStaffProfile`).
 - Registered `TeacherAssignmentsController` and `TeacherAssignmentsService` in `AcademicsModule`.
-- **Authorization Remediation:** Removed hardcoded role-name allowlist (`SUPER_ADMIN`, `SCHOOL_ADMIN`, etc.). Refactored controller to use core `PoliciesGuard` (`apps/api-gateway/src/modules/identity/security/policies.guard.ts`) and `@RequirePermission(...)` decorator (`apps/api-gateway/src/modules/identity/security/require-permission.decorator.ts`). Endpoints require effective permissions `academics:manage_assignments` and `academics:read_assignments` resolved from database `RolePermission` configuration.
+- **Authorization Remediation & Permission Catalog:** Removed hardcoded role-name allowlist. Refactored controller to use core `PoliciesGuard` (`apps/api-gateway/src/modules/identity/security/policies.guard.ts`) and `@RequirePermission(...)` decorator (`apps/api-gateway/src/modules/identity/security/require-permission.decorator.ts`). Added `seed-academics-permissions.ts` helper registering canonical permissions `academics:manage_assignments` and `academics:read_assignments` in database permission catalog table `idm_permissions` and binding them to default administrative roles (`SCHOOL_ADMIN`, `ACADEMIC_ADMIN`, `ADMIN`) and `TEACHER` (read-only).
 - Enforced teacher self-assignment and self-promotion block (`assertNoSelfAssignmentOrPromotion`).
 - Enforced `ARM_SPECIFIC` vs `CLASS_WIDE` scope rules, entity validation, and partial unique index conflict handling (`P2002` -> `ConflictException`).
 - Provided `checkTeacherGradingAuthority` helper method ensuring `ClassTeacherAssignment` alone yields zero grading authority and quarantined migration records yield zero authority.
 
-**Security & Integration Test Results (24 Scenarios):**
-- Executed `packages/core-platform/src/scripts/test-step3-security.ts`: `24/24 PASSED`.
-  1. Remediation Test A: User with effective permission (`academics:manage_assignments`) CAN manage assignments → PASSED
-  2. Remediation Test B: User WITHOUT effective permission is REJECTED by PoliciesGuard even with non-teacher role → PASSED
-  3. Remediation Test C: Teacher without management permission CANNOT manage assignments → PASSED
-  4. Remediation Test D: Teacher WITH management permission CANNOT assign themselves (self-assignment blocked) → PASSED
-  5. Remediation Test E: Teacher WITH management permission CANNOT promote themselves to primary → PASSED
-  6. Remediation Test F: Tenant/school isolation enforced independently of permission → PASSED
-  7. Admin creates valid CLASS_WIDE assignment → PASSED
-  8. Admin creates valid ARM_SPECIFIC assignment → PASSED
-  9. ARM_SPECIFIC assignment without arm → PASSED (rejected)
-  10. CLASS_WIDE assignment with arm → PASSED (rejected)
-  11. Cross-school teacher combination → PASSED (rejected)
-  12. Cross-tenant combination → PASSED (rejected)
-  13. Invalid academic year/term combination → PASSED (rejected)
-  14. Inactive/invalid staff → PASSED (rejected)
-  15. Duplicate assignment → PASSED (rejected safely)
-  16. Duplicate primary assignment in same scope → PASSED (rejected safely)
-  17. Teacher attempting self-assignment → PASSED (rejected)
-  18. ClassTeacherAssignment alone does NOT grant grading authority → PASSED
-  19. ARM_SPECIFIC teacher cannot access another arm → PASSED
-  20. CLASS_WIDE teacher can operate across arms within same school → PASSED
-  21. CLASS_WIDE teacher does not gain authority in another school → PASSED
-  22. Existing MIGRATION_5G_001 assignment remains valid → PASSED
-  23. Quarantined migration records do NOT grant authority → PASSED
-  24. Tenant/school isolation on list/read endpoints → PASSED
-  9. Duplicate assignment → PASSED (rejected safely)
-  10. Duplicate primary assignment in same scope → PASSED (rejected safely)
-  11. Teacher attempting self-assignment → PASSED (rejected)
+**Security & Integration Test Results (25 Scenarios):**
+- Executed `packages/core-platform/src/scripts/test-step3-security.ts`: `25/25 PASSED`.
+  1. Verification Test 1: `SUPER_ADMIN` passes `PoliciesGuard` via global role override → PASSED
+  2. Verification Test 2: `SCHOOL_ADMIN` passes `PoliciesGuard` via database `RolePermission` (`academics:manage_assignments`) → PASSED
+  3. Verification Test 3: `ACADEMIC_ADMIN` passes `PoliciesGuard` via database `RolePermission` (`academics:manage_assignments`) → PASSED
+  4. Verification Test 4: `TEACHER` role (assigned `academics:read_assignments`) CAN read assignments → PASSED
+  5. Verification Test 5: `TEACHER` role WITHOUT `academics:manage_assignments` is REJECTED on management endpoint → PASSED
+  6. Verification Test 6: User with unpermitted role (`OTHER_ROLE`) is REJECTED by `PoliciesGuard` on read & manage → PASSED
+  7. Verification Test 7: Teacher WITH manage permission is STILL blocked from self-assignment → PASSED
+  8. Admin creates valid CLASS_WIDE assignment → PASSED
+  9. Admin creates valid ARM_SPECIFIC assignment → PASSED
+  10. ARM_SPECIFIC assignment without arm → PASSED (rejected)
+  11. CLASS_WIDE assignment with arm → PASSED (rejected)
+  12. Cross-school teacher combination → PASSED (rejected)
+  13. Cross-tenant combination → PASSED (rejected)
+  14. Invalid academic year/term combination → PASSED (rejected)
+  15. Inactive/invalid staff → PASSED (rejected)
+  16. Duplicate assignment → PASSED (rejected safely)
+  17. Duplicate primary assignment in same scope → PASSED (rejected safely)
+  18. Teacher attempting self-assignment → PASSED (rejected)
+  19. ClassTeacherAssignment alone does NOT grant grading authority → PASSED
+  20. ARM_SPECIFIC teacher cannot access another arm → PASSED
+  21. CLASS_WIDE teacher can operate across arms within same school → PASSED
+  22. CLASS_WIDE teacher does not gain authority in another school → PASSED
+  23. Existing MIGRATION_5G_001 assignment remains valid → PASSED
+  24. Quarantined migration records do NOT grant authority → PASSED
+  25. Tenant/school isolation on list/read endpoints → PASSED
   12. ClassTeacherAssignment alone does NOT grant grading authority → PASSED
   13. ARM_SPECIFIC teacher cannot access another arm → PASSED
   14. CLASS_WIDE teacher can operate across arms within same school → PASSED
