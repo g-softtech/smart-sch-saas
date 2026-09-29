@@ -31,7 +31,7 @@ function buildScopedExtension(base: PrismaClient) {
           // TENANT_SCOPED Enforcement Layer
           const tenantScopedModels = [
             // Identity (Batch 1)
-            'School', 'Role', 'Permission', 'RolePermission', 'UserTenantMembership',
+            'School', 'Role', 'UserTenantMembership',
             // Students (Batch 3B)
             'Student', 'Guardian', 'StudentGuardian', 'Enrollment',
             // Admissions (Batch 3C)

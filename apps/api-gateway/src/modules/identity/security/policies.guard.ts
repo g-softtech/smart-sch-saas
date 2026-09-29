@@ -63,7 +63,9 @@ export class PoliciesGuard implements CanActivate {
     const roleId = request.workspace.roleId;
 
     // Resolve Permissions via Database Directly
-    const role = await this.roleRepo.findById(roleId, tenantId);
+    const role = await tenantContext.run({ tenantId }, () =>
+      this.roleRepo.findById(roleId, tenantId),
+    );
 
     if (!role) {
       throw new ForbiddenException("Role not found.");

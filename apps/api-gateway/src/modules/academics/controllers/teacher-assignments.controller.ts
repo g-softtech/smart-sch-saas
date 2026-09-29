@@ -12,10 +12,11 @@ import {
   UseInterceptors,
   UseFilters,
   ForbiddenException,
-  BadRequestException,
 } from "@nestjs/common";
 import { TeacherAssignmentsService } from "../services/teacher-assignments.service";
 import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
+import { PoliciesGuard } from "../../identity/security/policies.guard";
+import { RequirePermission } from "../../identity/security/require-permission.decorator";
 import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
 import { AcademicsPrismaExceptionFilter } from "../filters/prisma-exception.filter";
 import {
@@ -24,10 +25,10 @@ import {
   CreateClassTeacherAssignmentDto,
   QueryClassTeacherAssignmentDto,
 } from "../dto/teacher-assignments.dto";
-import { kernel } from "@saas/core-platform";
+import { kernel, tenantContext } from "@saas/core-platform";
 
 @Controller("api/v1/academics")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
 @UseFilters(AcademicsPrismaExceptionFilter)
 export class TeacherAssignmentsController {
@@ -36,10 +37,10 @@ export class TeacherAssignmentsController {
   ) {}
 
   /**
-   * Guard helper to ensure current user is an authorized admin/manager,
-   * and NOT a teacher attempting self-assignment or self-promotion.
+   * Guard helper to enforce self-assignment and self-promotion safeguards.
+   * Effective permissions (e.g. academics:manage_assignments) are verified by PoliciesGuard.
    */
-  private async assertAdminManagementAuthority(
+  private async assertNoSelfAssignmentOrPromotion(
     req: any,
     targetTeacherId?: string,
   ) {
@@ -50,30 +51,6 @@ export class TeacherAssignmentsController {
       throw new ForbiddenException("Authentication and workspace context required");
     }
 
-    const { tenantContext } = require("@saas/core-platform");
-
-    // Check tenant membership role within tenantContext
-    const membership = await tenantContext.run({ tenantId }, async () =>
-      await kernel.db.userTenantMembership.findFirst({
-        where: { userId, tenantId },
-        include: { role: true },
-      }),
-    );
-
-    const isSuperAdmin = membership?.role?.name === "SUPER_ADMIN";
-    const isSchoolAdmin =
-      membership?.role?.name === "SCHOOL_ADMIN" ||
-      membership?.role?.name === "ACADEMIC_ADMIN" ||
-      membership?.role?.name === "ADMIN";
-
-    if (!isSuperAdmin && !isSchoolAdmin) {
-      // Check if user is a teacher attempting to manipulate assignments
-      throw new ForbiddenException(
-        "Only authorized academic administrators can manage teacher assignments",
-      );
-    }
-
-    // Explicit check: if user's own StaffProfile matches targetTeacherId, reject self-assignment/self-promotion
     if (targetTeacherId) {
       const ownStaff = await tenantContext.run({ tenantId }, async () =>
         await kernel.db.staffProfile.findFirst({
@@ -91,11 +68,12 @@ export class TeacherAssignmentsController {
   // --- TEACHER SUBJECT ASSIGNMENTS ---
 
   @Post("teacher-subject-assignments")
+  @RequirePermission("academics:manage_assignments")
   async createTeacherSubjectAssignment(
     @Req() req: any,
     @Body() dto: CreateTeacherSubjectAssignmentDto,
   ) {
-    await this.assertAdminManagementAuthority(req, dto.teacherId);
+    await this.assertNoSelfAssignmentOrPromotion(req, dto.teacherId);
     const { tenantId, schoolId } = req.workspace;
     const data = await this.teacherAssignmentsService.createTeacherSubjectAssignment(
       tenantId,
@@ -106,6 +84,7 @@ export class TeacherAssignmentsController {
   }
 
   @Get("teacher-subject-assignments")
+  @RequirePermission("academics:read_assignments")
   async listTeacherSubjectAssignments(
     @Req() req: any,
     @Query() query: QueryTeacherSubjectAssignmentDto,
@@ -120,6 +99,7 @@ export class TeacherAssignmentsController {
   }
 
   @Get("teacher-subject-assignments/:id")
+  @RequirePermission("academics:read_assignments")
   async getTeacherSubjectAssignment(
     @Req() req: any,
     @Param("id") id: string,
@@ -134,19 +114,19 @@ export class TeacherAssignmentsController {
   }
 
   @Put("teacher-subject-assignments/:id/deactivate")
+  @RequirePermission("academics:manage_assignments")
   async deactivateTeacherSubjectAssignment(
     @Req() req: any,
     @Param("id") id: string,
   ) {
     const { tenantId, schoolId } = req.workspace;
 
-    // Fetch existing assignment to verify target teacher
     const existing = await this.teacherAssignmentsService.getTeacherSubjectAssignment(
       tenantId,
       schoolId,
       id,
     );
-    await this.assertAdminManagementAuthority(req, existing.teacherId);
+    await this.assertNoSelfAssignmentOrPromotion(req, existing.teacherId);
 
     const data = await this.teacherAssignmentsService.deactivateTeacherSubjectAssignment(
       tenantId,
@@ -159,11 +139,12 @@ export class TeacherAssignmentsController {
   // --- CLASS TEACHER ASSIGNMENTS ---
 
   @Post("class-teacher-assignments")
+  @RequirePermission("academics:manage_assignments")
   async createClassTeacherAssignment(
     @Req() req: any,
     @Body() dto: CreateClassTeacherAssignmentDto,
   ) {
-    await this.assertAdminManagementAuthority(req, dto.teacherId);
+    await this.assertNoSelfAssignmentOrPromotion(req, dto.teacherId);
     const { tenantId, schoolId } = req.workspace;
     const data = await this.teacherAssignmentsService.createClassTeacherAssignment(
       tenantId,
@@ -174,6 +155,7 @@ export class TeacherAssignmentsController {
   }
 
   @Get("class-teacher-assignments")
+  @RequirePermission("academics:read_assignments")
   async listClassTeacherAssignments(
     @Req() req: any,
     @Query() query: QueryClassTeacherAssignmentDto,
@@ -188,6 +170,7 @@ export class TeacherAssignmentsController {
   }
 
   @Get("class-teacher-assignments/:id")
+  @RequirePermission("academics:read_assignments")
   async getClassTeacherAssignment(
     @Req() req: any,
     @Param("id") id: string,
@@ -202,6 +185,7 @@ export class TeacherAssignmentsController {
   }
 
   @Delete("class-teacher-assignments/:id")
+  @RequirePermission("academics:manage_assignments")
   async deleteClassTeacherAssignment(
     @Req() req: any,
     @Param("id") id: string,
@@ -213,7 +197,7 @@ export class TeacherAssignmentsController {
       schoolId,
       id,
     );
-    await this.assertAdminManagementAuthority(req, existing.teacherId);
+    await this.assertNoSelfAssignmentOrPromotion(req, existing.teacherId);
 
     const data = await this.teacherAssignmentsService.deleteClassTeacherAssignment(
       tenantId,
