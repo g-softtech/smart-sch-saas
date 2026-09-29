@@ -694,6 +694,37 @@ Duplicate scan now correctly shows yellow "Already Arrived" notice.
   17. Quarantined migration records do NOT grant authority → PASSED
   18. Tenant/school isolation on list/read endpoints → PASSED
 
+**Step 4 Implementation Summary (Teacher Portal Gradebook BFF):**
+- Built `TeacherGradebookController` (`apps/api-gateway/src/modules/academics/controllers/teacher-gradebook.controller.ts`).
+- Built `TeacherGradebookService` (`apps/api-gateway/src/modules/academics/services/teacher-gradebook.service.ts`).
+- Built DTO definitions (`apps/api-gateway/src/modules/academics/dto/teacher-gradebook.dto.ts`).
+- Registered `TeacherGradebookController` and `TeacherGradebookService` in `AcademicsModule`.
+- Implemented `/scope` endpoint returning active teacher subject/class/arm assignments.
+- Implemented `/` endpoint loading gradebook student roster, academic context, assessment scores, and submission workflow status.
+- Implemented `/draft` endpoint for saving/upserting draft assessment scores, supporting `isAbsent` flags, recalculating total scores, and logging `ScoreAuditLog`.
+- Implemented `/submit` endpoint enforcing primary-teacher submission safeguard (`isPrimary = true`), updating `GradebookSubmission` status to `SUBMITTED`, and logging `WorkflowAuditLog`.
+
+**Adversarial Security & Integration Test Results (18 Scenarios):**
+- Executed `packages/core-platform/src/scripts/test-step4-gradebook.ts`: `18/18 PASSED`.
+  1. Primary teacher fetches assigned scope → PASSED
+  2. Primary teacher fetches gradebook roster & context → PASSED
+  3. Teacher with NO subject assignment rejected → PASSED
+  4. Teacher assigned to another class rejected → PASSED
+  5. ClassTeacherAssignment alone yields zero grading authority → PASSED
+  6. Quarantined migration record yields zero authority → PASSED
+  7. CLASS_WIDE teacher operates across arms within same school → PASSED
+  8. Cross-school gradebook access rejected → PASSED
+  9. Cross-tenant gradebook access rejected → PASSED
+  10. Wrong academic year / term request rejected → PASSED
+  11. Non-primary co-teacher saves draft scores → PASSED
+  12. Primary teacher saves draft with isAbsent flag → PASSED
+  13. Score entry for non-enrolled student rejected → PASSED
+  14. Non-primary co-teacher submission rejected → PASSED
+  15. Primary teacher submits gradebook → PASSED
+  16. Editing submitted gradebook rejected → PASSED
+  17. Resubmitting submitted gradebook rejected → PASSED
+  18. REJECTED gradebook state recovery & resubmission → PASSED
+
 **Verification Evidence:**
 - **Prisma Migration Status:** `npx prisma migrate status` ("28 migrations found in prisma/migrations. Database schema is up to date!")
 - **Core Platform Build (`tsc`):** PASSED (0 errors)
