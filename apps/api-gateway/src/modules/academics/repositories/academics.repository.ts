@@ -343,4 +343,16 @@ export class AcademicsRepository {
       where: { id, tenantId },
     });
   }
+
+  async findTerm(id: string) {
+    return kernel.db.term.findUnique({ where: { id } });
+  }
+
+  async findSubject(id: string) {
+    return kernel.db.subject.findUnique({ where: { id } });
+  }
+
+  async findStaffProfile(id: string) {
+    return kernel.db.staffProfile.findUnique({ where: { id } });
+  }
 }
