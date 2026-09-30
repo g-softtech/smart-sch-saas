@@ -464,8 +464,7 @@ export class TeacherGradebookService {
           const updatedSub = await tx.gradebookSubmission.update({
             where: { id: existingSubmission.id },
             data: {
-              status: WorkflowStatus.DRAFT,
-              rejectionReason: null,
+              status: existingSubmission.status,
             },
           });
           submissionId = updatedSub.id;

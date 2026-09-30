@@ -78,6 +78,14 @@ async function main() {
       data: { tenantId: tenant.id, schoolId: school.id, userId: coteacherUser.id, staffNumber: `STF-CO-${ts}`, firstName: "Co", lastName: "Teacher", joiningDate: new Date(), type: StaffType.TEACHING, status: "ACTIVE" },
     });
 
+    const unassignedUser = await kernel.db.user.create({
+      data: { email: `unassigned-${ts}@test.com`, passwordHash: "hash" },
+    });
+
+    const unassignedStaff = await kernel.db.staffProfile.create({
+      data: { tenantId: tenant.id, schoolId: school.id, userId: unassignedUser.id, staffNumber: `STF-UN-${ts}`, firstName: "Unassigned", lastName: "Teacher", joiningDate: new Date(), type: StaffType.TEACHING, status: "ACTIVE" },
+    });
+
     // Create Students, Users, Enrollments & Guardians
     const studentUser = await kernel.db.user.create({
       data: { email: `stu-${ts}@test.com`, passwordHash: "hash" },
@@ -513,6 +521,189 @@ async function main() {
       console.log(`Scenario 23: Audit records created for each workflow transition (${auditLogs.length} logs recorded) -> PASSED`);
     } else {
       throw new Error(`Scenario 23 Failed: Expected at least 6 audit logs got ${auditLogs.length}`);
+    }
+
+    // --- SCENARIO 24: Unassigned teacher submission attempt is REJECTED ---
+    try {
+      await teacherGradebookService.submitGradebook(
+        tenant.id,
+        school.id,
+        unassignedUser.id,
+        {
+          classId: cls.id,
+          armId: arm1.id,
+          subjectId: subject.id,
+          academicYearId: academicYear.id,
+          termId: term.id,
+        },
+      );
+      throw new Error("Scenario 24 Failed: Unassigned teacher should not be authorized to submit");
+    } catch (err: any) {
+      if (err.message.includes("is not authorized") || err.message.includes("is not assigned to teach")) {
+        console.log("Scenario 24: Unassigned teacher submission attempt is REJECTED -> PASSED");
+      } else {
+        throw err;
+      }
+    }
+
+    // --- SCENARIO 25: Direct publication attempt of REJECTED gradebook is REJECTED ---
+    const subj2 = await kernel.db.subject.create({
+      data: { tenantId: tenant.id, schoolId: school.id, name: "Physics" },
+    });
+    await kernel.db.teacherSubjectAssignment.create({
+      data: {
+        tenantId: tenant.id,
+        schoolId: school.id,
+        academicYearId: academicYear.id,
+        termId: term.id,
+        classId: cls.id,
+        armId: arm1.id,
+        subjectId: subj2.id,
+        teacherId: primaryTeacherStaff.id,
+        isPrimary: true,
+        scope: AssignmentScope.ARM_SPECIFIC,
+      },
+    });
+
+    await teacherGradebookService.saveGradebookDraft(
+      tenant.id,
+      school.id,
+      primaryTeacherUser.id,
+      {
+        academicYearId: academicYear.id,
+        termId: term.id,
+        classId: cls.id,
+        armId: arm1.id,
+        subjectId: subj2.id,
+        entries: [{ studentId: student.id, scores: [{ type: "CA1", maxScore: 20, score: 15 }] }],
+      },
+    );
+
+    const subToReject = await teacherGradebookService.submitGradebook(
+      tenant.id,
+      school.id,
+      primaryTeacherUser.id,
+      {
+        academicYearId: academicYear.id,
+        termId: term.id,
+        classId: cls.id,
+        armId: arm1.id,
+        subjectId: subj2.id,
+      },
+    );
+
+    const rejectedSub = await workflowService.rejectGradebook(
+      tenant.id,
+      school.id,
+      {
+        submissionId: subToReject.submissionId,
+        reason: "Test rejection for publication check",
+      },
+      adminUser.id,
+      "SCHOOL_ADMIN",
+    );
+
+    try {
+      await workflowService.publishGradebook(
+        tenant.id,
+        school.id,
+        { submissionId: rejectedSub.id },
+        adminUser.id,
+        "SCHOOL_ADMIN",
+      );
+      throw new Error("Scenario 25 Failed: Direct publication of REJECTED gradebook should fail");
+    } catch (err: any) {
+      if (err.message.includes("Cannot publish gradebook with status REJECTED")) {
+        console.log("Scenario 25: Direct publication attempt of REJECTED gradebook is REJECTED -> PASSED");
+      } else {
+        throw err;
+      }
+    }
+
+    // --- SCENARIO 26: Rejection attempt of DRAFT gradebook is REJECTED ---
+    const subj3 = await kernel.db.subject.create({
+      data: { tenantId: tenant.id, schoolId: school.id, name: "Chemistry" },
+    });
+    await kernel.db.teacherSubjectAssignment.create({
+      data: {
+        tenantId: tenant.id,
+        schoolId: school.id,
+        academicYearId: academicYear.id,
+        termId: term.id,
+        classId: cls.id,
+        armId: arm1.id,
+        subjectId: subj3.id,
+        teacherId: primaryTeacherStaff.id,
+        isPrimary: true,
+        scope: AssignmentScope.ARM_SPECIFIC,
+      },
+    });
+
+    const draftRes = await teacherGradebookService.saveGradebookDraft(
+      tenant.id,
+      school.id,
+      primaryTeacherUser.id,
+      {
+        academicYearId: academicYear.id,
+        termId: term.id,
+        classId: cls.id,
+        armId: arm1.id,
+        subjectId: subj3.id,
+        entries: [{ studentId: student.id, scores: [{ type: "CA1", maxScore: 20, score: 10 }] }],
+      },
+    );
+
+    try {
+      await workflowService.rejectGradebook(
+        tenant.id,
+        school.id,
+        { submissionId: draftRes.submissionId, reason: "Invalid" },
+        adminUser.id,
+        "SCHOOL_ADMIN",
+      );
+      throw new Error("Scenario 26 Failed: Rejecting DRAFT gradebook should fail");
+    } catch (err: any) {
+      if (err.message.includes("Cannot reject gradebook with status DRAFT")) {
+        console.log("Scenario 26: Rejection attempt of DRAFT gradebook is REJECTED -> PASSED");
+      } else {
+        throw err;
+      }
+    }
+
+    // --- SCENARIO 27: Approval attempt of DRAFT gradebook is REJECTED ---
+    try {
+      await workflowService.approveGradebook(
+        tenant.id,
+        school.id,
+        { submissionId: draftRes.submissionId },
+        adminUser.id,
+        "SCHOOL_ADMIN",
+      );
+      throw new Error("Scenario 27 Failed: Approving DRAFT gradebook should fail");
+    } catch (err: any) {
+      if (err.message.includes("Cannot approve gradebook with status DRAFT")) {
+        console.log("Scenario 27: Approval attempt of DRAFT gradebook is REJECTED -> PASSED");
+      } else {
+        throw err;
+      }
+    }
+
+    // --- SCENARIO 28: Reopen attempt of non-PUBLISHED gradebook is REJECTED ---
+    try {
+      await workflowService.reopenGradebook(
+        tenant.id,
+        school.id,
+        { submissionId: draftRes.submissionId, reason: "Invalid" },
+        adminUser.id,
+        "SUPER_ADMIN",
+      );
+      throw new Error("Scenario 28 Failed: Reopening DRAFT gradebook should fail");
+    } catch (err: any) {
+      if (err.message.includes("Cannot reopen gradebook with status DRAFT")) {
+        console.log("Scenario 28: Reopen attempt of non-PUBLISHED gradebook is REJECTED -> PASSED");
+      } else {
+        throw err;
+      }
     }
   });
 

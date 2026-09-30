@@ -38,23 +38,28 @@
 ---
 
 ### Phase 5G Step 5 — Gradebook Submission, Approval, Publication & Reopen Workflow Engine
-- **Status:** **COMPLETE & FULLY VERIFIED**
+- **Status:** **REMEDIATED, COMPLETE & FULLY VERIFIED**
 - **Changes Implemented:**
   - **Prisma Model Updates:** Created `GradebookSubmission` (`acd_gradebook_submissions`), `ScoreAuditLog` (`acd_score_audit_logs`), and `WorkflowAuditLog` (`acd_workflow_audit_logs`) with `WorkflowStatus` enum (`DRAFT`, `SUBMITTED`, `APPROVED`, `PUBLISHED`, `REJECTED`).
   - **State Machine Rules:**
-    - `SUBMITTED -> APPROVED` (Admin / Reviewer review)
-    - `SUBMITTED -> REJECTED` (Rejection with mandatory reason, transitions to `REJECTED`, audited)
-    - `APPROVED -> PUBLISHED` (Result publishing to portals)
-    - `PUBLISHED -> REOPENED (DRAFT)` (Gradebook reopening for edits)
-    - `REJECTED -> DRAFT` (Teacher editing draft after rejection)
+    - `DRAFT -> SUBMITTED` (Primary teacher submits gradebook for review)
+    - `SUBMITTED -> APPROVED` (Authorized reviewer approves submission)
+    - `SUBMITTED -> REJECTED` (Authorized reviewer rejects submission with mandatory reason)
+    - `REJECTED -> SUBMITTED` (Primary teacher resubmits gradebook after editing)
+    - `APPROVED -> PUBLISHED` (Authorized publisher publishes results to portals)
+    - `PUBLISHED -> DRAFT` (Authorized admin reopens published gradebook with mandatory reason)
   - **Security & Authorization Controls:**
     - Teachers CANNOT approve, reject, publish, or reopen gradebooks (`403 Forbidden`).
-    - Fine-grained permissions enforced via `@RequirePermissions(...)`: `academics:review_gradebook`, `academics:publish_results`, `academics:reopen_gradebook`.
+    - Fine-grained permissions enforced via `@RequirePermissions(...)`: `academics:review_gradebook`, `academics:approve_gradebook`, `academics:reject_gradebook`, `academics:publish_results`, `academics:reopen_results`.
     - Cross-tenant/cross-school isolation enforced on all submission, score edit, and workflow status endpoints.
   - **Student & Parent Portal Result Engine Alignment:**
-    - Student and Parent Result endpoints (`/portal/student/results`, `/portal/parent/children/:id/results`) updated to query published gradebooks and calculate subject totals, grades, terms, and GPA safely. Unpublished/draft results are completely hidden.
+    - Student and Parent Result endpoints (`/portal/student/results`, `/portal/parent/children/:id/results`) explicitly query `status: "PUBLISHED"`. All `DRAFT`, `SUBMITTED`, `APPROVED`, and `REJECTED` states remain strictly invisible to students and parents.
 - **Verification Summary:**
-  - **Comprehensive Security & Workflow Suite (`packages/core-platform/src/scripts/test-step5-workflow.ts`):** `23/23 PASSED` scenarios verified.
+  - **Comprehensive Security & Workflow Suite (`packages/core-platform/src/scripts/test-step5-workflow.ts`):** `28/28 PASSED` scenarios verified.
+  - **Phase 3 Regression Suite (`packages/core-platform/src/scripts/test-step3-security.ts`):** `25/25 PASSED` scenarios verified.
+  - **Phase 4 Regression Suite (`packages/core-platform/src/scripts/test-step4-gradebook.ts`):** `22/22 PASSED` scenarios verified.
+  - **Prisma Migration Status:** `prisma migrate status` PASSED ("Database schema is up to date!").
+  - **Core Platform Typecheck (`packages/core-platform`):** `tsc --noEmit` PASSED (0 errors).
   - **Backend Build (`apps/api-gateway`):** `npm run build` PASSED (0 errors).
   - **Frontend Build (`apps/web-app`):** `npm run build` PASSED (0 errors).
   - **Code Quality:** `git diff --check` PASSED (0 whitespace errors).
