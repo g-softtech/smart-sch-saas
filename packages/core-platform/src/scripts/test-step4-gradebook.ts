@@ -81,38 +81,38 @@ async function runStep4GradebookSuite() {
   let userNoEnterPermTeacherId = `u_noenter_t_${ts}`;
   let userNoSubmitPermTeacherId = `u_nosubmit_t_${ts}`;
 
-  let staffPrimaryId: string;
-  let staffCoTeacherId: string;
-  let staffUnassignedId: string;
-  let staffWrongClassId: string;
-  let staffQuarantinedId: string;
-  let staffNoReadPermId: string;
-  let staffNoEnterPermId: string;
-  let staffNoSubmitPermId: string;
+  let staffPrimaryId: string = "";
+  let staffCoTeacherId: string = "";
+  let staffUnassignedId: string = "";
+  let staffWrongClassId: string = "";
+  let staffQuarantinedId: string = "";
+  let staffNoReadPermId: string = "";
+  let staffNoEnterPermId: string = "";
+  let staffNoSubmitPermId: string = "";
 
-  let academicYear1Id: string;
-  let term1Id: string;
-  let termWrongId: string;
-  let class1Id: string;
-  let class2Id: string;
-  let armAId: string;
-  let armBId: string;
-  let subjectMathId: string;
-  let subjectEngId: string;
+  let academicYear1Id: string = "";
+  let term1Id: string = "";
+  let termWrongId: string = "";
+  let class1Id: string = "";
+  let class2Id: string = "";
+  let armAId: string = "";
+  let armBId: string = "";
+  let subjectMathId: string = "";
+  let subjectEngId: string = "";
 
   let student1Id = `st1_${ts}`;
   let student2Id = `st2_${ts}`;
   let studentOutsideId = `st_out_${ts}`;
 
-  let roleFullTeacherId: string;
-  let roleNoReadTeacherId: string;
-  let roleNoEnterTeacherId: string;
-  let roleNoSubmitTeacherId: string;
+  let roleFullTeacherId: string = "";
+  let roleNoReadTeacherId: string = "";
+  let roleNoEnterTeacherId: string = "";
+  let roleNoSubmitTeacherId: string = "";
 
-  let permReadAssignmentsId: string;
-  let permReadGradebookId: string;
-  let permEnterScoresId: string;
-  let permSubmitGradebookId: string;
+  let permReadAssignmentsId: string = "";
+  let permReadGradebookId: string = "";
+  let permEnterScoresId: string = "";
+  let permSubmitGradebookId: string = "";
 
   try {
     // 1. Core Tenants & Schools

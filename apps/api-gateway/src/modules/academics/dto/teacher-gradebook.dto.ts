@@ -13,29 +13,29 @@ import { Type } from "class-transformer";
 export class GetTeacherScopeQueryDto {
   @IsString()
   @IsNotEmpty()
-  academicYearId: string;
+  academicYearId!: string;
 
   @IsString()
   @IsNotEmpty()
-  termId: string;
+  termId!: string;
 }
 
 export class GetGradebookQueryDto {
   @IsString()
   @IsNotEmpty()
-  academicYearId: string;
+  academicYearId!: string;
 
   @IsString()
   @IsNotEmpty()
-  termId: string;
+  termId!: string;
 
   @IsString()
   @IsNotEmpty()
-  classId: string;
+  classId!: string;
 
   @IsString()
   @IsNotEmpty()
-  subjectId: string;
+  subjectId!: string;
 
   @IsString()
   @IsOptional()
@@ -59,7 +59,7 @@ export class ScoreEntryItemDto {
   @IsNumber()
   @IsNotEmpty()
   @Min(0)
-  maxScore: number;
+  maxScore!: number;
 
   @IsBoolean()
   @IsOptional()
@@ -69,26 +69,26 @@ export class ScoreEntryItemDto {
 export class StudentGradebookEntryDto {
   @IsString()
   @IsNotEmpty()
-  studentId: string;
+  studentId!: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ScoreEntryItemDto)
-  scores: ScoreEntryItemDto[];
+  scores!: ScoreEntryItemDto[];
 }
 
 export class SaveGradebookDraftDto {
   @IsString()
   @IsNotEmpty()
-  academicYearId: string;
+  academicYearId!: string;
 
   @IsString()
   @IsNotEmpty()
-  termId: string;
+  termId!: string;
 
   @IsString()
   @IsNotEmpty()
-  classId: string;
+  classId!: string;
 
   @IsString()
   @IsOptional()
@@ -96,26 +96,26 @@ export class SaveGradebookDraftDto {
 
   @IsString()
   @IsNotEmpty()
-  subjectId: string;
+  subjectId!: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => StudentGradebookEntryDto)
-  entries: StudentGradebookEntryDto[];
+  entries!: StudentGradebookEntryDto[];
 }
 
 export class SubmitGradebookDto {
   @IsString()
   @IsNotEmpty()
-  academicYearId: string;
+  academicYearId!: string;
 
   @IsString()
   @IsNotEmpty()
-  termId: string;
+  termId!: string;
 
   @IsString()
   @IsNotEmpty()
-  classId: string;
+  classId!: string;
 
   @IsString()
   @IsOptional()
@@ -123,5 +123,5 @@ export class SubmitGradebookDto {
 
   @IsString()
   @IsNotEmpty()
-  subjectId: string;
+  subjectId!: string;
 }

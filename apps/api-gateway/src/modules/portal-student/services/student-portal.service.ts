@@ -1,5 +1,5 @@
 import { Injectable, ForbiddenException, NotFoundException } from "@nestjs/common";
-import { kernel } from "@saas/core-platform";
+import { kernel, tenantContext } from "@saas/core-platform";
 import { AssignmentsService } from "../../assignments/services/assignments.service";
 import { CBTService } from "../../cbt/services/cbt.service";
 import { SubmitStudentAssignmentDto, SubmitStudentCBTDto } from "../dto/student-portal.dto";
@@ -16,54 +16,56 @@ export class StudentPortalService {
    * Throws ForbiddenException if no active Student profile is linked to the user account in this tenant/school.
    */
   async resolveStudent(userId: string, tenantId: string, schoolId: string) {
-    const student = await kernel.db.student.findFirst({
-      where: {
-        tenantId,
-        schoolId,
-        userId,
-        status: "ACTIVE",
-      },
-      include: {
-        enrollments: {
-          where: { status: "ACTIVE" },
-          include: {
-            class: true,
-            arm: true,
-            academicYear: true,
-          },
-          take: 1,
+    return tenantContext.run({ tenantId }, async () => {
+      const student = await kernel.db.student.findFirst({
+        where: {
+          tenantId,
+          schoolId,
+          userId,
+          status: "ACTIVE",
         },
-      },
-    });
-
-    if (!student) {
-      // Fallback: Check if user exists in tenant for fallback test environments
-      const user = await kernel.db.user.findUnique({ where: { id: userId } });
-      if (user) {
-        const studentBySchool = await kernel.db.student.findFirst({
-          where: {
-            tenantId,
-            schoolId,
-            status: "ACTIVE",
-          },
-          include: {
-            enrollments: {
-              where: { status: "ACTIVE" },
-              include: {
-                class: true,
-                arm: true,
-                academicYear: true,
-              },
-              take: 1,
+        include: {
+          enrollments: {
+            where: { status: "ACTIVE" },
+            include: {
+              class: true,
+              arm: true,
+              academicYear: true,
             },
+            take: 1,
           },
-        });
-        if (studentBySchool) return studentBySchool;
-      }
-      throw new ForbiddenException("No active student profile linked to authenticated user");
-    }
+        },
+      });
 
-    return student;
+      if (!student) {
+        // Fallback: Check if user exists in tenant for fallback test environments
+        const user = await kernel.db.user.findUnique({ where: { id: userId } });
+        if (user) {
+          const studentBySchool = await kernel.db.student.findFirst({
+            where: {
+              tenantId,
+              schoolId,
+              status: "ACTIVE",
+            },
+            include: {
+              enrollments: {
+                where: { status: "ACTIVE" },
+                include: {
+                  class: true,
+                  arm: true,
+                  academicYear: true,
+                },
+                take: 1,
+              },
+            },
+          });
+          if (studentBySchool) return studentBySchool;
+        }
+        throw new ForbiddenException("No active student profile linked to authenticated user");
+      }
+
+      return student;
+    });
   }
 
   async getProfile(userId: string, tenantId: string, schoolId: string) {
@@ -327,22 +329,25 @@ export class StudentPortalService {
   }
 
   async getResults(userId: string, tenantId: string, schoolId: string) {
-    const student = await this.resolveStudent(userId, tenantId, schoolId);
-    const enrollmentIds = student.enrollments.map((e) => e.id);
+    return tenantContext.run({ tenantId }, async () => {
+      const student = await this.resolveStudent(userId, tenantId, schoolId);
+      const enrollmentIds = student.enrollments.map((e) => e.id);
 
-    return kernel.db.subjectResult.findMany({
-      where: {
-        tenantId,
-        schoolId,
-        enrollmentId: { in: enrollmentIds },
-      },
-      include: {
-        subject: { select: { id: true, name: true } },
-        academicYear: { select: { id: true, name: true } },
-        term: { select: { id: true, name: true } },
-        scores: true,
-      },
-      orderBy: { createdAt: "desc" },
+      return kernel.db.subjectResult.findMany({
+        where: {
+          tenantId,
+          schoolId,
+          enrollmentId: { in: enrollmentIds },
+          status: "PUBLISHED",
+        },
+        include: {
+          subject: { select: { id: true, name: true } },
+          academicYear: { select: { id: true, name: true } },
+          term: { select: { id: true, name: true } },
+          scores: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
     });
   }
 

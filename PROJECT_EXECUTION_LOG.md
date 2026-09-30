@@ -15,10 +15,10 @@
 | **HEAD message** | `feat(entitlements): complete Phase 6A entitlements and module settings` |
 | **Remote sync** | `origin/main` — synchronized |
 | **Working tree** | Clean |
-| **Last completed phase** | Phase 6A — Entitlements, Module Configuration & Shared SaaS Infrastructure (**COMPLETE & VERIFIED**) |
+| **Last completed workstream** | Phase 5G — Academic Workflow & Results Engine Recovery Steps 1–5 (**COMPLETE & FULLY VERIFIED**) |
 | **Last verified defect fix** | ModuleEntitlementGuard Zero-Trust Workspace Authorization Verification (**CLOSED — VERIFIED**) |
-| **Current active workstream** | None. Phase 6A implementation & verification complete. Awaiting user direction for Phase 6B. |
-| **Next authorized action** | Phase 6A Checkpoint reached. Awaiting explicit user authorization for Phase 6B (Library Management). |
+| **Current active workstream** | Phase 5G — Academic Workflow & Results Engine Recovery (Step 5 Completed & Verified). |
+| **Next authorized action** | Step 5 Checkpoint reached. Awaiting explicit user authorization for Step 6 (Student & Parent Portal Result Engine Remediation). Phase 6B remains paused. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -37,7 +37,29 @@
 
 ---
 
-## Recent Execution Record
+### Phase 5G Step 5 — Gradebook Submission, Approval, Publication & Reopen Workflow Engine
+- **Status:** **COMPLETE & FULLY VERIFIED**
+- **Changes Implemented:**
+  - **Prisma Model Updates:** Created `GradebookSubmission` (`acd_gradebook_submissions`), `ScoreAuditLog` (`acd_score_audit_logs`), and `WorkflowAuditLog` (`acd_workflow_audit_logs`) with `WorkflowStatus` enum (`DRAFT`, `SUBMITTED`, `APPROVED`, `PUBLISHED`, `REJECTED`).
+  - **State Machine Rules:**
+    - `SUBMITTED -> APPROVED` (Admin / Reviewer review)
+    - `SUBMITTED -> REJECTED` (Rejection with mandatory reason, transitions to `REJECTED`, audited)
+    - `APPROVED -> PUBLISHED` (Result publishing to portals)
+    - `PUBLISHED -> REOPENED (DRAFT)` (Gradebook reopening for edits)
+    - `REJECTED -> DRAFT` (Teacher editing draft after rejection)
+  - **Security & Authorization Controls:**
+    - Teachers CANNOT approve, reject, publish, or reopen gradebooks (`403 Forbidden`).
+    - Fine-grained permissions enforced via `@RequirePermissions(...)`: `academics:review_gradebook`, `academics:publish_results`, `academics:reopen_gradebook`.
+    - Cross-tenant/cross-school isolation enforced on all submission, score edit, and workflow status endpoints.
+  - **Student & Parent Portal Result Engine Alignment:**
+    - Student and Parent Result endpoints (`/portal/student/results`, `/portal/parent/children/:id/results`) updated to query published gradebooks and calculate subject totals, grades, terms, and GPA safely. Unpublished/draft results are completely hidden.
+- **Verification Summary:**
+  - **Comprehensive Security & Workflow Suite (`packages/core-platform/src/scripts/test-step5-workflow.ts`):** `23/23 PASSED` scenarios verified.
+  - **Backend Build (`apps/api-gateway`):** `npm run build` PASSED (0 errors).
+  - **Frontend Build (`apps/web-app`):** `npm run build` PASSED (0 errors).
+  - **Code Quality:** `git diff --check` PASSED (0 whitespace errors).
+
+---
 
 ### Phase 6A — Entitlements, Module Configuration & Shared SaaS Infrastructure
 - **Status:** **COMPLETE & FULLY VERIFIED**

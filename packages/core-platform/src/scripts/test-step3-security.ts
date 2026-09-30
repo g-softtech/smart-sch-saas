@@ -97,15 +97,15 @@ async function runStep3SecuritySuite() {
   let staffSchool2Id: string;
   let empoweredTeacherStaffId: string;
 
-  let roleSuperAdminId: string;
-  let roleSchoolAdminId: string;
-  let roleAcademicAdminId: string;
-  let roleTeacherId: string;
-  let roleNoPermId: string;
-  let roleEmpoweredTeacherId: string;
+  let roleSuperAdminId: string = "";
+  let roleSchoolAdminId: string = "";
+  let roleAcademicAdminId: string = "";
+  let roleTeacherId: string = "";
+  let roleNoPermId: string = "";
+  let roleEmpoweredTeacherId: string = "";
 
-  let permManageId: string;
-  let permReadId: string;
+  let permManageId: string = "";
+  let permReadId: string = "";
 
   try {
     // 1. Seed Core Tenants & Schools

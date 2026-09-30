@@ -186,7 +186,7 @@ export class CBTService {
 
     // Auto-Grade
     let totalScore = 0;
-    const answersData = [];
+    const answersData: any[] = [];
 
     const questionMap = new Map(attempt.exam.questions.map(q => [q.id, q]));
 

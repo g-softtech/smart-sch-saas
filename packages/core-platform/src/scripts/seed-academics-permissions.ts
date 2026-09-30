@@ -21,6 +21,26 @@ export const CANONICAL_ACADEMIC_PERMISSIONS = [
     name: "academics:submit_gradebook",
     description: "Submit teacher gradebook for administrative review",
   },
+  {
+    name: "academics:review_gradebook",
+    description: "Review submitted teacher gradebooks for administrative oversight",
+  },
+  {
+    name: "academics:approve_gradebook",
+    description: "Approve submitted gradebooks for publication readiness",
+  },
+  {
+    name: "academics:reject_gradebook",
+    description: "Reject submitted gradebooks back to draft with mandatory reason",
+  },
+  {
+    name: "academics:publish_results",
+    description: "Publish approved gradebook results to Student and Parent Portals",
+  },
+  {
+    name: "academics:reopen_results",
+    description: "Reopen published gradebooks back to draft state with mandatory reason",
+  },
 ];
 
 /**

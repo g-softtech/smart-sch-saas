@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from "@nestjs/common";
-const { kernel } = require("@saas/core-platform/dist/index.js");
+import { kernel, tenantContext } from "@saas/core-platform";
 import { CreateParentPickupAuthorizationDto, PayInvoiceDto } from "../dto/parent-portal.dto";
 
 @Injectable()
@@ -14,39 +14,41 @@ export class ParentPortalService {
    * Resolves Guardian exclusively via authenticated User ID (req.user.sub).
    */
   async resolveGuardian(userId: string, tenantId: string) {
-    const guardian = await kernel.db.guardian.findFirst({
-      where: {
-        tenantId,
-        userId,
-      },
-      include: {
-        students: {
-          include: {
-            student: {
-              include: {
-                school: { select: { id: true, name: true } },
-                enrollments: {
-                  where: { status: "ACTIVE" },
-                  include: {
-                    class: { select: { id: true, name: true } },
-                    arm: { select: { id: true, name: true } },
+    return tenantContext.run({ tenantId }, async () => {
+      const guardian = await kernel.db.guardian.findFirst({
+        where: {
+          tenantId,
+          userId,
+        },
+        include: {
+          students: {
+            include: {
+              student: {
+                include: {
+                  school: { select: { id: true, name: true } },
+                  enrollments: {
+                    where: { status: "ACTIVE" },
+                    include: {
+                      class: { select: { id: true, name: true } },
+                      arm: { select: { id: true, name: true } },
+                    },
                   },
+                  photo: { select: { id: true } },
                 },
-                photo: { select: { id: true } },
               },
             },
           },
         },
-      },
+      });
+
+      if (!guardian) {
+        throw new NotFoundException(
+          "Authenticated user is not linked to an active Guardian profile"
+        );
+      }
+
+      return guardian;
     });
-
-    if (!guardian) {
-      throw new NotFoundException(
-        "Authenticated user is not linked to an active Guardian profile"
-      );
-    }
-
-    return guardian;
   }
 
   /**
@@ -161,24 +163,28 @@ export class ParentPortalService {
   }
 
   async getChildResults(userId: string, tenantId: string, childId: string) {
-    const guardian = await this.resolveGuardian(userId, tenantId);
-    this.verifyChildAuthorization(guardian, childId);
+    return tenantContext.run({ tenantId }, async () => {
+      const guardian = await this.resolveGuardian(userId, tenantId);
+      this.verifyChildAuthorization(guardian, childId);
 
-    const child = guardian.students.find((sg: any) => sg.student.id === childId)?.student;
-    const enrollmentIds = child.enrollments.map((e: any) => e.id);
+      const child = guardian.students.find((sg: any) => sg.student.id === childId)?.student;
+      if (!child) throw new NotFoundException("Child profile not found");
+      const enrollmentIds = (child.enrollments || []).map((e: any) => e.id);
 
-    return kernel.db.subjectResult.findMany({
-      where: {
-        tenantId,
-        enrollmentId: { in: enrollmentIds },
-      },
-      include: {
-        subject: { select: { id: true, name: true } },
-        academicYear: { select: { id: true, name: true } },
-        term: { select: { id: true, name: true } },
-        scores: true,
-      },
-      orderBy: { createdAt: "desc" },
+      return kernel.db.subjectResult.findMany({
+        where: {
+          tenantId,
+          enrollmentId: { in: enrollmentIds },
+          status: "PUBLISHED",
+        },
+        include: {
+          subject: { select: { id: true, name: true } },
+          academicYear: { select: { id: true, name: true } },
+          term: { select: { id: true, name: true } },
+          scores: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
     });
   }
 
@@ -187,7 +193,8 @@ export class ParentPortalService {
     this.verifyChildAuthorization(guardian, childId);
 
     const child = guardian.students.find((sg: any) => sg.student.id === childId)?.student;
-    const enrollmentIds = child.enrollments.map((e: any) => e.id);
+    if (!child) throw new NotFoundException("Child profile not found");
+    const enrollmentIds = (child.enrollments || []).map((e: any) => e.id);
 
     const [attendanceRecords, arrivals] = await Promise.all([
       kernel.db.attendanceRecord.findMany({
@@ -203,7 +210,7 @@ export class ParentPortalService {
           tenantId,
           studentId: childId,
         },
-        orderBy: { arrivalTime: "desc" },
+        orderBy: { timestamp: "desc" },
         take: 30,
       }),
     ]);
@@ -252,6 +259,7 @@ export class ParentPortalService {
     this.verifyChildAuthorization(guardian, childId);
 
     const child = guardian.students.find((sg: any) => sg.student.id === childId)?.student;
+    if (!child) throw new NotFoundException("Child profile not found");
     const activeEnrollment = child.enrollments[0];
     if (!activeEnrollment) {
       throw new BadRequestException("Child has no active enrollment to authorize pickup for");
