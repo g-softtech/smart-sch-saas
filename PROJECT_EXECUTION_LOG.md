@@ -11,14 +11,14 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `8f097c49` |
-| **HEAD message** | `feat(academics): remediate Phase 5G Step 5 workflow engine & test suite` |
+| **HEAD** | `3fc83fa7` |
+| **HEAD message** | `docs: sync header table HEAD commit hash to 8f097c49 in execution log` |
 | **Remote sync** | `origin/main` — synchronized |
 | **Working tree** | Clean |
-| **Last completed workstream** | Phase 5G — Academic Workflow & Results Engine Recovery Steps 1–5 (**COMPLETE & FULLY VERIFIED**) |
-| **Last verified defect fix** | ModuleEntitlementGuard Zero-Trust Workspace Authorization Verification (**CLOSED — VERIFIED**) |
-| **Current active workstream** | Phase 5G — Academic Workflow & Results Engine Recovery (Step 5 Completed & Verified). |
-| **Next authorized action** | Step 5 Checkpoint reached. Awaiting explicit user authorization for Step 6 (Student & Parent Portal Result Engine Remediation). Phase 6B remains paused. |
+| **Last completed workstream** | Phase 5G — Academic Workflow & Results Engine Recovery Steps 1–6 (**COMPLETE & FULLY VERIFIED**) |
+| **Last verified defect fix** | Step 6 Legacy Publication Path & Parent Portal Property Access Remediation (**CLOSED — VERIFIED**) |
+| **Current active workstream** | Phase 5G — Academic Workflow & Results Engine Recovery (Steps 1–6 Completed & Verified). |
+| **Next authorized action** | Step 6 Checkpoint reached. Phase 5G Steps 1–6 Complete. Awaiting user authorization for next roadmap workstream. Phase 6B remains paused. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -58,6 +58,25 @@
   - **Comprehensive Security & Workflow Suite (`packages/core-platform/src/scripts/test-step5-workflow.ts`):** `28/28 PASSED` scenarios verified.
   - **Phase 3 Regression Suite (`packages/core-platform/src/scripts/test-step3-security.ts`):** `25/25 PASSED` scenarios verified.
   - **Phase 4 Regression Suite (`packages/core-platform/src/scripts/test-step4-gradebook.ts`):** `22/22 PASSED` scenarios verified.
+  - **Prisma Migration Status:** `prisma migrate status` PASSED ("Database schema is up to date!").
+  - **Core Platform Typecheck (`packages/core-platform`):** `tsc --noEmit` PASSED (0 errors).
+  - **Backend Build (`apps/api-gateway`):** `npm run build` PASSED (0 errors).
+  - **Frontend Build (`apps/web-app`):** `npm run build` PASSED (0 errors).
+  - **Code Quality:** `git diff --check` PASSED (0 whitespace errors).
+
+---
+
+### Phase 5G Step 6 — Student & Parent Portal Result Engine Remediation
+- **Status:** **COMPLETE & FULLY VERIFIED**
+- **Changes Implemented:**
+  - **Legacy Publication Bypass Remediation:** Blocked legacy `ResultsService.publishResults()` / `ResultsController.publishResults()` (`PATCH /api/v1/academics/results/publish/term/:termId/class/:classId`) by throwing `ForbiddenException`, enforcing `GradebookWorkflowService.publishGradebook()` as the single authoritative publication path.
+  - **Portal Query Scoping & Hardening:** Enforced `schoolId: child.schoolId` explicitly in `ParentPortalService.getChildResults()`. Added optional `academicYearId` and `termId` query filters to `StudentPortalService.getResults()` and `ParentPortalService.getChildResults()`. Structured response payload with term summary statistics (`totalSubjects`, `totalScore`, `averageScore`).
+  - **Web UI Remediation:** Fixed `res.finalScore` -> `res.totalScore` property access bug in Parent Portal result view ([`ParentChildResultsPage`](file:///c:/Users/gbemi/OneDrive/Desktop/schoolOS/apps/web-app/src/app/portal/parent/children/%5BchildId%5D/results/page.tsx#L81)). Added Result Summary Cards to Student and Parent Portal result pages.
+- **Verification Summary:**
+  - **Step 6 Portal Results Suite (`packages/core-platform/src/scripts/test-step6-portal-results.ts`):** `10/10 PASSED` scenarios verified.
+  - **Step 5 Workflow Regression Suite (`packages/core-platform/src/scripts/test-step5-workflow.ts`):** `28/28 PASSED` scenarios verified.
+  - **Step 4 Gradebook Regression Suite (`packages/core-platform/src/scripts/test-step4-gradebook.ts`):** `22/22 PASSED` scenarios verified.
+  - **Step 3 Security Regression Suite (`packages/core-platform/src/scripts/test-step3-security.ts`):** `25/25 PASSED` scenarios verified.
   - **Prisma Migration Status:** `prisma migrate status` PASSED ("Database schema is up to date!").
   - **Core Platform Typecheck (`packages/core-platform`):** `tsc --noEmit` PASSED (0 errors).
   - **Backend Build (`apps/api-gateway`):** `npm run build` PASSED (0 errors).

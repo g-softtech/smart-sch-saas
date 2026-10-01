@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   UseInterceptors,
   Req,
@@ -110,9 +111,13 @@ export class StudentPortalController {
 
   @Get("results")
   @ApiOperation({ summary: "Get student published academic results" })
-  async getResults(@Req() req: any) {
+  async getResults(
+    @Req() req: any,
+    @Query("academicYearId") academicYearId?: string,
+    @Query("termId") termId?: string,
+  ) {
     const { tenantId, schoolId, userId } = this.extractContext(req);
-    const data = await this.studentPortalService.getResults(userId, tenantId, schoolId);
+    const data = await this.studentPortalService.getResults(userId, tenantId, schoolId, academicYearId, termId);
     return { success: true, data };
   }
 

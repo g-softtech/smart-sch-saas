@@ -7,6 +7,7 @@ import { Award, AlertCircle, CheckCircle } from "lucide-react";
 export default function StudentResultsPage() {
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -14,7 +15,17 @@ export default function StudentResultsPage() {
       try {
         setLoading(true);
         const res = await apiClient.get<any>("/api/v1/portal/student/results");
-        setResults(Array.isArray(res) ? res : res?.data || []);
+        const payload = res?.data || res;
+        if (payload?.results && Array.isArray(payload.results)) {
+          setResults(payload.results);
+          setSummary(payload.summary || null);
+        } else if (Array.isArray(payload)) {
+          setResults(payload);
+          setSummary(null);
+        } else {
+          setResults([]);
+          setSummary(null);
+        }
       } catch (err: any) {
         console.error("Failed to load results:", err);
         setError(err.message || "Failed to load academic results");
@@ -36,6 +47,24 @@ export default function StudentResultsPage() {
           <p className="text-sm text-slate-400">View your published subject scores, assessment breakdowns, and grades.</p>
         </div>
       </div>
+
+      {/* Result Summary Card */}
+      {summary && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Published Subjects</span>
+            <span className="text-xl font-bold text-white">{summary.totalSubjects}</span>
+          </div>
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Total Score</span>
+            <span className="text-xl font-bold text-emerald-400">{summary.totalScore} pts</span>
+          </div>
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Average Score</span>
+            <span className="text-xl font-bold text-emerald-400">{summary.averageScore !== null ? `${summary.averageScore}%` : "N/A"}</span>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center h-48">

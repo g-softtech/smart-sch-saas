@@ -162,7 +162,13 @@ export class ParentPortalService {
     });
   }
 
-  async getChildResults(userId: string, tenantId: string, childId: string) {
+  async getChildResults(
+    userId: string,
+    tenantId: string,
+    childId: string,
+    academicYearId?: string,
+    termId?: string,
+  ) {
     return tenantContext.run({ tenantId }, async () => {
       const guardian = await this.resolveGuardian(userId, tenantId);
       this.verifyChildAuthorization(guardian, childId);
@@ -171,20 +177,44 @@ export class ParentPortalService {
       if (!child) throw new NotFoundException("Child profile not found");
       const enrollmentIds = (child.enrollments || []).map((e: any) => e.id);
 
-      return kernel.db.subjectResult.findMany({
-        where: {
-          tenantId,
-          enrollmentId: { in: enrollmentIds },
-          status: "PUBLISHED",
-        },
+      const where: any = {
+        tenantId,
+        schoolId: child.schoolId,
+        enrollmentId: { in: enrollmentIds },
+        status: "PUBLISHED",
+      };
+
+      if (academicYearId) where.academicYearId = academicYearId;
+      if (termId) where.termId = termId;
+
+      const rawResults = await kernel.db.subjectResult.findMany({
+        where,
         include: {
           subject: { select: { id: true, name: true } },
           academicYear: { select: { id: true, name: true } },
           term: { select: { id: true, name: true } },
           scores: true,
+          gradingScale: true,
         },
         orderBy: { createdAt: "desc" },
       });
+
+      const totalSubjects = rawResults.length;
+      const validScores = rawResults.filter((r) => r.totalScore !== null && r.totalScore !== undefined);
+      const totalScoreSum = validScores.reduce((acc, curr) => acc + (curr.totalScore || 0), 0);
+      const averageScore = validScores.length > 0 ? Math.round((totalScoreSum / validScores.length) * 100) / 100 : null;
+
+      const summary = {
+        totalSubjects,
+        totalScore: totalScoreSum,
+        averageScore,
+        publishedCount: rawResults.length,
+      };
+
+      return {
+        summary,
+        results: rawResults,
+      };
     });
   }
 

@@ -260,33 +260,8 @@ export class ResultsService {
   }
 
   async publishResults(tenantId: string, schoolId: string, termId: string, classId: string) {
-    // Note: The specific permission logic for this is enforced in the controller.
-    
-    // Find all draft enrollments in this term/class
-    const results = await prisma.subjectResult.findMany({
-      where: {
-        tenantId,
-        schoolId,
-        termId,
-        status: { in: [ResultStatus.DRAFT, ResultStatus.FINALIZED] },
-        enrollment: {
-          classId: classId,
-        },
-      },
-    });
-
-    if (results.length === 0) return { count: 0 };
-
-    const update = await prisma.subjectResult.updateMany({
-      where: {
-        id: { in: results.map(r => r.id) }
-      },
-      data: {
-        status: ResultStatus.PUBLISHED,
-        publishedAt: new Date(),
-      }
-    });
-
-    return { count: update.count };
+    throw new ForbiddenException(
+      "Direct publication of results is disabled. All result publications must be approved and published through GradebookWorkflowService.",
+    );
   }
 }

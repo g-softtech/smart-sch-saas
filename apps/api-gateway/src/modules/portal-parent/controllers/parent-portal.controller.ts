@@ -42,10 +42,15 @@ export class ParentPortalController {
   }
 
   @Get("children/:childId/results")
-  async getChildResults(@Req() req: any, @Param("childId") childId: string) {
+  async getChildResults(
+    @Req() req: any,
+    @Param("childId") childId: string,
+    @Query("academicYearId") academicYearId?: string,
+    @Query("termId") termId?: string,
+  ) {
     const userId = req.user.sub;
     const tenantId = req.workspace.tenantId;
-    return this.parentPortalService.getChildResults(userId, tenantId, childId);
+    return this.parentPortalService.getChildResults(userId, tenantId, childId, academicYearId, termId);
   }
 
   @Get("children/:childId/attendance")

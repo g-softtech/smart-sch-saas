@@ -332,7 +332,8 @@ async function main() {
     }
 
     // --- SCENARIO 10: Unpublished result remains invisible to Student Portal ---
-    const stuResults1 = await studentPortalService.getResults(studentUser.id, tenant.id, school.id);
+    const stuRes1 = await studentPortalService.getResults(studentUser.id, tenant.id, school.id);
+    const stuResults1 = stuRes1.results || stuRes1;
     if (stuResults1.length === 0) {
       console.log("Scenario 10: Unpublished result remains invisible to Student Portal -> PASSED");
     } else {
@@ -340,7 +341,8 @@ async function main() {
     }
 
     // --- SCENARIO 11: Unpublished result remains invisible to Parent Portal ---
-    const parResults1 = await parentPortalService.getChildResults(guardianUser.id, tenant.id, student.id);
+    const parRes1 = await parentPortalService.getChildResults(guardianUser.id, tenant.id, student.id);
+    const parResults1 = parRes1.results || parRes1;
     if (parResults1.length === 0) {
       console.log("Scenario 11: Unpublished result remains invisible to Parent Portal -> PASSED");
     } else {
@@ -363,7 +365,8 @@ async function main() {
     }
 
     // --- SCENARIO 13: Published result IS now visible to Student Portal ---
-    const stuResults2 = await studentPortalService.getResults(studentUser.id, tenant.id, school.id);
+    const stuRes2 = await studentPortalService.getResults(studentUser.id, tenant.id, school.id);
+    const stuResults2 = stuRes2.results || stuRes2;
     if (stuResults2.length > 0 && stuResults2[0].status === "PUBLISHED") {
       console.log("Scenario 13: Published result is visible through Student Portal -> PASSED");
     } else {
@@ -371,7 +374,8 @@ async function main() {
     }
 
     // --- SCENARIO 14: Published result IS now visible to Parent Portal ---
-    const parResults2 = await parentPortalService.getChildResults(guardianUser.id, tenant.id, student.id);
+    const parRes2 = await parentPortalService.getChildResults(guardianUser.id, tenant.id, student.id);
+    const parResults2 = parRes2.results || parRes2;
     if (parResults2.length > 0 && parResults2[0].status === "PUBLISHED") {
       console.log("Scenario 14: Published result is visible through Parent Portal -> PASSED");
     } else {
@@ -436,8 +440,10 @@ async function main() {
     }
 
     // --- SCENARIO 18: Reopened result immediately becomes invisible to Student & Parent portals ---
-    const stuResults3 = await studentPortalService.getResults(studentUser.id, tenant.id, school.id);
-    const parResults3 = await parentPortalService.getChildResults(guardianUser.id, tenant.id, student.id);
+    const stuRes3 = await studentPortalService.getResults(studentUser.id, tenant.id, school.id);
+    const parRes3 = await parentPortalService.getChildResults(guardianUser.id, tenant.id, student.id);
+    const stuResults3 = stuRes3.results || stuRes3;
+    const parResults3 = parRes3.results || parRes3;
     if (stuResults3.length === 0 && parResults3.length === 0) {
       console.log("Scenario 18: Reopened result returns to DRAFT and is no longer treated as published -> PASSED");
     } else {

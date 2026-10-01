@@ -11,6 +11,7 @@ export default function ParentChildResultsPage() {
 
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,7 +19,17 @@ export default function ParentChildResultsPage() {
       try {
         setLoading(true);
         const res = await apiClient.get<any>(`/api/v1/portal/parent/children/${childId}/results`);
-        setResults(Array.isArray(res) ? res : res?.data || []);
+        const payload = res?.data || res;
+        if (payload?.results && Array.isArray(payload.results)) {
+          setResults(payload.results);
+          setSummary(payload.summary || null);
+        } else if (Array.isArray(payload)) {
+          setResults(payload);
+          setSummary(null);
+        } else {
+          setResults([]);
+          setSummary(null);
+        }
       } catch (err: any) {
         console.error("Failed to load child results:", err);
         setError(err.message || "Failed to load report cards");
@@ -60,6 +71,24 @@ export default function ParentChildResultsPage() {
         </div>
       </div>
 
+      {/* Result Summary Card */}
+      {summary && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-2xl bg-[#112240] border border-[#1E3A5F] flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Published Subjects</span>
+            <span className="text-xl font-bold text-slate-100">{summary.totalSubjects}</span>
+          </div>
+          <div className="p-4 rounded-2xl bg-[#112240] border border-[#1E3A5F] flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Total Score</span>
+            <span className="text-xl font-bold text-[#D2AD36]">{summary.totalScore} pts</span>
+          </div>
+          <div className="p-4 rounded-2xl bg-[#112240] border border-[#1E3A5F] flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Average Score</span>
+            <span className="text-xl font-bold text-emerald-400">{summary.averageScore !== null ? `${summary.averageScore}%` : "N/A"}</span>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
         {results.length > 0 ? (
           results.map((res: any) => (
@@ -78,7 +107,14 @@ export default function ParentChildResultsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-xs text-slate-400">Final Score:</span>
-                  <p className="text-xl font-extrabold text-[#D2AD36]">{res.finalScore ?? "N/A"} pts</p>
+                  <p className="text-xl font-extrabold text-[#D2AD36]">
+                    {res.totalScore !== null && res.totalScore !== undefined ? `${res.totalScore} pts` : "N/A"}
+                  </p>
+                  {res.grade && (
+                    <span className="ml-2 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold">
+                      Grade: {res.grade}
+                    </span>
+                  )}
                 </div>
               </div>
 

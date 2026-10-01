@@ -328,26 +328,55 @@ export class StudentPortalService {
     });
   }
 
-  async getResults(userId: string, tenantId: string, schoolId: string) {
+  async getResults(
+    userId: string,
+    tenantId: string,
+    schoolId: string,
+    academicYearId?: string,
+    termId?: string,
+  ) {
     return tenantContext.run({ tenantId }, async () => {
       const student = await this.resolveStudent(userId, tenantId, schoolId);
       const enrollmentIds = student.enrollments.map((e) => e.id);
 
-      return kernel.db.subjectResult.findMany({
-        where: {
-          tenantId,
-          schoolId,
-          enrollmentId: { in: enrollmentIds },
-          status: "PUBLISHED",
-        },
+      const where: any = {
+        tenantId,
+        schoolId,
+        enrollmentId: { in: enrollmentIds },
+        status: "PUBLISHED",
+      };
+
+      if (academicYearId) where.academicYearId = academicYearId;
+      if (termId) where.termId = termId;
+
+      const rawResults = await kernel.db.subjectResult.findMany({
+        where,
         include: {
           subject: { select: { id: true, name: true } },
           academicYear: { select: { id: true, name: true } },
           term: { select: { id: true, name: true } },
           scores: true,
+          gradingScale: true,
         },
         orderBy: { createdAt: "desc" },
       });
+
+      const totalSubjects = rawResults.length;
+      const validScores = rawResults.filter((r) => r.totalScore !== null && r.totalScore !== undefined);
+      const totalScoreSum = validScores.reduce((acc, curr) => acc + (curr.totalScore || 0), 0);
+      const averageScore = validScores.length > 0 ? Math.round((totalScoreSum / validScores.length) * 100) / 100 : null;
+
+      const summary = {
+        totalSubjects,
+        totalScore: totalScoreSum,
+        averageScore,
+        publishedCount: rawResults.length,
+      };
+
+      return {
+        summary,
+        results: rawResults,
+      };
     });
   }
 
