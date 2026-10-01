@@ -43,9 +43,14 @@ export default function TeacherPortalLayout({
       icon: LayoutDashboard,
     },
     {
-      name: "Profile",
-      href: "/portal/teacher/profile",
-      icon: User,
+      name: "Gradebook",
+      href: "/portal/teacher/gradebook",
+      icon: GraduationCap,
+    },
+    {
+      name: "Assigned Classes",
+      href: "/portal/teacher/classes",
+      icon: BookOpen,
     },
     {
       name: "Timetable",
@@ -53,9 +58,9 @@ export default function TeacherPortalLayout({
       icon: Calendar,
     },
     {
-      name: "Assigned Classes",
-      href: "/portal/teacher/classes",
-      icon: BookOpen,
+      name: "Profile",
+      href: "/portal/teacher/profile",
+      icon: User,
     },
   ];
 
