@@ -167,7 +167,15 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Portal Query Scoping & Hardening:** Enforced `schoolId: child.schoolId` explicitly in `ParentPortalService.getChildResults()`. Added optional `academicYearId` and `termId` query filters to `StudentPortalService.getResults()` and `ParentPortalService.getChildResults()`. Structured response payload with term summary statistics (`totalSubjects`, `totalScore`, `averageScore`).
       - **Web UI Remediation:** Fixed `res.finalScore` -> `res.totalScore` property access bug in Parent Portal result view ([`ParentChildResultsPage`](file:///c:/Users/gbemi/OneDrive/Desktop/schoolOS/apps/web-app/src/app/portal/parent/children/%5BchildId%5D/results/page.tsx#L81)). Added Result Summary Cards to Student and Parent Portal result pages.
       - **Security & Portal Integration Suite:** `10/10 PASSED` (`packages/core-platform/src/scripts/test-step6-portal-results.ts`). Verified legacy publication blocking, `DRAFT`/`SUBMITTED`/`APPROVED` invisibility, `PUBLISHED` visibility, immediate disappearance on gradebook reopen (`PUBLISHED → DRAFT`), full re-publication flow, unlinked parent rejection (`403 Forbidden`), year/term scoping, and cross-school rejection.
-    - **Current Status & Next Step:** **Phase 5G Steps 1–6 COMPLETE & FULLY VERIFIED.** Ready for next user directive. Phase 6B remains strictly paused.
+  - **Phase 5H — Admin Teacher Assignment Management UI & Final Phase 5 Operational Closure:** **COMPLETE & FULLY VERIFIED**.
+    - **Scope Completed:** Built Admin Teacher & Class Assignments Management page (`/dashboard/academics/assignments`) and integrated staff assignment duties tab (`/dashboard/staff/[staffId]`). Consumes existing verified APIs (`POST/GET/PUT /api/v1/academics/teacher-subject-assignments` and `POST/GET/DELETE /api/v1/academics/class-teacher-assignments`).
+    - **Subject Teaching Assignments (`TeacherSubjectAssignment`):** Full operational UI for assigning academic/grading authority per subject, class, arm (`CLASS_WIDE` or `ARM_SPECIFIC`), and `isPrimary` designation. Includes deactivation/revocation workflow (`PUT /:id/deactivate`).
+    - **Class/Form Teacher Assignments (`ClassTeacherAssignment`):** Full operational UI for assigning pastoral/form teacher responsibilities per class and arm. Enforces strict domain boundary: form teacher assignment carries **ZERO grading authority** unless accompanied by a separate subject teaching assignment.
+    - **Verification Evidence:**
+      - **Phase 5H Integration Suite:** `8/8 PASSED` (`packages/core-platform/src/scripts/test-phase5h-assignments-e2e.ts`).
+      - **Regression Suites:** Step 3 Security (`25/25`), Step 4 Gradebook (`22/22`), Step 5 Workflow (`28/28`), Step 6 Portal Results (`10/10`).
+      - **Build & Migration Integrity:** Core Platform typecheck PASSED (`0 errors`), API Gateway build PASSED (`0 errors`), Web App build PASSED (`47/47 static/dynamic pages prerendered`), Prisma migration status PASSED (`28 migrations up to date`), `git diff --check` PASSED.
+    - **Current Status:** **Phase 5 (All Sub-phases 5A–5H) COMPLETE & FULLY VERIFIED.** Ready for Phase 6B authorization. Phase 6B remains paused until explicit user directive.
 
 ### Phase 6: Future SaaS Expansion
 - **Objective:** Value-add features beyond core operations.

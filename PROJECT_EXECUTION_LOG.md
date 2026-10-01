@@ -11,14 +11,14 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `3fc83fa7` |
-| **HEAD message** | `docs: sync header table HEAD commit hash to 8f097c49 in execution log` |
-| **Remote sync** | `origin/main` — synchronized |
-| **Working tree** | Clean |
-| **Last completed workstream** | Phase 5G — Academic Workflow & Results Engine Recovery Steps 1–6 (**COMPLETE & FULLY VERIFIED**) |
-| **Last verified defect fix** | Step 6 Legacy Publication Path & Parent Portal Property Access Remediation (**CLOSED — VERIFIED**) |
-| **Current active workstream** | Phase 5G — Academic Workflow & Results Engine Recovery (Steps 1–6 Completed & Verified). |
-| **Next authorized action** | Step 6 Checkpoint reached. Phase 5G Steps 1–6 Complete. Awaiting user authorization for next roadmap workstream. Phase 6B remains paused. |
+| **HEAD** | Pending Phase 5H commit |
+| **HEAD message** | `feat(academics): implement Phase 5H Admin Teacher Assignment Management UI & staff profile integration` |
+| **Remote sync** | `origin/main` — pending push |
+| **Working tree** | Staged |
+| **Last completed workstream** | Phase 5H — Admin Teacher Assignment Management UI (**COMPLETE & FULLY VERIFIED**) |
+| **Last verified defect fix** | Form Teacher zero grading authority & assignment scope deactivation (**CLOSED — VERIFIED**) |
+| **Current active workstream** | Phase 5 Operational Closure Complete (Phases 5A–5H Verified). |
+| **Next authorized action** | Phase 5 Complete. Awaiting user authorization for Phase 6B. Phase 6B remains paused. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -34,6 +34,28 @@
 - Phase 5A Student Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
 - Phase 5B Parent Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
 - Phase 5C Portal Account Provisioning & Smart Access (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
+
+---
+
+### Phase 5H — Admin Teacher Assignment Management UI & Staff Profile Integration
+- **Status:** **COMPLETE & FULLY VERIFIED**
+- **Changes Implemented:**
+  - **Admin Teacher & Class Assignments UI (`/dashboard/academics/assignments`):** Built interactive administration interface for Subject Teaching Assignments (`TeacherSubjectAssignment`) and Class/Form Teacher Assignments (`ClassTeacherAssignment`).
+  - **Subject Teaching Assignments (`TeacherSubjectAssignment`):** Configures academic & grading authority per subject, class, arm (`CLASS_WIDE` vs `ARM_SPECIFIC`), and primary teacher designation (`isPrimary`). Deactivation workflow supported (`PUT /:id/deactivate`).
+  - **Class/Form Teacher Assignments (`ClassTeacherAssignment`):** Configures pastoral & form teacher responsibilities per class and arm. Enforces domain boundary: Form Teacher assignment carries **ZERO grading authority** unless accompanied by a separate subject teaching assignment.
+  - **Staff Profile Integration (`/dashboard/staff/[staffId]`):** Added Assigned Academic & Teaching Duties section displaying active subject and class teacher roles for the staff member.
+  - **Academics Header Navigation (`/dashboard/academics`):** Added `Manage Teacher Assignments` button linking directly to `/dashboard/academics/assignments`.
+- **Verification Summary:**
+  - **Phase 5H E2E Integration Suite (`packages/core-platform/src/scripts/test-phase5h-assignments-e2e.ts`):** `8/8 PASSED` scenarios verified.
+  - **Step 3 Security Regression Suite (`packages/core-platform/src/scripts/test-step3-security.ts`):** `25/25 PASSED` scenarios verified.
+  - **Step 4 Gradebook Regression Suite (`packages/core-platform/src/scripts/test-step4-gradebook.ts`):** `22/22 PASSED` scenarios verified.
+  - **Step 5 Workflow Regression Suite (`packages/core-platform/src/scripts/test-step5-workflow.ts`):** `28/28 PASSED` scenarios verified.
+  - **Step 6 Portal Results Regression Suite (`packages/core-platform/src/scripts/test-step6-portal-results.ts`):** `10/10 PASSED` scenarios verified.
+  - **Prisma Migration Status:** `prisma migrate status` PASSED ("Database schema is up to date! 28 migrations found").
+  - **Core Platform Typecheck (`packages/core-platform`):** `tsc --noEmit` PASSED (0 errors).
+  - **Backend Build (`apps/api-gateway`):** `npm run build` PASSED (0 errors).
+  - **Frontend Build (`apps/web-app`):** `npm run build` PASSED (0 errors, 47 pages prerendered).
+  - **Code Quality:** `git diff --check` PASSED (0 whitespace errors).
 
 ---
 

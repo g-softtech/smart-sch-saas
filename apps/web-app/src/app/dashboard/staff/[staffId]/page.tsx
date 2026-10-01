@@ -74,6 +74,9 @@ export default function StaffProfilePage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [lastActivationUrl, setLastActivationUrl] = useState<string | null>(null);
 
+  const [subjectAssignments, setSubjectAssignments] = useState<any[]>([]);
+  const [classAssignments, setClassAssignments] = useState<any[]>([]);
+
   const fetchProfile = useCallback(
     async (isRefresh = false) => {
       if (!staffId) return;
@@ -81,14 +84,18 @@ export default function StaffProfilePage() {
         if (!isRefresh) setLoading(true);
         setError(null);
 
-        const [response, statusRes] = await Promise.all([
+        const [response, statusRes, subAssRes, clsAssRes] = await Promise.all([
           apiClient.get(`api/v1/staff/${staffId}`),
           apiClient.get(`api/v1/portal/account/staff/${staffId}/invitation-status`).catch(() => null),
+          apiClient.get(`api/v1/academics/teacher-subject-assignments?teacherId=${staffId}`).catch(() => []),
+          apiClient.get(`api/v1/academics/class-teacher-assignments?teacherId=${staffId}`).catch(() => []),
         ]);
 
         const profile = response as unknown as StaffProfile;
         setStaff(profile || null);
         if (statusRes) setInvitationStatus(statusRes as InvitationStatus);
+        setSubjectAssignments(Array.isArray(subAssRes) ? subAssRes : []);
+        setClassAssignments(Array.isArray(clsAssRes) ? clsAssRes : []);
 
         if (!isRefresh && profile && profile.status) {
           setTargetStatus(profile.status);
@@ -441,6 +448,78 @@ export default function StaffProfilePage() {
                 <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Staff Category</label>
                 <p className="text-base font-medium text-gray-900 dark:text-white mt-1 capitalize">{staff.type.replace("_", " ").toLowerCase()}</p>
               </div>
+            </div>
+          </div>
+
+          {/* Assigned Academic & Teaching Duties Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm space-y-6">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                </svg>
+                Assigned Academic & Teaching Duties
+              </h2>
+              <Link
+                href="/dashboard/academics/assignments"
+                className="text-xs font-bold text-amber-500 hover:underline"
+              >
+                Manage Assignments &rarr;
+              </Link>
+            </div>
+
+            {/* Subject Assignments Sub-section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                Subject Teaching Assignments ({subjectAssignments.length})
+              </h3>
+              {subjectAssignments.length === 0 ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">No active subject teaching assignments found for this staff member.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {subjectAssignments.map((a: any) => (
+                    <div key={a.id} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-500 text-xs">{a.subject?.name || a.subjectId}</span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${a.isPrimary ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-300"}`}>
+                          {a.isPrimary ? "PRIMARY" : "CO-TEACHER"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                        Class: {a.class?.name || a.classId} {a.arm ? `(${a.arm.name})` : ""}
+                      </p>
+                      <span className="text-[10px] text-gray-400 block font-mono">Scope: {a.scope}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Class / Form Teacher Sub-section */}
+            <div className="space-y-3 pt-2">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                Class / Form Teacher Roles ({classAssignments.length})
+              </h3>
+              {classAssignments.length === 0 ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">No form/class teacher assignments found for this staff member.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {classAssignments.map((c: any) => (
+                    <div key={c.id} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-blue-400 text-xs">Form Teacher</span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${c.isPrimary ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-300"}`}>
+                          {c.isPrimary ? "PRIMARY FORM" : "CO-FORM"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                        Class: {c.class?.name || c.classId} {c.arm ? `(${c.arm.name})` : ""}
+                      </p>
+                      <span className="text-[10px] text-gray-400 block font-mono">Scope: {c.scope}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

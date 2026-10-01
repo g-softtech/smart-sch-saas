@@ -702,6 +702,12 @@ export default function AcademicsPage() {
             <p className="text-sm text-gray-500 dark:text-brand-gray-text">Manage academics structure plan and gradebooks.</p>
           </div>
           <Link
+            href="/dashboard/academics/assignments"
+            className="inline-flex items-center rounded-md border border-brand-gold bg-[#0A192E] px-3.5 py-2 text-xs font-bold text-brand-gold shadow-sm hover:bg-brand-gold hover:text-brand-navy transition-colors"
+          >
+            Manage Teacher Assignments
+          </Link>
+          <Link
             href="/dashboard/academics/workflow"
             className="inline-flex items-center rounded-md border border-brand-gold bg-[#0A192E] px-3.5 py-2 text-xs font-bold text-brand-gold shadow-sm hover:bg-brand-gold hover:text-brand-navy transition-colors"
           >
