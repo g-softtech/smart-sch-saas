@@ -11,14 +11,14 @@
 | Field | Value |
 |-------|-------|
 | **Branch** | `main` |
-| **HEAD** | `8bc71a5f` |
-| **HEAD message** | `feat(academics): implement Phase 5H Admin Teacher Assignment Management UI & staff profile integration` |
+| **HEAD** | `252f24ab` |
+| **HEAD message** | `feat(academics): implement Phase 5I Academic Lesson Planning & Notes module` |
 | **Remote sync** | `origin/main` — pending push |
 | **Working tree** | Clean |
-| **Last completed workstream** | Phase 5H — Admin Teacher Assignment Management UI (**COMPLETE & FULLY VERIFIED**) |
-| **Last verified defect fix** | Form Teacher zero grading authority & assignment scope deactivation (**CLOSED — VERIFIED**) |
-| **Current active workstream** | Phase 5 Operational Closure Complete (Phases 5A–5H Verified). |
-| **Next authorized action** | Phase 5 Complete. Awaiting user authorization for Phase 6B. Phase 6B remains paused. |
+| **Last completed workstream** | Phase 5I — Academic Lesson Planning & Notes (**COMPLETE & FULLY VERIFIED**) |
+| **Last verified defect fix** | Form Teacher zero authoring authority safeguard & immutable workflow transitions (**CLOSED — VERIFIED**) |
+| **Current active workstream** | Phase 5 Operational Closure Complete (Phases 5A–5I Verified). |
+| **Next authorized action** | Phase 5 Complete. Awaiting user authorization for Phase 6B (Library Management). Phase 6B remains paused. |
 | **Primary roadmap** | `CURRENT_MASTER_EXECUTION_PLAN.md` |
 
 ### Do NOT reopen without a concrete new regression
@@ -34,6 +34,17 @@
 - Phase 5A Student Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
 - Phase 5B Parent Portal (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
 - Phase 5C Portal Account Provisioning & Smart Access (IMPLEMENTATION COMPLETE — PARTIALLY VERIFIED)
+
+---
+
+### Phase 5I — Academic Lesson Planning & Notes Module
+
+- **Scope Completed**: Added `LessonNoteStatus` enum, `LessonNote` model, and `LessonNoteAuditLog` model (`acd_lesson_notes` and `acd_lesson_note_audit_logs` via migration `20261002030000_add_phase_5i_lesson_notes_models`). Implemented `LessonNotesService`, `LessonNotesController`, and DTOs (`apps/api-gateway/src/modules/academics/*`). Seeded canonical permissions `academics:manage_lesson_notes`, `academics:read_lesson_notes`, `academics:review_lesson_notes`. Built Teacher Portal Lesson Notes UI (`/portal/teacher/lesson-notes`) and Admin Lesson Notes Review UI (`/dashboard/academics/lesson-notes`). Enforced strict `TeacherSubjectAssignment` authority gate (Form Teacher `ClassTeacherAssignment` carries ZERO authoring authority). Implemented `DRAFT -> SUBMITTED -> APPROVED / REJECTED` workflow with transactional audit logging, immutability under review, and rejection feedback correction.
+- **Verification Evidence**:
+  - **Phase 5I Dedicated Suite**: `10/10 PASSED` (`packages/core-platform/src/scripts/test-phase5i-lesson-notes-e2e.ts`).
+  - **Regression Suites**: Step 3 Security (`25/25`), Step 4 Gradebook (`22/22`), Step 5 Workflow (`28/28`), Step 6 Portal Results (`10/10`), Phase 5H Assignments (`8/8`).
+  - **Build Integrity**: Core Platform typecheck PASSED (`0 errors`), API Gateway build PASSED (`0 errors`), Web App build PASSED (`49/49 static/dynamic pages prerendered`), Prisma migration status PASSED (`29 migrations up to date`), `git diff --check` PASSED.
+- **Commit**: `252f24ab` (`feat(academics): implement Phase 5I Academic Lesson Planning & Notes module`).
 
 ---
 
