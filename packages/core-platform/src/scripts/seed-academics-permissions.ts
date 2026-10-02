@@ -41,6 +41,18 @@ export const CANONICAL_ACADEMIC_PERMISSIONS = [
     name: "academics:reopen_results",
     description: "Reopen published gradebooks back to draft state with mandatory reason",
   },
+  {
+    name: "academics:manage_lesson_notes",
+    description: "Create, edit, save draft, and submit lesson notes",
+  },
+  {
+    name: "academics:read_lesson_notes",
+    description: "Read and list lesson notes and workflow audit logs",
+  },
+  {
+    name: "academics:review_lesson_notes",
+    description: "Review, approve, and reject submitted lesson notes for administrative oversight",
+  },
 ];
 
 /**

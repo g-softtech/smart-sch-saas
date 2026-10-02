@@ -88,6 +88,8 @@ model Tenant {
   scoreAuditLogs        ScoreAuditLog[]
   workflowAuditLogs     WorkflowAuditLog[]
   assignmentMigrationQuarantines AssignmentMigrationQuarantine[]
+  lessonNotes           LessonNote[]
+  lessonNoteAuditLogs   LessonNoteAuditLog[]
 
   @@map("plt_tenants")
 }
@@ -110,6 +112,7 @@ model User {
   students          Student[]
   guardians         Guardian[]
   passwordResetTokens PasswordResetToken[]
+  lessonNoteReviews LessonNote[]             @relation("LessonNoteReviewer")
 
   @@map("idm_users")
 }
@@ -270,6 +273,8 @@ model School {
   teacherSubjectAssignments TeacherSubjectAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
   gradebookSubmissions  GradebookSubmission[]
+  lessonNotes           LessonNote[]
+  lessonNoteAuditLogs   LessonNoteAuditLog[]
 
   @@unique([tenantId, id])
 }
@@ -430,6 +435,7 @@ model Campus {
   userAccess          UserSchoolAccess[]
   staffAssignments    StaffCampusAssignment[]
   enrollments         Enrollment[]
+  lessonNotes         LessonNote[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -460,6 +466,7 @@ model AcademicYear {
   teacherSubjectAssignments TeacherSubjectAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
   gradebookSubmissions  GradebookSubmission[]
+  lessonNotes           LessonNote[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -486,6 +493,7 @@ model Term {
   teacherSubjectAssignments TeacherSubjectAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
   gradebookSubmissions  GradebookSubmission[]
+  lessonNotes           LessonNote[]
 
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
@@ -527,6 +535,7 @@ model Class {
   teacherSubjectAssignments TeacherSubjectAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
   gradebookSubmissions  GradebookSubmission[]
+  lessonNotes           LessonNote[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -552,6 +561,7 @@ model Arm {
   teacherSubjectAssignments TeacherSubjectAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
   gradebookSubmissions  GradebookSubmission[]
+  lessonNotes           LessonNote[]
 
   @@unique([tenantId, classId, campusId, name])
   @@index([tenantId])
@@ -590,6 +600,7 @@ model Subject {
   TimetableEntry      TimetableEntry[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
   gradebookSubmissions  GradebookSubmission[]
+  lessonNotes           LessonNote[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -910,6 +921,7 @@ model StaffProfile {
   photo             StaffPhoto?
   teacherSubjectAssignments TeacherSubjectAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
+  lessonNotes           LessonNote[]
   department        Department?             @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   school            School                  @relation(fields: [schoolId], references: [id])
   tenant            Tenant                  @relation(fields: [tenantId], references: [id])
@@ -1908,6 +1920,7 @@ model TeacherSubjectAssignment {
   arm              Arm?            @relation(fields: [armId], references: [id], onDelete: Cascade)
   subject          Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   teacher          StaffProfile    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  lessonNotes      LessonNote[]
 
   @@index([tenantId, schoolId, teacherId])
   @@index([tenantId, schoolId, classId, armId])
@@ -2037,4 +2050,86 @@ model AssignmentMigrationQuarantine {
 
   @@index([tenantId, schoolId, migrationBatchId])
   @@map("stf_assignment_migration_quarantine")
+}
+
+// ==========================================
+// PHASE 5I: LESSON PLANNING & NOTES MODELS
+// ==========================================
+
+enum LessonNoteStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model LessonNote {
+  id                String                   @id @default(uuid())
+  tenantId          String
+  schoolId          String
+  campusId          String?
+  academicYearId    String
+  termId            String
+  classId           String
+  armId             String?
+  subjectId         String
+  teacherId         String
+  assignmentId      String
+  weekNumber        Int
+  title             String
+  topic             String
+  subtopic          String?
+  objectives        Json
+  materials         String?
+  introduction      String?
+  presentationSteps Json
+  evaluation        String?
+  assignment        String?
+  status            LessonNoteStatus         @default(DRAFT)
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  reviewedById      String?
+  rejectionReason   String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  tenant            Tenant                   @relation(fields: [tenantId], references: [id])
+  school            School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  campus            Campus?                  @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  term              Term                     @relation(fields: [termId], references: [id], onDelete: Cascade)
+  class             Class                    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  arm               Arm?                     @relation(fields: [armId], references: [id], onDelete: Restrict)
+  subject           Subject                  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher           StaffProfile             @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherAssignment TeacherSubjectAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  reviewer          User?                    @relation("LessonNoteReviewer", fields: [reviewedById], references: [id])
+  auditLogs         LessonNoteAuditLog[]
+
+  @@index([tenantId, schoolId, classId, subjectId])
+  @@index([tenantId, teacherId, academicYearId, termId])
+  @@index([tenantId, assignmentId])
+  @@index([tenantId, status])
+  @@map("acd_lesson_notes")
+}
+
+model LessonNoteAuditLog {
+  id            String            @id @default(uuid())
+  tenantId      String
+  schoolId      String
+  lessonNoteId  String
+  fromStatus    LessonNoteStatus?
+  toStatus      LessonNoteStatus
+  action        String
+  reason        String?
+  actorUserId   String
+  actorRole     String
+  createdAt     DateTime          @default(now())
+
+  tenant        Tenant            @relation(fields: [tenantId], references: [id])
+  school        School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lessonNote    LessonNote        @relation(fields: [lessonNoteId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, schoolId, lessonNoteId])
+  @@map("acd_lesson_note_audit_logs")
 }

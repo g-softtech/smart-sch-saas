@@ -48,6 +48,11 @@ export default function TeacherPortalLayout({
       icon: GraduationCap,
     },
     {
+      name: "Lesson Notes",
+      href: "/portal/teacher/lesson-notes",
+      icon: BookOpen,
+    },
+    {
       name: "Assigned Classes",
       href: "/portal/teacher/classes",
       icon: BookOpen,

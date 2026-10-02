@@ -5,12 +5,14 @@ import { ResultsController } from "./controllers/results.controller";
 import { TeacherAssignmentsController } from "./controllers/teacher-assignments.controller";
 import { TeacherGradebookController } from "./controllers/teacher-gradebook.controller";
 import { GradebookWorkflowController } from "./controllers/gradebook-workflow.controller";
+import { LessonNotesController } from "./controllers/lesson-notes.controller";
 import { AcademicsService } from "./services/academics.service";
 import { TimetableService } from "./services/timetable.service";
 import { ResultsService } from "./services/results.service";
 import { TeacherAssignmentsService } from "./services/teacher-assignments.service";
 import { TeacherGradebookService } from "./services/teacher-gradebook.service";
 import { GradebookWorkflowService } from "./services/gradebook-workflow.service";
+import { LessonNotesService } from "./services/lesson-notes.service";
 import { AcademicsRepository } from "./repositories/academics.repository";
 
 @Module({
@@ -21,6 +23,7 @@ import { AcademicsRepository } from "./repositories/academics.repository";
     TeacherAssignmentsController,
     TeacherGradebookController,
     GradebookWorkflowController,
+    LessonNotesController,
   ],
   providers: [
     AcademicsService,
@@ -29,6 +32,7 @@ import { AcademicsRepository } from "./repositories/academics.repository";
     TeacherAssignmentsService,
     TeacherGradebookService,
     GradebookWorkflowService,
+    LessonNotesService,
     AcademicsRepository,
   ],
   exports: [
@@ -38,6 +42,7 @@ import { AcademicsRepository } from "./repositories/academics.repository";
     TeacherAssignmentsService,
     TeacherGradebookService,
     GradebookWorkflowService,
+    LessonNotesService,
   ],
 })
 export class AcademicsModule {}
