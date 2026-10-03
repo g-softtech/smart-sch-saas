@@ -1,4 +1,4 @@
-﻿# CURRENT MASTER EXECUTION PLAN (SchoolOS SaaS)
+# CURRENT MASTER EXECUTION PLAN (SchoolOS SaaS)
 
 This document is the authoritative execution roadmap for the SchoolOS project, replacing the legacy `MASTER_EXECUTION_PLAN.md`.
 
@@ -204,7 +204,7 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Status:** **COMPLETE**. Commit e98c59d0 pushed.
   - **Phase 6D: Transport & Fleet Management:** COMPLETE & VERIFIED (Implementation: 1fdaa860)
   - **Phase 6E ï¿½ Hostel & Boarding Management:** PLANNED
-  - **Phase 6F ï¿½ School Website Builder & Public CMS:** PLANNED
+  - **Phase 6F — School Website Builder & Public CMS:** COMPLETE & VERIFIED (Implementation: b2beda10)
   - **Phase 6G ï¿½ Marketplace & Subscription Billing Engine:** PLANNED
   - **Phase 6H ï¿½ Advanced School AI Engine (Sandboxed & Advisory):** PLANNED
 
