@@ -89,26 +89,6 @@ export class StudentPortalController {
     return { success: true, data };
   }
 
-  @Post("cbt/:id/start")
-  @ApiOperation({ summary: "Start student CBT examination attempt" })
-  async startCBTAttempt(@Req() req: any, @Param("id") examId: string) {
-    const { tenantId, schoolId, userId } = this.extractContext(req);
-    const data = await this.studentPortalService.startCBTAttempt(userId, tenantId, schoolId, examId);
-    return { success: true, data };
-  }
-
-  @Post("cbt/:id/submit")
-  @ApiOperation({ summary: "Submit student CBT examination attempt" })
-  async submitCBTAttempt(
-    @Req() req: any,
-    @Param("id") examId: string,
-    @Body() dto: SubmitStudentCBTDto
-  ) {
-    const { tenantId, schoolId, userId } = this.extractContext(req);
-    const data = await this.studentPortalService.submitCBTAttempt(userId, tenantId, schoolId, examId, dto);
-    return { success: true, data };
-  }
-
   @Get("results")
   @ApiOperation({ summary: "Get student published academic results" })
   async getResults(

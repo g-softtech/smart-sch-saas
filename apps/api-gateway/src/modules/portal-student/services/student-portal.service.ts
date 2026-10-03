@@ -310,24 +310,6 @@ export class StudentPortalService {
     }));
   }
 
-  async startCBTAttempt(userId: string, tenantId: string, schoolId: string, examId: string) {
-    const student = await this.resolveStudent(userId, tenantId, schoolId);
-    return this.cbtService.startAttempt(tenantId, schoolId, student.id, examId);
-  }
-
-  async submitCBTAttempt(
-    userId: string,
-    tenantId: string,
-    schoolId: string,
-    examId: string,
-    dto: SubmitStudentCBTDto
-  ) {
-    const student = await this.resolveStudent(userId, tenantId, schoolId);
-    return this.cbtService.submitAttempt(tenantId, schoolId, student.id, examId, {
-      answers: dto.answers,
-    });
-  }
-
   async getResults(
     userId: string,
     tenantId: string,
