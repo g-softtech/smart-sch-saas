@@ -2603,3 +2603,4 @@ model CmsNavigationItem {
   @@unique([tenantId, schoolId, orderIndex])
   @@map("cms_navigation_items")
 }
+

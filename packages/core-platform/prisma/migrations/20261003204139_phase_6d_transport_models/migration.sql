@@ -11,7 +11,7 @@ CREATE TYPE "TransportRouteStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 CREATE TYPE "TransportSubscriptionStatus" AS ENUM ('ACTIVE', 'CANCELLED');
 
 -- DropIndex
-DROP INDEX "acd_gradebook_submissions_tenantId_schoolId_academicYearId__key";
+-- DROP INDEX "acd_gradebook_submissions_tenantId_schoolId_academicYearId__key";
 
 -- CreateTable
 CREATE TABLE "trp_vehicles" (
@@ -177,3 +177,4 @@ ALTER TABLE "trp_subscriptions" ADD CONSTRAINT "trp_subscriptions_routeAllocatio
 
 -- AddForeignKey
 ALTER TABLE "trp_subscriptions" ADD CONSTRAINT "trp_subscriptions_stopId_fkey" FOREIGN KEY ("stopId") REFERENCES "trp_route_stops"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+

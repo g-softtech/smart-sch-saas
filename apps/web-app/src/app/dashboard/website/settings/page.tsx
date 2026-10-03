@@ -1,0 +1,219 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { Save, AlertCircle, RefreshCw } from "lucide-react";
+
+export default function WebsiteSettingsPage() {
+  const [config, setConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchConfig = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
+      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+
+      const res = await fetch("/api/v1/cms/admin/config", {
+        headers: {
+          Authorization: "Bearer "$"{"token"}",
+          "x-tenant-id": tenantId,
+          "x-school-id": schoolId,
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to load CMS settings");
+      const data = await res.json();
+      setConfig(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!config) return;
+    setSaving(true);
+    setError(null);
+    
+    try {
+      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
+      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+
+      const payload = {
+        status: config.status,
+        expectedVersion: config.version,
+        themeColor: config.themeColor,
+        socialLinks: config.socialLinks,
+        contactEmail: config.contactEmail,
+        contactPhone: config.contactPhone,
+        address: config.address,
+        enableAdmissionsCta: config.enableAdmissionsCta,
+        enablePortalLinks: config.enablePortalLinks
+      };
+
+      const res = await fetch("/api/v1/cms/admin/config", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer "$"{"token"}",
+          "x-tenant-id": tenantId,
+          "x-school-id": schoolId,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        if (res.status === 409) throw new Error("Settings were updated by someone else. Please refresh and try again.");
+        throw new Error("Failed to update CMS settings");
+      }
+      
+      const updated = await res.json();
+      setConfig(updated);
+      alert("Settings saved successfully!");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-12"><RefreshCw className="w-6 h-6 animate-spin text-slate-500" /></div>;
+  }
+
+  return (
+    <form onSubmit={handleSave} className="space-y-8">
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+          <p>{error}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h2 className="text-lg font-semibold text-white">General Status</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Publication Status</label>
+              <select 
+                value={config?.status || "DRAFT"}
+                onChange={(e) => setConfig({...config, status: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="DRAFT">Draft (Hidden from public)</option>
+                <option value="PUBLISHED">Published (Live)</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+              <p className="text-xs text-slate-500 mt-1">If draft, the website will return 404 for visitors.</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Contact Information</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Contact Email</label>
+              <input 
+                type="email"
+                value={config?.contactEmail || ""}
+                onChange={(e) => setConfig({...config, contactEmail: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Contact Phone</label>
+              <input 
+                type="text"
+                value={config?.contactPhone || ""}
+                onChange={(e) => setConfig({...config, contactPhone: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Address</label>
+              <textarea 
+                value={config?.address || ""}
+                onChange={(e) => setConfig({...config, address: e.target.value})}
+                rows={3}
+                className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:border-indigo-500 resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Theme & Features</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Primary Theme Color</label>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="color"
+                  value={config?.themeColor || "#4f46e5"}
+                  onChange={(e) => setConfig({...config, themeColor: e.target.value})}
+                  className="w-10 h-10 rounded border-0 bg-transparent p-0 cursor-pointer"
+                />
+                <input 
+                  type="text"
+                  value={config?.themeColor || "#4f46e5"}
+                  onChange={(e) => setConfig({...config, themeColor: e.target.value})}
+                  className="bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:border-indigo-500 flex-1"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2 border-t border-slate-800/50 mt-4">
+              <input 
+                type="checkbox" 
+                id="enableAdmissionsCta"
+                checked={config?.enableAdmissionsCta || false}
+                onChange={(e) => setConfig({...config, enableAdmissionsCta: e.target.checked})}
+                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500"
+              />
+              <label htmlFor="enableAdmissionsCta" className="text-sm font-medium text-slate-300 cursor-pointer">
+                Enable "Apply Now" Admissions CTA
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <input 
+                type="checkbox" 
+                id="enablePortalLinks"
+                checked={config?.enablePortalLinks || false}
+                onChange={(e) => setConfig({...config, enablePortalLinks: e.target.checked})}
+                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500"
+              />
+              <label htmlFor="enablePortalLinks" className="text-sm font-medium text-slate-300 cursor-pointer">
+                Show Portal Login Links (Student/Parent/Staff)
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end border-t border-slate-800 pt-5">
+        <button
+          type="submit"
+          disabled={saving}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+        >
+          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {saving ? "Saving..." : "Save Settings"}
+        </button>
+      </div>
+    </form>
+  );
+}

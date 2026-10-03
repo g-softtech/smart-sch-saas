@@ -1,4 +1,4 @@
-﻿import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
+import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { TenantMiddleware } from "@saas/core-platform/dist/tenant/tenant.middleware.js";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
@@ -31,6 +31,7 @@ import { LibraryModule } from "./modules/library/library.module";
     PaymentsModule,
     AcademicsModule,
     TransportModule,
+    CmsModule,
     StudentsModule,
     AdmissionsModule,
     StaffModule,
