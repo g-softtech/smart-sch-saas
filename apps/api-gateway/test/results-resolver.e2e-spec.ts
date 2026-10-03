@@ -33,7 +33,7 @@ describe("SubjectResult Canonical Resolver (e2e DB Race Test)", () => {
     const tenant = await kernel.db.tenant.create({ data: { name: "Resolver Tenant " + uniqueSuffix, slug: "res-tenant-" + uniqueSuffix } });
     tenantId = tenant.id;
 
-    const school = await kernel.db.school.create({ data: { tenantId, name: "Resolver School", abbreviation: "RS" } });
+    const school = await kernel.db.school.create({ data: { tenantId, name: "Resolver School" } });
     schoolId = school.id;
 
     const year = await kernel.db.academicYear.create({ data: { tenantId, schoolId, name: "2026/2027", startDate: new Date(), endDate: new Date() } });
@@ -45,18 +45,18 @@ describe("SubjectResult Canonical Resolver (e2e DB Race Test)", () => {
     const cls = await kernel.db.class.create({ data: { tenantId, schoolId, name: "Class 1", order: 1 } });
     classId = cls.id;
 
-    const student = await kernel.db.student.create({ data: { tenantId, schoolId, userId: "u_" + uniqueSuffix, firstName: "John", lastName: "Doe", dateOfBirth: new Date() } });
+    const student = await kernel.db.student.create({ data: { tenantId, schoolId, userId: "u_" + uniqueSuffix, firstName: "John", lastName: "Doe", studentNumber: "STD-"+uniqueSuffix } });
     
     const enrollment = await kernel.db.enrollment.create({ data: { tenantId, schoolId, studentId: student.id, academicYearId, classId, enrolledAt: new Date() } });
     enrollmentId = enrollment.id;
 
-    const subject = await kernel.db.subject.create({ data: { tenantId, schoolId, name: "Math", code: "MTH" } });
+    const subject = await kernel.db.subject.create({ data: { tenantId, schoolId, name: "Math" } });
     subjectId = subject.id;
 
     // Cross-tenant data
     const otherTenant = await kernel.db.tenant.create({ data: { name: "Other Tenant " + uniqueSuffix, slug: "other-tenant-" + uniqueSuffix } });
     otherTenantId = otherTenant.id;
-    const otherSchool = await kernel.db.school.create({ data: { tenantId: otherTenantId, name: "Other School", abbreviation: "OS" } });
+    const otherSchool = await kernel.db.school.create({ data: { tenantId: otherTenantId, name: "Other School" } });
     otherSchoolId = otherSchool.id;
   });
 
@@ -95,7 +95,7 @@ describe("SubjectResult Canonical Resolver (e2e DB Race Test)", () => {
 
   it("concurrent resolution cannot create duplicates", async () => {
     await tenantContext.run({ tenantId }, async () => {
-      const newSubject = await kernel.db.subject.create({ data: { tenantId, schoolId, name: "Science", code: "SCI" } });
+      const newSubject = await kernel.db.subject.create({ data: { tenantId, schoolId, name: "Science" } });
       const newSubjectId = newSubject.id;
 
       // Launch 15 concurrent creations
@@ -120,7 +120,7 @@ describe("SubjectResult Canonical Resolver (e2e DB Race Test)", () => {
 
   it("enforces tenant, school, year, term, subject, enrollment isolation", async () => {
     await tenantContext.run({ tenantId }, async () => {
-      const newStudent = await kernel.db.student.create({ data: { tenantId, schoolId, userId: "ux_" + Date.now(), firstName: "Jane", lastName: "Doe", dateOfBirth: new Date() } });
+      const newStudent = await kernel.db.student.create({ data: { tenantId, schoolId, userId: "ux_" + Date.now(), firstName: "Jane", lastName: "Doe", studentNumber: "STD-X-"+Date.now() } });
       const newEnrollment = await kernel.db.enrollment.create({ data: { tenantId, schoolId, studentId: newStudent.id, academicYearId, classId, enrolledAt: new Date() } });
       
       await kernel.db.$transaction(async (tx) => {

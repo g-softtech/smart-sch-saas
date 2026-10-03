@@ -264,4 +264,39 @@ export class ResultsService {
       "Direct publication of results is disabled. All result publications must be approved and published through GradebookWorkflowService.",
     );
   }
+
+  async resolveOrCreateSubjectResult(
+    tx: any,
+    params: {
+      tenantId: string;
+      schoolId: string;
+      academicYearId: string;
+      termId: string;
+      enrollmentId: string;
+      subjectId: string;
+    }
+  ) {
+    return tx.subjectResult.upsert({
+      where: {
+        tenantId_schoolId_enrollmentId_subjectId_termId: {
+          tenantId: params.tenantId,
+          schoolId: params.schoolId,
+          enrollmentId: params.enrollmentId,
+          subjectId: params.subjectId,
+          termId: params.termId,
+        }
+      },
+      update: {},
+      create: {
+        tenantId: params.tenantId,
+        schoolId: params.schoolId,
+        academicYearId: params.academicYearId,
+        termId: params.termId,
+        enrollmentId: params.enrollmentId,
+        subjectId: params.subjectId,
+        status: ResultStatus.DRAFT,
+      },
+    });
+  }
+
 }
