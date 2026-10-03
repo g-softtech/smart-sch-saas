@@ -1,4 +1,7 @@
-import { kernel, PrismaClient, CmsPublicationStatus } from '../index';
+const fs = require("fs");
+const path = "C:/Users/gbemi/OneDrive/Desktop/schoolOS/packages/core-platform/src/scripts/test-phase6f-cms-e2e.ts";
+
+const content = `import { kernel, PrismaClient, CmsPublicationStatus } from '../index';
 import { CmsAdminService } from '../../../apps/api-gateway/src/modules/cms/services/cms-admin.service';
 import { CmsPublicService } from '../../../apps/api-gateway/src/modules/cms/services/cms-public.service';
 import { AuditService } from '../audit/audit.service';
@@ -102,3 +105,7 @@ async function runTest() {
 }
 
 runTest();
+`
+
+fs.writeFileSync(path, content);
+console.log("Rewrote E2E test with exhaustive checks.");

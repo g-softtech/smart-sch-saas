@@ -2509,7 +2509,9 @@ model CmsSiteConfig {
   status              CmsPublicationStatus @default(DRAFT)
   version             Int                  @default(1)
   logoMediaId         String?
+  faviconMediaId      String?
   primaryColor        String?
+  themePayload        Json?
   secondaryColor      String?
   contactEmail        String?
   contactPhone        String?
@@ -2517,9 +2519,10 @@ model CmsSiteConfig {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
-  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  logoMedia CmsMedia? @relation(fields: [logoMediaId], references: [id], onDelete: SetNull)
+  school       School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  logoMedia    CmsMedia? @relation("LogoMedia", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  faviconMedia CmsMedia? @relation("FaviconMedia", fields: [faviconMediaId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, schoolId])
   @@map("cms_site_configs")
@@ -2577,10 +2580,11 @@ model CmsMedia {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school        School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  author        User            @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  CmsSiteConfig CmsSiteConfig[]
+  school             School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author             User            @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  siteConfigsLogo    CmsSiteConfig[] @relation("LogoMedia")
+  siteConfigsFavicon CmsSiteConfig[] @relation("FaviconMedia")
 
   @@index([tenantId, schoolId])
   @@map("cms_media")

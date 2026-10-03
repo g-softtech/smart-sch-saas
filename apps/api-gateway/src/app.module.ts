@@ -24,6 +24,7 @@ import { PortalAccountModule } from "./modules/portal-account/portal-account.mod
 import { PortalTeacherModule } from "./modules/portal-teacher/portal-teacher.module";
 import { EntitlementsModule } from "./modules/entitlements/entitlements.module";
 import { LibraryModule } from "./modules/library/library.module";
+import { CmsModule } from "./modules/cms/cms.module";
 
 @Module({
   imports: [

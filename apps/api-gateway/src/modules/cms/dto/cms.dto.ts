@@ -13,6 +13,12 @@ export class UpdateSiteConfigDto {
   logoMediaId?: string;
 
   @IsOptional() @IsString()
+  faviconMediaId?: string;
+
+  @IsOptional()
+  themePayload?: any;
+
+  @IsOptional() @IsString()
   primaryColor?: string;
 
   @IsOptional() @IsString()

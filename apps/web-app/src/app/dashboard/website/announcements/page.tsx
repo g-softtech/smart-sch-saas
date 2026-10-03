@@ -1,13 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, RefreshCw, AlertCircle, FileText, ExternalLink } from "lucide-react";
+import { Plus, Edit2, Trash2, RefreshCw, AlertCircle, Megaphone } from "lucide-react";
 
-export default function WebsitePagesManagement() {
-  const [pages, setPages] = useState<any[]>([]);
+export default function WebsiteAnnouncementsManagement() {
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPages = async () => {
+  const fetchItems = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -15,7 +15,7 @@ export default function WebsitePagesManagement() {
       const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
       const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
 
-      const res = await fetch("/api/v1/cms/admin/pages", {
+      const res = await fetch("/api/v1/cms/admin/announcements", {
         headers: {
           Authorization: `Bearer ${token}`,
           "x-tenant-id": tenantId,
@@ -23,9 +23,9 @@ export default function WebsitePagesManagement() {
         },
       });
 
-      if (!res.ok) throw new Error("Failed to load CMS pages");
+      if (!res.ok) throw new Error("Failed to load announcements");
       const data = await res.json();
-      setPages(data);
+      setItems(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -34,17 +34,17 @@ export default function WebsitePagesManagement() {
   };
 
   useEffect(() => {
-    fetchPages();
+    fetchItems();
   }, []);
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete the page "${title}"?`)) return;
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
     try {
       const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
       const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
       const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
 
-      const res = await fetch(`/api/v1/cms/admin/pages/${id}`, {
+      const res = await fetch(`/api/v1/cms/admin/announcements/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -53,8 +53,8 @@ export default function WebsitePagesManagement() {
         },
       });
 
-      if (!res.ok) throw new Error("Failed to delete page");
-      setPages(pages.filter(p => p.id !== id));
+      if (!res.ok) throw new Error("Failed to delete announcement");
+      setItems(items.filter(p => p.id !== id));
     } catch (err: any) {
       alert(err.message);
     }
@@ -63,12 +63,12 @@ export default function WebsitePagesManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Manage Pages</h2>
+        <h2 className="text-lg font-semibold text-white">Announcements</h2>
         <button
           className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Create Page
+          New Announcement
         </button>
       </div>
 
@@ -83,15 +83,15 @@ export default function WebsitePagesManagement() {
         <div className="flex items-center justify-center p-12">
           <RefreshCw className="w-6 h-6 animate-spin text-slate-500" />
         </div>
-      ) : pages.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 flex flex-col items-center justify-center text-center space-y-3">
           <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center">
-            <FileText className="w-6 h-6 text-slate-400" />
+            <Megaphone className="w-6 h-6 text-slate-400" />
           </div>
           <div>
-            <h3 className="text-lg font-medium text-white">No pages found</h3>
+            <h3 className="text-lg font-medium text-white">No announcements</h3>
             <p className="text-sm text-slate-400 mt-1 max-w-sm">
-              Create your first page to start building your public website.
+              Create an announcement to show on the public website.
             </p>
           </div>
         </div>
@@ -101,50 +101,42 @@ export default function WebsitePagesManagement() {
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="bg-slate-950/50 text-slate-400 uppercase text-xs font-semibold border-b border-slate-800">
                 <tr>
-                  <th className="px-5 py-3">Title / Slug</th>
+                  <th className="px-5 py-3">Title</th>
                   <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Last Updated</th>
+                  <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {pages.map((page) => (
-                  <tr key={page.id} className="hover:bg-slate-800/50 transition-colors">
+                {items.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-800/50 transition-colors">
                     <td className="px-5 py-4">
-                      <div className="font-medium text-white">{page.title}</div>
-                      <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                        /{page.slug}
-                        <a href={`/${page.slug}`} target="_blank" rel="noreferrer" className="hover:text-indigo-400">
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
+                      <div className="font-medium text-white">{item.title}</div>
                     </td>
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                          page.status === "PUBLISHED"
+                          item.status === "PUBLISHED"
                             ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                             : "bg-slate-800 text-slate-400 border-slate-700"
                         }`}
                       >
-                        {page.status}
+                        {item.status}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-400">
-                      {new Date(page.updatedAt).toLocaleDateString()}
+                      {new Date(item.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-4 text-right space-x-2">
                       <button className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-md transition-colors">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      {page.slug !== "home" && (
-                        <button 
-                          onClick={() => handleDelete(page.id, page.title)}
-                          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => handleDelete(item.id, item.title)}
+                        className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

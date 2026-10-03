@@ -1,4 +1,6 @@
-import React from "react";
+const fs = require("fs");
+
+const layout = `import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Globe, Settings, FileText, Megaphone, Menu } from "lucide-react";
@@ -33,11 +35,11 @@ export default function WebsiteLayout({ children }: { children: React.ReactNode 
             <Link
               key={tab.name}
               href={tab.href}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              className={\`flex items-center gap-2 px-4 py-2 border-b-2 text-sm font-medium transition-colors whitespace-nowrap \${
                 isActive
                   ? "border-indigo-500 text-indigo-400"
                   : "border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700"
-              }`}
+              }\`}
             >
               <Icon className="w-4 h-4" />
               {tab.name}
@@ -51,4 +53,7 @@ export default function WebsiteLayout({ children }: { children: React.ReactNode 
       </div>
     </div>
   );
-}
+}`;
+
+fs.writeFileSync("apps/web-app/src/app/dashboard/website/layout.tsx", layout);
+console.log("Fixed layout");

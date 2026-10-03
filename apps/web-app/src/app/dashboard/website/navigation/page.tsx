@@ -8,8 +8,6 @@ export default function WebsiteNavigationManagement() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // We should fetch current navigation, but the backend doesn't have a GET endpoint for it in the snippet
-  // I will assume it's part of getSiteConfig or we just initialize empty for now
   useEffect(() => {
     const fetchConfig = async () => {
       setLoading(true);
@@ -20,7 +18,7 @@ export default function WebsiteNavigationManagement() {
 
         const res = await fetch("/api/v1/cms/admin/config", {
           headers: {
-            Authorization: "Bearer "$"{"token"}",
+            Authorization: `Bearer ${token}`,
             "x-tenant-id": tenantId,
             "x-school-id": schoolId,
           },
@@ -28,7 +26,6 @@ export default function WebsiteNavigationManagement() {
         
         if (res.ok) {
           const data = await res.json();
-          // Assume the API returns navigation in config or we mock it
           if (data.navigation) setItems(data.navigation);
           else setItems([{ id: "temp", label: "Home", type: "PAGE", target: "home", order: 0 }]);
         }
@@ -53,7 +50,7 @@ export default function WebsiteNavigationManagement() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer "$"{"token"}",
+          Authorization: `Bearer ${token}`,
           "x-tenant-id": tenantId,
           "x-school-id": schoolId,
         },
@@ -156,7 +153,7 @@ export default function WebsiteNavigationManagement() {
         ))}
         
         <button 
-          onClick={() => setItems([...items, { id: Math.random().toString(), label: "New Item", type: "PAGE", target: "", order: items.length }])}
+          onClick={() => setItems([...items, { id: crypto.randomUUID(), label: "New Item", type: "PAGE", target: "", order: items.length }])}
           className="w-full py-3 border-2 border-dashed border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-300 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" />

@@ -12,12 +12,12 @@ export class CmsAdminService {
     });
     if (!config) {
       config = await kernel.db.cmsSiteConfig.create({
-        data: { tenantId, schoolId }
+        data: { tenantId, schoolId, themePayload: {} }
       });
       // create default home page
       await kernel.db.cmsPage.create({
         data: {
-          tenantId, schoolId, title: 'Home', slug: 'home', content: '# Welcome', authorId: userId // in real, needs proper auth mapping
+          tenantId, schoolId, title: 'Home', slug: 'home', content: '# Welcome', authorId: userId
         }
       });
     }
@@ -35,7 +35,14 @@ export class CmsAdminService {
     if (dto.logoMediaId) {
       const media = await kernel.db.cmsMedia.findUnique({ where: { id: dto.logoMediaId } });
       if (!media || media.tenantId !== tenantId || media.schoolId !== schoolId) {
-        throw new ForbiddenException('Invalid media reference');
+        throw new ForbiddenException('Invalid logo media reference');
+      }
+    }
+
+    if (dto.faviconMediaId) {
+      const media = await kernel.db.cmsMedia.findUnique({ where: { id: dto.faviconMediaId } });
+      if (!media || media.tenantId !== tenantId || media.schoolId !== schoolId) {
+        throw new ForbiddenException('Invalid favicon media reference');
       }
     }
 
@@ -44,6 +51,8 @@ export class CmsAdminService {
       data: {
         status: dto.status,
         logoMediaId: dto.logoMediaId,
+        faviconMediaId: dto.faviconMediaId,
+        themePayload: dto.themePayload ?? existing.themePayload,
         primaryColor: dto.primaryColor,
         secondaryColor: dto.secondaryColor,
         contactEmail: dto.contactEmail,
@@ -61,13 +70,23 @@ export class CmsAdminService {
     return kernel.db.cmsPage.findMany({ where: { tenantId, schoolId } });
   }
 
+  
+  private sanitizeContent(content: string): string {
+    if (!content) return content;
+    const dangerous = /<script[^<]*(?:(?!</script>)<[^<]*)*</script>|javascript:/gi;
+    if (dangerous.test(content)) {
+      throw new BadRequestException("Unsafe HTML or JavaScript detected");
+    }
+    return content;
+  }
+
   async createPage(tenantId: string, schoolId: string, userId: string, dto: CreateCmsPageDto) {
     if (dto.slug === 'home') throw new BadRequestException('home slug is reserved');
     try {
       const page = await kernel.db.cmsPage.create({
         data: {
           tenantId, schoolId, authorId: userId,
-          title: dto.title, slug: dto.slug, content: dto.content
+          title: dto.title, slug: dto.slug, content: this.sanitizeContent(dto.content)
         }
       });
       await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_PAGE_CREATED', entity: 'cms_pages', entityId: page.id, severity: 'MEDIUM', metadata: { slug: page.slug } });
@@ -93,7 +112,7 @@ export class CmsAdminService {
         data: {
           title: dto.title,
           slug: dto.slug,
-          content: dto.content,
+          content: this.sanitizeContent(dto.content) ? this.sanitizeContent(dto.content) : dto.content,
           status: dto.status,
           version: { increment: 1 }
         }
@@ -114,6 +133,48 @@ export class CmsAdminService {
 
     await kernel.db.cmsPage.delete({ where: { id: pageId } });
     await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_PAGE_DELETED', entity: 'cms_pages', entityId: pageId, severity: 'MEDIUM', metadata: {} });
+  }
+
+  async getAnnouncements(tenantId: string, schoolId: string) {
+    return kernel.db.cmsAnnouncement.findMany({ where: { tenantId, schoolId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async createAnnouncement(tenantId: string, schoolId: string, userId: string, dto: CreateCmsAnnouncementDto) {
+    const announcement = await kernel.db.cmsAnnouncement.create({
+      data: {
+        tenantId, schoolId, authorId: userId,
+        title: dto.title, content: dto.content ? this.sanitizeContent(dto.content) : dto.content
+      }
+    });
+    await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_ANNOUNCEMENT_CREATED', entity: 'cms_announcements', entityId: announcement.id, severity: 'MEDIUM', metadata: {} });
+    return announcement;
+  }
+
+  async updateAnnouncement(tenantId: string, schoolId: string, id: string, userId: string, dto: UpdateCmsAnnouncementDto) {
+    const existing = await kernel.db.cmsAnnouncement.findUnique({ where: { id } });
+    if (!existing || existing.tenantId !== tenantId || existing.schoolId !== schoolId) throw new NotFoundException();
+    if (existing.version !== dto.expectedVersion) throw new ConflictException('Version mismatch');
+
+    const updated = await kernel.db.cmsAnnouncement.update({
+      where: { id },
+      data: {
+        title: dto.title,
+        content: dto.content,
+        status: dto.status,
+        version: { increment: 1 }
+      }
+    });
+
+    await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_ANNOUNCEMENT_UPDATED', entity: 'cms_announcements', entityId: updated.id, severity: 'MEDIUM', metadata: { version: updated.version } });
+    return updated;
+  }
+
+  async deleteAnnouncement(tenantId: string, schoolId: string, id: string, userId: string) {
+    const existing = await kernel.db.cmsAnnouncement.findUnique({ where: { id } });
+    if (!existing || existing.tenantId !== tenantId || existing.schoolId !== schoolId) throw new NotFoundException();
+
+    await kernel.db.cmsAnnouncement.delete({ where: { id } });
+    await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_ANNOUNCEMENT_DELETED', entity: 'cms_announcements', entityId: id, severity: 'MEDIUM', metadata: {} });
   }
 
   async syncNavigation(tenantId: string, schoolId: string, userId: string, dto: SyncNavigationDto) {
