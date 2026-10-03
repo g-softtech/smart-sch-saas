@@ -216,3 +216,4 @@ The following features are intentionally deferred unless the canonical roadmap e
 - **Student movement drop-off/pick-up notifications**
 - **Staff QR attendance**
 
+
