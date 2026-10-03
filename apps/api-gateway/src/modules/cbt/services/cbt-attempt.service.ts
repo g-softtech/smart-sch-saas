@@ -1,4 +1,4 @@
-import { Injectable, Logger, ConflictException, ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
+﻿import { Injectable, Logger, ConflictException, ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
 import { kernel, tenantContext, CBTAttemptStatus, QuestionType } from "@saas/core-platform";
 
 @Injectable()
@@ -55,7 +55,7 @@ export class CBTAttemptService {
         });
 
         if (attempt) {
-          return { attempt, examPayload: exam.presentationPayload };
+          return { attempt, examPayload: this.sanitizePresentationPayload(exam.presentationPayload) };
         }
 
         try {
@@ -70,14 +70,24 @@ export class CBTAttemptService {
              attempt = await tx.cBTAttempt.findFirst({
                where: { examId, studentId: student.id, tenantId, schoolId }
              });
+             if (!attempt) throw new ConflictException("Failed to recover from concurrent attempt creation");
           } else {
              throw error;
           }
         }
 
-        return { attempt, examPayload: exam.presentationPayload };
+        return { attempt, examPayload: this.sanitizePresentationPayload(exam.presentationPayload) };
       });
     });
+  }
+
+  private sanitizePresentationPayload(payload: any): any {
+    if (!payload || !payload.questions) return payload;
+    const sanitizedQuestions = payload.questions.map((q: any) => {
+       const { correctOption, correctOptions, correctAnswerPayload, gradingSnapshot, awardedScore, ...safeQuestion } = q;
+       return safeQuestion;
+    });
+    return { ...payload, questions: sanitizedQuestions, correctOption: undefined, correctAnswerPayload: undefined, gradingSnapshot: undefined };
   }
 
   async saveAnswer(tenantId: string, schoolId: string, userId: string, examId: string, payload: any) {
@@ -113,13 +123,32 @@ export class CBTAttemptService {
         throw new BadRequestException("Invalid question ID for this exam.");
       }
 
-      // Basic structure validation based on type
+      // Payload structure validation based on type and published snapshot
       if (question.questionType === QuestionType.SINGLE_CHOICE || question.questionType === QuestionType.TRUE_FALSE) {
-         if (typeof answerPayload?.selectedOption !== "string") throw new BadRequestException("Invalid answer payload for single choice.");
+         const selectedOption = answerPayload?.selectedOption;
+         if (typeof selectedOption !== "number" && typeof selectedOption !== "string") throw new BadRequestException("Invalid answer payload for single choice.");
+         // Verify option actually exists in question.options
+         if (Array.isArray(question.options) && !question.options.some((opt: any) => opt.id === selectedOption || opt === selectedOption)) {
+            // For boolean or index types, it could just be an index. Allow numbers strictly within options bounds.
+            if (typeof selectedOption === "number" && (selectedOption < 0 || selectedOption >= question.options.length)) {
+                throw new BadRequestException("Selected option index out of bounds.");
+            }
+         }
       } else if (question.questionType === QuestionType.MULTIPLE_CHOICE) {
-         if (!Array.isArray(answerPayload?.selectedOptions)) throw new BadRequestException("Invalid answer payload for multiple choice.");
+         const selectedOptions = answerPayload?.selectedOptions;
+         if (!Array.isArray(selectedOptions)) throw new BadRequestException("Invalid answer payload for multiple choice.");
+         const uniqueSelections = new Set(selectedOptions);
+         if (uniqueSelections.size !== selectedOptions.length) throw new BadRequestException("Duplicate options selected.");
+         if (Array.isArray(question.options)) {
+             for (const opt of selectedOptions) {
+                 if (typeof opt === "number" && (opt < 0 || opt >= question.options.length)) {
+                     throw new BadRequestException("Selected option index out of bounds.");
+                 }
+             }
+         }
       } else if (question.questionType === QuestionType.SUBJECTIVE) {
          if (typeof answerPayload?.text !== "string") throw new BadRequestException("Invalid answer payload for subjective.");
+         if (answerPayload.text.length > 5000) throw new BadRequestException("Subjective answer too long.");
       }
 
       const existingAnswer = await kernel.db.cBTAttemptAnswer.findUnique({
@@ -127,18 +156,21 @@ export class CBTAttemptService {
       });
 
       if (existingAnswer) {
-        if (expectedVersion !== undefined && existingAnswer.version !== expectedVersion) {
-          throw new ConflictException("Answer version mismatch. A newer answer was already saved.");
-        }
+        if (expectedVersion === undefined) throw new ConflictException("expectedVersion is required for updates.");
         
-        const answer = await kernel.db.cBTAttemptAnswer.update({
-          where: { id: existingAnswer.id },
+        // TRUE ATOMIC CAS
+        const result = await kernel.db.cBTAttemptAnswer.updateMany({
+          where: { id: existingAnswer.id, version: expectedVersion },
           data: { 
             answerPayload, 
             version: { increment: 1 } 
           }
         });
-        return { success: true, savedAt: answer.updatedAt, newVersion: answer.version };
+
+        if (result.count === 0) {
+          throw new ConflictException("Answer version mismatch. A newer answer was already saved.");
+        }
+        return { success: true, newVersion: expectedVersion + 1 };
       } else {
         try {
           const answer = await kernel.db.cBTAttemptAnswer.create({
@@ -184,11 +216,17 @@ export class CBTAttemptService {
         if (!attempt) throw new NotFoundException("Attempt not found.");
         if (attempt.status !== "IN_PROGRESS") return { success: true, status: attempt.status, totalScore: attempt.totalScore };
 
-        // Step 1: Transition to SUBMITTED
-        await tx.cBTAttempt.update({
-          where: { id: attempt.id },
+        // TRUE ATOMIC STATE TRANSITION
+        const updateResult = await tx.cBTAttempt.updateMany({
+          where: { id: attempt.id, status: CBTAttemptStatus.IN_PROGRESS },
           data: { status: CBTAttemptStatus.SUBMITTED, submitTime: new Date() }
         });
+
+        if (updateResult.count === 0) {
+           // Concurrently modified by another submission process
+           const latest = await tx.cBTAttempt.findUnique({ where: { id: attemptId } });
+           return { success: true, status: latest?.status, totalScore: latest?.totalScore };
+        }
 
         // Step 2: Evaluate Answers
         const payload = attempt.exam.publishedPayload as any;
@@ -210,8 +248,8 @@ export class CBTAttemptService {
               awardedScore = q.points || 0;
             }
           } else if (q.questionType === QuestionType.MULTIPLE_CHOICE) {
-            const selectedOptions = (ans.answerPayload as any)?.selectedOptions as string[];
-            const correctOptions = q.correctOptions as string[];
+            const selectedOptions = (ans.answerPayload as any)?.selectedOptions as any[];
+            const correctOptions = (q.correctAnswerPayload as any)?.correctOptions as any[]; // From architecture correctly referencing correctAnswerPayload
             if (Array.isArray(selectedOptions) && Array.isArray(correctOptions)) {
                const isCorrect = selectedOptions.length === correctOptions.length &&
                                  correctOptions.every(co => selectedOptions.includes(co));
