@@ -6,7 +6,8 @@ import { CBTService } from "../../cbt/services/cbt.service";
 jest.mock("@saas/core-platform", () => ({
   kernel: {
     db: {
-      student: { findFirst: jest.fn().mockResolvedValue({ id: "student-1", tenantId: "t1", schoolId: "s1" }) },
+      student: { findFirst: jest.fn().mockResolvedValue({ id: "student-1", tenantId: "t1", schoolId: "s1", enrollments: [{ classId: "class-1" }] }) },
+      cBTAttempt: { findMany: jest.fn().mockResolvedValue([]) },
     }
   },
   tenantContext: {
