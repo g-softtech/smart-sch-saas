@@ -21,7 +21,7 @@ describe("StudentPortalService Read-Only BFF & Cleanup Verification", () => {
   beforeEach(async () => {
     const assignmentsServiceMock = { getAssignmentsForClass: jest.fn() };
     const cbtServiceMock = {
-      getCBTExamsForClass: jest.fn().mockResolvedValue([{ id: "exam-1", title: "Mid-Term Exam" }]),
+      getExamsForClass: jest.fn().mockResolvedValue([{ id: "exam-1", title: "Mid-Term Exam" }]),
       getAttemptByStudentId: jest.fn().mockResolvedValue(null)
     };
 
@@ -42,7 +42,7 @@ describe("StudentPortalService Read-Only BFF & Cleanup Verification", () => {
     expect(exams).toBeDefined();
     expect(exams.length).toBe(1);
     expect(exams[0].title).toBe("Mid-Term Exam");
-    expect(cbtService.getCBTExamsForClass).toHaveBeenCalled();
+    expect(cbtService.getExamsForClass).toHaveBeenCalled();
   });
 
   it("should prove legacy startCBTAttempt mutation wrapper is gone (inaccessible)", () => {
