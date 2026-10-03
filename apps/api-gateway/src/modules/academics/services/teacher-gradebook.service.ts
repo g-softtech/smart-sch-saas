@@ -314,7 +314,9 @@ export class TeacherGradebookService {
             termId: dto.termId,
             enrollmentId: enrollment.id,
             subjectId: dto.subjectId,
-          }); else if (subjectResult.status === ResultStatus.PUBLISHED || subjectResult.status === ResultStatus.FINALIZED) {
+          });
+
+          if (subjectResult.status === ResultStatus.PUBLISHED || subjectResult.status === ResultStatus.FINALIZED) {
             throw new ForbiddenException(`Result for student ${entry.studentId} is already ${subjectResult.status} and cannot be modified.`);
           }
 
