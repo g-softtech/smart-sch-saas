@@ -1,69 +1,76 @@
-﻿import { Injectable, Logger, ConflictException, ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
-import { kernel, tenantContext, WorkflowStatus, ScoreProvenance, ResultStatus, CBTAttemptStatus, QuestionType } from "@saas/core-platform";
-import { TeacherAssignmentsService } from "../../academics/services/teacher-assignments.service";
+﻿import { Injectable, ConflictException, BadRequestException, ForbiddenException } from "@nestjs/common";
+import { kernel, tenantContext, ScoreProvenance, CBTAttemptStatus, QuestionType, WorkflowStatus, ResultStatus } from "@saas/core-platform";
+import { ResultsService } from "../../academics/services/results.service";
 
-export interface ReviewAnswerDto {
+export class ReviewAnswerDto {
   answerId: string;
   awardedScore: number;
 }
 
-export interface ReviewAttemptDto {
+export class ReviewAttemptDto {
   answers: ReviewAnswerDto[];
 }
 
 @Injectable()
 export class CBTCompilerService {
-  private readonly logger = new Logger(CBTCompilerService.name);
+  constructor(private readonly resultsService: ResultsService) {}
 
-  constructor(private readonly assignmentsService: TeacherAssignmentsService) {}
+  async verifyTeacherAuthority(tenantId: string, schoolId: string, actorUserId: string, component: any) {
+    const staff = await kernel.db.staffProfile.findFirst({
+      where: { tenantId, schoolId, userId: actorUserId, status: "ACTIVE" }
+    });
+    if (!staff) throw new ForbiddenException("Staff profile not found");
 
-  private async verifyTeacherAuthority(tenantId: string, schoolId: string, teacherId: string, component: any) {
-    const auth = await this.assignmentsService.checkTeacherGradingAuthority({
-      tenantId,
-      schoolId,
-      teacherId,
-      academicYearId: component.academicYearId,
-      termId: component.termId,
-      classId: component.classId,
-      armId: component.armId,
-      subjectId: component.subjectId,
+    const assignment = await kernel.db.teacherSubjectAssignment.findFirst({
+      where: {
+        tenantId, schoolId, teacherId: staff.id,
+        academicYearId: component.academicYearId,
+        termId: component.termId,
+        classId: component.classId,
+        subjectId: component.subjectId,
+        status: "ACTIVE"
+      }
     });
 
-    if (!auth.hasAuthority) {
-      throw new ForbiddenException("Teacher lacks Assignment Authority over this gradebook scope.");
+    if (!assignment) {
+      throw new ForbiddenException("Teacher does not have active assignment for this class/subject context");
+    }
+    
+    if (assignment.scope === "ARM_SPECIFIC") {
+      if (!assignment.armId) throw new ForbiddenException("Assignment is ARM_SPECIFIC but missing armId");
     }
 
-    return auth;
+    return assignment;
   }
 
-  async reviewAttempt(tenantId: string, schoolId: string, actorUserId: string, attemptId: string, dto: ReviewAttemptDto) {
+  async reviewAttempt(tenantId: string, schoolId: string, attemptId: string, actorUserId: string, dto: ReviewAttemptDto) {
     return tenantContext.run({ tenantId }, async () => {
       const attempt = await kernel.db.cBTAttempt.findUnique({
         where: { id: attemptId, tenantId, schoolId },
-        include: { exam: { include: { assessmentComponent: true } }, answers: true }
+        include: { answers: true, exam: { include: { assessmentComponent: true } } }
       });
 
-      if (!attempt) throw new NotFoundException("CBT Attempt not found.");
-      if (attempt.status !== CBTAttemptStatus.PENDING_REVIEW) {
-        throw new ConflictException(`Cannot review attempt in status ${attempt.status}. Expected PENDING_REVIEW.`);
+      if (!attempt || !attempt.exam.assessmentComponent) throw new ConflictException("Attempt or Exam Component not found");
+      
+      const exam = attempt.exam;
+      if (exam.status !== "CLOSED") throw new ConflictException("Exam must be CLOSED to perform final subjective grading.");
+
+      await this.verifyTeacherAuthority(tenantId, schoolId, actorUserId, exam.assessmentComponent);
+
+      if (attempt.status !== CBTAttemptStatus.PENDING_REVIEW && attempt.status !== CBTAttemptStatus.GRADED) {
+         throw new ConflictException("Attempt must be PENDING_REVIEW or GRADED to review.");
       }
 
-      const component = attempt.exam.assessmentComponent;
-      if (!component) throw new ConflictException("Exam is missing an AssessmentComponent.");
-
-      await this.verifyTeacherAuthority(tenantId, schoolId, actorUserId, component);
-
-      const publishedPayload = attempt.exam.publishedPayload as any;
-      if (!publishedPayload || !Array.isArray(publishedPayload.questions)) {
-        throw new ConflictException("Published payload invalid.");
-      }
+      const publishedPayload = typeof exam.publishedPayload === 'string' 
+        ? JSON.parse(exam.publishedPayload) 
+        : exam.publishedPayload;
 
       return kernel.db.$transaction(async (tx) => {
         let currentTotal = attempt.totalScore || 0;
         let subjectiveScoresAdded = 0;
 
         for (const reviewAns of dto.answers) {
-          const dbAns = attempt.answers.find(a => a.id === reviewAns.answerId);
+          const dbAns = attempt.answers.find((a: any) => a.id === reviewAns.answerId);
           if (!dbAns) throw new BadRequestException(`Answer ${reviewAns.answerId} not found in this attempt.`);
 
           const q = publishedPayload.questions.find((x: any) => x.id === dbAns.questionId);
@@ -77,7 +84,6 @@ export class CBTCompilerService {
              throw new BadRequestException(`Score ${reviewAns.awardedScore} exceeds max points ${q.points}.`);
           }
 
-          // if it was previously reviewed, subtract the old score
           const prevScore = dbAns.awardedScore || 0;
           currentTotal = currentTotal - prevScore + reviewAns.awardedScore;
 
@@ -88,8 +94,7 @@ export class CBTCompilerService {
           subjectiveScoresAdded++;
         }
 
-        // We check if all subjective questions have an awardedScore
-        const allSubjectiveGraded = attempt.answers.every(dbAns => {
+        const allSubjectiveGraded = attempt.answers.every((dbAns: any) => {
           const isReviewedInThisBatch = dto.answers.some(a => a.answerId === dbAns.id);
           if (isReviewedInThisBatch) return true;
 
@@ -124,7 +129,8 @@ export class CBTCompilerService {
 
       const component = exam.assessmentComponent;
 
-      await this.verifyTeacherAuthority(tenantId, schoolId, actorUserId, component);
+      const assignment = await this.verifyTeacherAuthority(tenantId, schoolId, actorUserId, component);
+      const submissionArmId = assignment.scope === "CLASS_WIDE" ? null : assignment.armId;
 
       const attempts = await kernel.db.cBTAttempt.findMany({
         where: { examId, tenantId, schoolId, status: "GRADED" },
@@ -142,7 +148,7 @@ export class CBTCompilerService {
             termId: component.termId,
             classId: component.classId,
             subjectId: component.subjectId,
-            armId: component.armId || null
+            armId: submissionArmId
           }
         });
 
@@ -158,7 +164,7 @@ export class CBTCompilerService {
               termId: component.termId,
               classId: component.classId,
               subjectId: component.subjectId,
-              armId: component.armId || null,
+              armId: submissionArmId,
               status: WorkflowStatus.DRAFT,
             }
           });
@@ -178,27 +184,25 @@ export class CBTCompilerService {
           
           if (!enrollment) continue;
 
-          let subjectResult = await tx.subjectResult.findFirst({
-            where: {
-              tenantId, schoolId, enrollmentId: enrollment.id,
-              subjectId: component.subjectId, termId: component.termId
-            }
-          });
-
-          if (!subjectResult) {
-            subjectResult = await tx.subjectResult.create({
-              data: {
-                tenantId, schoolId, enrollmentId: enrollment.id,
-                subjectId: component.subjectId, termId: component.termId,
-                academicYearId: component.academicYearId, status: ResultStatus.DRAFT
-              }
-            });
+          if (submissionArmId && enrollment.armId !== submissionArmId) {
+            continue; 
           }
 
-          let existingScore = await tx.assessmentScore.findFirst({
+          const subjectResult = await this.resultsService.resolveOrCreateSubjectResult(tx, {
+            tenantId, schoolId,
+            academicYearId: component.academicYearId,
+            termId: component.termId,
+            enrollmentId: enrollment.id,
+            subjectId: component.subjectId
+          });
+
+          const existingScore = await tx.assessmentScore.findUnique({
             where: {
-              tenantId, schoolId, subjectResultId: subjectResult.id,
-              assessmentComponentId: component.id
+              tenantId_schoolId_subjectResultId_assessmentComponentId: {
+                tenantId, schoolId,
+                subjectResultId: subjectResult.id,
+                assessmentComponentId: component.id
+              }
             }
           });
 
@@ -224,7 +228,7 @@ export class CBTCompilerService {
                 previousScore: oldScore, newScore: attempt.totalScore,
                 previousIsAbsent: existingScore.isAbsent, newIsAbsent: false,
                 actorUserId: actorUserId, actorRole: "SYSTEM_CBT_COMPILER",
-                reason: `CBT Auto-Compilation`
+                reason: "CBT Auto-Compilation"
               }
             });
             compiledCount++;
@@ -245,7 +249,7 @@ export class CBTCompilerService {
                 previousScore: null, newScore: attempt.totalScore,
                 previousIsAbsent: false, newIsAbsent: false,
                 actorUserId: actorUserId, actorRole: "SYSTEM_CBT_COMPILER",
-                reason: `CBT Initial Auto-Compilation`
+                reason: "CBT Initial Auto-Compilation"
               }
             });
             compiledCount++;
