@@ -20,20 +20,20 @@ export class StudentPortalCBTController {
 
   @Post(":id/start")
   async startAttempt(@Req() req: any, @Param("id") examId: string) {
-    const studentId = req.user.studentId;
-    if (!studentId) throw new Error("Student identity missing from token");
-    return this.attemptService.startAttempt(req.workspace.tenantId, req.workspace.schoolId, studentId, examId);
+    const userId = req.user.sub;
+    if (!userId) throw new Error("User identity missing from token");
+    return this.attemptService.startAttempt(req.workspace.tenantId, req.workspace.schoolId, userId, examId);
   }
 
   @Post(":id/answer")
   async saveAnswer(@Req() req: any, @Param("id") examId: string, @Body() dto: any) {
-    const studentId = req.user.studentId;
-    return this.attemptService.saveAnswer(req.workspace.tenantId, req.workspace.schoolId, studentId, examId, dto);
+    const userId = req.user.sub;
+    return this.attemptService.saveAnswer(req.workspace.tenantId, req.workspace.schoolId, userId, examId, dto);
   }
 
   @Post(":id/submit")
   async submitAttempt(@Req() req: any, @Param("id") examId: string) {
-    const studentId = req.user.studentId;
-    return this.attemptService.submitAttempt(req.workspace.tenantId, req.workspace.schoolId, studentId, examId);
+    const userId = req.user.sub;
+    return this.attemptService.submitAttempt(req.workspace.tenantId, req.workspace.schoolId, userId, examId);
   }
 }

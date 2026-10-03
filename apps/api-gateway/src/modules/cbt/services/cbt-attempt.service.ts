@@ -5,9 +5,6 @@ import { kernel, tenantContext, CBTAttemptStatus, QuestionType } from "@saas/cor
 export class CBTAttemptService {
   private readonly logger = new Logger(CBTAttemptService.name);
 
-  /**
-   * Helper to resolve canonical student identity, exactly like StudentPortalService.
-   */
   private async resolveStudent(userId: string, tenantId: string, schoolId: string) {
     const student = await kernel.db.student.findFirst({
       where: { userId, tenantId, schoolId },
@@ -61,12 +58,22 @@ export class CBTAttemptService {
           return { attempt, examPayload: exam.presentationPayload };
         }
 
-        attempt = await tx.cBTAttempt.create({
-          data: {
-            tenantId, schoolId, examId, studentId: student.id,
-            status: "IN_PROGRESS", startTime: new Date()
+        try {
+          attempt = await tx.cBTAttempt.create({
+            data: {
+              tenantId, schoolId, examId, studentId: student.id,
+              status: CBTAttemptStatus.IN_PROGRESS, startTime: new Date()
+            }
+          });
+        } catch (error: any) {
+          if (error.code === 'P2002') {
+             attempt = await tx.cBTAttempt.findFirst({
+               where: { examId, studentId: student.id, tenantId, schoolId }
+             });
+          } else {
+             throw error;
           }
-        });
+        }
 
         return { attempt, examPayload: exam.presentationPayload };
       });
@@ -86,18 +93,35 @@ export class CBTAttemptService {
       if (!attempt || attempt.status !== "IN_PROGRESS") throw new ForbiddenException("Attempt not in progress.");
       
       const now = new Date().getTime();
+      const availableToTime = attempt.exam.availableTo?.getTime() ?? Infinity;
       const authoritativeDeadline = Math.min(
-        attempt.exam.availableTo.getTime(),
+        availableToTime,
         attempt.startTime.getTime() + attempt.exam.durationMinutes * 60000
       );
 
       if (now > authoritativeDeadline) {
-        // Enforce deterministic closure
-        await this.forceSubmitExpiredAttempt(attempt);
+        await this.forceSubmitExpiredAttempt(attempt.id);
         throw new ForbiddenException("Attempt time expired. The attempt has been automatically submitted.");
       }
 
-      // Optimistic concurrency
+      // Verify question is valid in published grading snapshot
+      const publishedPayload = attempt.exam.publishedPayload as any;
+      const questions = publishedPayload?.questions as any[];
+      const question = questions?.find(q => q.id === questionId);
+      
+      if (!question) {
+        throw new BadRequestException("Invalid question ID for this exam.");
+      }
+
+      // Basic structure validation based on type
+      if (question.questionType === QuestionType.SINGLE_CHOICE || question.questionType === QuestionType.TRUE_FALSE) {
+         if (typeof answerPayload?.selectedOption !== "string") throw new BadRequestException("Invalid answer payload for single choice.");
+      } else if (question.questionType === QuestionType.MULTIPLE_CHOICE) {
+         if (!Array.isArray(answerPayload?.selectedOptions)) throw new BadRequestException("Invalid answer payload for multiple choice.");
+      } else if (question.questionType === QuestionType.SUBJECTIVE) {
+         if (typeof answerPayload?.text !== "string") throw new BadRequestException("Invalid answer payload for subjective.");
+      }
+
       const existingAnswer = await kernel.db.cBTAttemptAnswer.findUnique({
         where: { attemptId_questionId: { attemptId: attempt.id, questionId } }
       });
@@ -116,15 +140,20 @@ export class CBTAttemptService {
         });
         return { success: true, savedAt: answer.updatedAt, newVersion: answer.version };
       } else {
-        const answer = await kernel.db.cBTAttemptAnswer.create({
-          data: {
-            attemptId: attempt.id, 
-            questionId, 
-            answerPayload,
-            version: 1
-          }
-        });
-        return { success: true, savedAt: answer.updatedAt, newVersion: answer.version };
+        try {
+          const answer = await kernel.db.cBTAttemptAnswer.create({
+            data: {
+              attemptId: attempt.id, 
+              questionId, 
+              answerPayload,
+              version: 1
+            }
+          });
+          return { success: true, savedAt: answer.updatedAt, newVersion: answer.version };
+        } catch(err: any) {
+           if (err.code === 'P2002') throw new ConflictException("Answer created concurrently. Please fetch and use expectedVersion.");
+           throw err;
+        }
       }
     });
   }
@@ -133,14 +162,35 @@ export class CBTAttemptService {
     return tenantContext.run({ tenantId }, async () => {
       const { student } = await this.resolveStudent(userId, tenantId, schoolId);
       
-      return kernel.db.$transaction(async (tx) => {
-        const attempt = await tx.cBTAttempt.findFirst({
-          where: { examId, studentId: student.id, tenantId, schoolId },
-          include: { exam: true, answers: true }
+      const attempt = await kernel.db.cBTAttempt.findFirst({
+         where: { examId, studentId: student.id, tenantId, schoolId }
+      });
+      if (!attempt) throw new NotFoundException("Attempt not found.");
+
+      return this.processSubmission(attempt.id);
+    });
+  }
+
+  private async forceSubmitExpiredAttempt(attemptId: string) {
+     return this.processSubmission(attemptId);
+  }
+
+  private async processSubmission(attemptId: string) {
+     return kernel.db.$transaction(async (tx) => {
+        const attempt = await tx.cBTAttempt.findUnique({
+           where: { id: attemptId },
+           include: { exam: true, answers: true }
         });
         if (!attempt) throw new NotFoundException("Attempt not found.");
-        if (attempt.status !== "IN_PROGRESS") throw new ConflictException("Attempt is already submitted or graded.");
+        if (attempt.status !== "IN_PROGRESS") return { success: true, status: attempt.status, totalScore: attempt.totalScore };
 
+        // Step 1: Transition to SUBMITTED
+        await tx.cBTAttempt.update({
+          where: { id: attempt.id },
+          data: { status: CBTAttemptStatus.SUBMITTED, submitTime: new Date() }
+        });
+
+        // Step 2: Evaluate Answers
         const payload = attempt.exam.publishedPayload as any;
         const questions = payload.questions as any[];
         
@@ -157,7 +207,15 @@ export class CBTAttemptService {
           } else if (q.questionType === QuestionType.SINGLE_CHOICE || q.questionType === QuestionType.TRUE_FALSE) {
             const selectedOption = (ans.answerPayload as any)?.selectedOption;
             if (selectedOption !== undefined && selectedOption === q.correctOption) {
-              awardedScore = q.points;
+              awardedScore = q.points || 0;
+            }
+          } else if (q.questionType === QuestionType.MULTIPLE_CHOICE) {
+            const selectedOptions = (ans.answerPayload as any)?.selectedOptions as string[];
+            const correctOptions = q.correctOptions as string[];
+            if (Array.isArray(selectedOptions) && Array.isArray(correctOptions)) {
+               const isCorrect = selectedOptions.length === correctOptions.length &&
+                                 correctOptions.every(co => selectedOptions.includes(co));
+               if (isCorrect) awardedScore = q.points || 0;
             }
           }
           totalScore += awardedScore;
@@ -165,63 +223,22 @@ export class CBTAttemptService {
         });
 
         for (const gAns of gradedAnswers) {
-          await tx.cBTAttemptAnswer.update({
-            where: { id: gAns.id },
-            data: { awardedScore: gAns.awardedScore }
-          });
+          if (gAns.awardedScore !== null && gAns.awardedScore !== undefined) {
+             await tx.cBTAttemptAnswer.update({
+               where: { id: gAns.id },
+               data: { awardedScore: gAns.awardedScore }
+             });
+          }
         }
 
         const newStatus = requiresManualReview ? CBTAttemptStatus.PENDING_REVIEW : CBTAttemptStatus.GRADED;
 
         const updated = await tx.cBTAttempt.update({
           where: { id: attempt.id },
-          data: { status: newStatus, submitTime: new Date(), totalScore }
+          data: { status: newStatus, totalScore }
         });
         
         return { success: true, status: updated.status, totalScore: updated.totalScore };
-      });
-    });
-  }
-
-  private async forceSubmitExpiredAttempt(attempt: any) {
-     return kernel.db.$transaction(async (tx) => {
-        const latestAttempt = await tx.cBTAttempt.findUnique({
-           where: { id: attempt.id },
-           include: { exam: true, answers: true }
-        });
-        if (!latestAttempt || latestAttempt.status !== "IN_PROGRESS") return;
-        
-        const payload = latestAttempt.exam.publishedPayload as any;
-        const questions = payload.questions as any[];
-        let totalScore = 0;
-        let requiresManualReview = false;
-
-        for (const ans of latestAttempt.answers) {
-          const q = questions.find(x => x.id === ans.questionId);
-          if (!q) continue;
-
-          let awardedScore = 0;
-          if (q.questionType === QuestionType.SUBJECTIVE) {
-            requiresManualReview = true;
-          } else if (q.questionType === QuestionType.SINGLE_CHOICE || q.questionType === QuestionType.TRUE_FALSE) {
-            const selectedOption = (ans.answerPayload as any)?.selectedOption;
-            if (selectedOption !== undefined && selectedOption === q.correctOption) {
-              awardedScore = q.points;
-            }
-          }
-          totalScore += awardedScore;
-          await tx.cBTAttemptAnswer.update({
-            where: { id: ans.id },
-            data: { awardedScore }
-          });
-        }
-
-        const newStatus = requiresManualReview ? CBTAttemptStatus.PENDING_REVIEW : CBTAttemptStatus.GRADED;
-
-        await tx.cBTAttempt.update({
-          where: { id: latestAttempt.id },
-          data: { status: newStatus, submitTime: new Date(), totalScore }
-        });
      });
   }
 }
