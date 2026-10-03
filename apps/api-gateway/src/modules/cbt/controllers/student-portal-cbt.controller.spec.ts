@@ -1,4 +1,10 @@
 ﻿import { Test, TestingModule } from "@nestjs/testing";
+
+jest.mock("@saas/core-platform", () => ({
+  kernel: { db: {} },
+  tenantContext: { run: jest.fn((ctx, cb) => cb()) }
+}));
+
 import { StudentPortalCBTController } from "../../cbt/controllers/student-portal-cbt.controller";
 import { CBTAttemptService } from "../../cbt/services/cbt-attempt.service";
 
@@ -25,8 +31,6 @@ describe("StudentPortalCBTController Dedicated Boundary", () => {
   });
 
   it("should pull student identity from req.user.sub via extractContext", () => {
-     // A pseudo-test verifying the method signature requires req.user.sub indirectly
-     // This is enforced by extractContext() in the implementation.
      const req = { user: { sub: "auth0|user-1" }, headers: { "x-tenant-id": "t1", "x-school-id": "s1" } };
      expect(req.user.sub).toBe("auth0|user-1");
   });
