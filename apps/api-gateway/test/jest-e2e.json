@@ -10,7 +10,14 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "transformIgnorePatterns": [
-    "/node_modules/(?!@nestjs/event-emitter)"
-  ]
+  "globals": {
+    "ts-jest": {
+      "tsconfig": {
+        "allowJs": true
+      }
+    }
+  },
+  "moduleNameMapper": {
+    "^@nestjs/event-emitter$": "<rootDir>/__mocks__/@nestjs/event-emitter.ts"
+  }
 }
