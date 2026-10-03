@@ -202,7 +202,7 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - Snapshot secrecy and tenant/student isolation proven.
       - No new migrations or schema changes were required.
     - **Status:** **COMPLETE**. Commit e98c59d0 pushed.
-  - **Phase 6D ï¿½ Transport & Fleet Management:** PLANNED
+  - **Phase 6D: Transport & Fleet Management:** COMPLETE & VERIFIED (Implementation: 1fdaa860)
   - **Phase 6E ï¿½ Hostel & Boarding Management:** PLANNED
   - **Phase 6F ï¿½ School Website Builder & Public CMS:** PLANNED
   - **Phase 6G ï¿½ Marketplace & Subscription Billing Engine:** PLANNED
@@ -215,5 +215,6 @@ The following features are intentionally deferred unless the canonical roadmap e
 - **Student QR attendance / ID Card attendance integration**
 - **Student movement drop-off/pick-up notifications**
 - **Staff QR attendance**
+
 
 
