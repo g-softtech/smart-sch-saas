@@ -1,8 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
+﻿import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { TenantMiddleware } from "@saas/core-platform/dist/tenant/tenant.middleware.js";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { AcademicsModule } from "./modules/academics/academics.module";
+import { TransportModule } from "./modules/transport/transport.module";
 import { StudentsModule } from "./modules/students/students.module";
 import { AdmissionsModule } from "./modules/admissions/admissions.module";
 import { StaffModule } from "./modules/staff/staff.module";
@@ -29,6 +30,7 @@ import { LibraryModule } from "./modules/library/library.module";
     IdentityModule,
     PaymentsModule,
     AcademicsModule,
+    TransportModule,
     StudentsModule,
     AdmissionsModule,
     StaffModule,
@@ -56,3 +58,5 @@ export class AppModule implements NestModule {
     consumer.apply(TenantMiddleware).forRoutes("*");
   }
 }
+
+

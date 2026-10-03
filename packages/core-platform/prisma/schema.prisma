@@ -95,6 +95,10 @@ model Tenant {
   libraryPolicies                LibraryPolicy[]
   bookLoans                      BookLoan[]
   libraryAuditLogs               LibraryAuditLog[]
+  TransportVehicle               TransportVehicle[]
+  TransportRoute                 TransportRoute[]
+  TransportRouteAllocation       TransportRouteAllocation[]
+  TransportSubscription          TransportSubscription[]
 
   @@map("plt_tenants")
 }
@@ -286,6 +290,10 @@ model School {
   libraryPolicies           LibraryPolicy[]
   bookLoans                 BookLoan[]
   libraryAuditLogs          LibraryAuditLog[]
+  TransportVehicle          TransportVehicle[]
+  TransportRoute            TransportRoute[]
+  TransportRouteAllocation  TransportRouteAllocation[]
+  TransportSubscription     TransportSubscription[]
 
   @@unique([tenantId, id])
 }
@@ -448,6 +456,8 @@ model Campus {
   lessonNotes         LessonNote[]
   bookItems           BookItem[]
   bookLoans           BookLoan[]
+  TransportVehicle    TransportVehicle[]
+  TransportRoute      TransportRoute[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -479,6 +489,8 @@ model AcademicYear {
   classTeacherAssignments   ClassTeacherAssignment[]
   gradebookSubmissions      GradebookSubmission[]
   lessonNotes               LessonNote[]
+  TransportRouteAllocation  TransportRouteAllocation[]
+  TransportSubscription     TransportSubscription[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -506,6 +518,8 @@ model Term {
   classTeacherAssignments   ClassTeacherAssignment[]
   gradebookSubmissions      GradebookSubmission[]
   lessonNotes               LessonNote[]
+  TransportRouteAllocation  TransportRouteAllocation[]
+  TransportSubscription     TransportSubscription[]
 
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
@@ -629,40 +643,41 @@ model StudentNumberSequence {
 }
 
 model Student {
-  id                   String                 @id @default(uuid())
-  tenantId             String
-  schoolId             String
-  userId               String?
-  studentNumber        String
-  firstName            String
-  lastName             String
-  middleName           String?
-  email                String?
-  dateOfBirth          DateTime?
-  gender               GenderEnum
-  nationality          String?
-  status               StudentStatus          @default(ACTIVE)
-  admissionDate        DateTime
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  pickupAuthorizations PickupAuthorization[]
-  StudentArrival       StudentArrival[]
-  departures           StudentDeparture[]
-  AssignmentSubmission AssignmentSubmission[]
-  CBTAttempt           CBTAttempt[]
-  admissionApplication AdmissionApplication?
-  attendanceRecords    AttendanceRecord[]
-  Invoice              Invoice[]              @relation("InvoiceStudent")
-  PaymentReceipt       PaymentReceipt[]       @relation("ReceiptStudent")
-  Payment              Payment[]              @relation("PaymentStudent")
-  credentials          StudentCredential[]
-  enrollments          Enrollment[]
-  photo                StudentPhoto?
-  guardians            StudentGuardian[]
-  bookLoans            BookLoan[]
-  school               School                 @relation(fields: [schoolId], references: [id])
-  tenant               Tenant                 @relation(fields: [tenantId], references: [id])
-  user                 User?                  @relation(fields: [userId], references: [id])
+  id                    String                  @id @default(uuid())
+  tenantId              String
+  schoolId              String
+  userId                String?
+  studentNumber         String
+  firstName             String
+  lastName              String
+  middleName            String?
+  email                 String?
+  dateOfBirth           DateTime?
+  gender                GenderEnum
+  nationality           String?
+  status                StudentStatus           @default(ACTIVE)
+  admissionDate         DateTime
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  pickupAuthorizations  PickupAuthorization[]
+  StudentArrival        StudentArrival[]
+  departures            StudentDeparture[]
+  AssignmentSubmission  AssignmentSubmission[]
+  CBTAttempt            CBTAttempt[]
+  admissionApplication  AdmissionApplication?
+  attendanceRecords     AttendanceRecord[]
+  Invoice               Invoice[]               @relation("InvoiceStudent")
+  PaymentReceipt        PaymentReceipt[]        @relation("ReceiptStudent")
+  Payment               Payment[]               @relation("PaymentStudent")
+  credentials           StudentCredential[]
+  enrollments           Enrollment[]
+  photo                 StudentPhoto?
+  guardians             StudentGuardian[]
+  bookLoans             BookLoan[]
+  school                School                  @relation(fields: [schoolId], references: [id])
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id])
+  user                  User?                   @relation(fields: [userId], references: [id])
+  TransportSubscription TransportSubscription[]
 
   @@unique([tenantId, schoolId, studentNumber])
   @@index([tenantId])
@@ -940,6 +955,7 @@ model StaffProfile {
   school                    School                     @relation(fields: [schoolId], references: [id])
   tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
   user                      User?                      @relation(fields: [userId], references: [id])
+  TransportRouteAllocation  TransportRouteAllocation[]
 
   @@unique([tenantId, schoolId, staffNumber])
   @@index([tenantId])
@@ -1399,7 +1415,7 @@ model CBTAttemptAnswer {
   question      CBTQuestion @relation(fields: [questionId], references: [id])
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-    version       Int         @default(1)
+  version       Int         @default(1)
 
   @@unique([attemptId, questionId])
   @@map("acd_cbt_attempt_answers")
@@ -2025,7 +2041,6 @@ model GradebookSubmission {
   subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, schoolId, academicYearId, termId, classId, subjectId])
-  
   @@map("acd_gradebook_submissions")
 }
 
@@ -2328,3 +2343,137 @@ model LibraryAuditLog {
   @@map("lib_audit_logs")
 }
 
+// --- Phase 6D Transport & Fleet Management ---
+
+enum TransportVehicleStatus {
+  ACTIVE
+  IN_MAINTENANCE
+  RETIRED
+}
+
+enum TransportRouteDirection {
+  PICKUP
+  DROP_OFF
+}
+
+enum TransportRouteStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TransportSubscriptionStatus {
+  ACTIVE
+  CANCELLED
+}
+
+model TransportVehicle {
+  id                 String                 @id @default(uuid())
+  tenantId           String
+  schoolId           String
+  campusId           String?
+  registrationNumber String
+  capacity           Int
+  status             TransportVehicleStatus @default(ACTIVE)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  campus      Campus?                    @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  school      School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  allocations TransportRouteAllocation[]
+
+  @@unique([tenantId, registrationNumber])
+  @@index([tenantId, schoolId])
+  @@map("trp_vehicles")
+}
+
+model TransportRoute {
+  id        String                  @id @default(uuid())
+  tenantId  String
+  schoolId  String
+  campusId  String?
+  name      String
+  direction TransportRouteDirection
+  status    TransportRouteStatus    @default(ACTIVE)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  campus      Campus?                    @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  school      School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  allocations TransportRouteAllocation[]
+  stops       TransportRouteStop[]
+
+  @@index([tenantId, schoolId])
+  @@map("trp_routes")
+}
+
+model TransportRouteStop {
+  id            String   @id @default(uuid())
+  routeId       String
+  name          String
+  estimatedTime String?
+  cost          Decimal  @default(0.00) @db.Decimal(10, 2)
+  orderIndex    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  route         TransportRoute          @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  subscriptions TransportSubscription[]
+
+  @@index([routeId])
+  @@map("trp_route_stops")
+}
+
+model TransportRouteAllocation {
+  id             String   @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  routeId        String
+  academicYearId String
+  termId         String
+  vehicleId      String
+  driverId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  academicYear  AcademicYear            @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term          Term                    @relation(fields: [termId], references: [id], onDelete: Restrict)
+  school        School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  driver        StaffProfile            @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  route         TransportRoute          @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  vehicle       TransportVehicle        @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  subscriptions TransportSubscription[]
+
+  @@unique([tenantId, schoolId, routeId, termId])
+  @@index([tenantId, schoolId])
+  @@map("trp_route_allocations")
+}
+
+model TransportSubscription {
+  id                String                      @id @default(uuid())
+  tenantId          String
+  schoolId          String
+  studentId         String
+  academicYearId    String
+  termId            String
+  routeAllocationId String
+  stopId            String
+  direction         TransportRouteDirection
+  status            TransportSubscriptionStatus @default(ACTIVE)
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  academicYear    AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term            Term                     @relation(fields: [termId], references: [id], onDelete: Restrict)
+  school          School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student         Student                  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  routeAllocation TransportRouteAllocation @relation(fields: [routeAllocationId], references: [id], onDelete: Restrict)
+  stop            TransportRouteStop       @relation(fields: [stopId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, schoolId, studentId])
+  @@index([routeAllocationId])
+  @@map("trp_subscriptions")
+}
