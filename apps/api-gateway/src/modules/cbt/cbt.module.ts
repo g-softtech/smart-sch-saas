@@ -1,12 +1,10 @@
 import { Module } from "@nestjs/common";
-import { CBTController } from "./controllers/cbt.controller";
-import { CBTService } from "./services/cbt.service";
-import { AcademicsModule } from "../academics/academics.module";
+import { CBTAttemptService } from "./services/cbt-attempt.service";
+import { StudentPortalCBTController } from "./controllers/student-portal-cbt.controller";
 
 @Module({
-  imports: [AcademicsModule],
-  controllers: [CBTController],
-  providers: [CBTService],
-  exports: [CBTService],
+  controllers: [StudentPortalCBTController],
+  providers: [CBTAttemptService],
+  exports: [CBTAttemptService],
 })
 export class CBTModule {}

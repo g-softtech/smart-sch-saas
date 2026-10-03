@@ -1399,6 +1399,7 @@ model CBTAttemptAnswer {
   question      CBTQuestion @relation(fields: [questionId], references: [id])
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+    version       Int         @default(1)
 
   @@unique([attemptId, questionId])
   @@map("acd_cbt_attempt_answers")
@@ -2325,3 +2326,4 @@ model LibraryAuditLog {
   @@index([tenantId, schoolId, userId])
   @@map("lib_audit_logs")
 }
+
