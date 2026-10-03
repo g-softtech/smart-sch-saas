@@ -62,12 +62,12 @@ describe("CBTCompilerService & Authorization", () => {
     });
 
     it("should reject teacher without matching TeacherSubjectAssignment", async () => {
-      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: false });
+      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: false, isPrimary: false, reason: "Unauthorized" } as any);
       await expect(compiler.compileToGradebook("tenant1", "school1", "ex1", "teacher-1")).rejects.toThrow(ForbiddenException);
     });
 
     it("should accept valid TeacherSubjectAssignment authority", async () => {
-      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true });
+      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true, isPrimary: true, scope: "CLASS_WIDE" as any, assignmentId: "a1" });
       kernel.db.cBTAttempt.findMany.mockResolvedValue([]); // return 0 attempts to end early
       const res = await compiler.compileToGradebook("tenant1", "school1", "ex1", "teacher-1");
       expect(res.success).toBe(true);
@@ -82,7 +82,7 @@ describe("CBTCompilerService & Authorization", () => {
     const mockComponent = { id: "comp1", academicYearId: "y1", termId: "t1", classId: "c1", subjectId: "sub1", maxScore: 100 };
     
     beforeEach(() => {
-      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true });
+      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true, isPrimary: true, scope: "CLASS_WIDE" as any, assignmentId: "a1" });
     });
 
     it("should reject compilation if exam is OPEN/PUBLISHED", async () => {
@@ -106,7 +106,7 @@ describe("CBTCompilerService & Authorization", () => {
     const mockComponent = { id: "comp1", academicYearId: "y1", termId: "t1", classId: "c1", subjectId: "sub1", maxScore: 100 };
     
     beforeEach(() => {
-      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true });
+      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true, isPrimary: true, scope: "CLASS_WIDE" as any, assignmentId: "a1" });
       kernel.db.cBTExam.findUnique.mockResolvedValue({ id: "ex1", status: "CLOSED", assessmentComponent: mockComponent });
       kernel.db.cBTAttempt.findMany.mockResolvedValue([{ id: "att1", studentId: "st1", totalScore: 85 }]);
       
