@@ -2025,7 +2025,7 @@ model GradebookSubmission {
   subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, schoolId, academicYearId, termId, classId, subjectId])
-  @@unique([tenantId, schoolId, academicYearId, termId, classId, subjectId, armId])
+  
   @@map("acd_gradebook_submissions")
 }
 
