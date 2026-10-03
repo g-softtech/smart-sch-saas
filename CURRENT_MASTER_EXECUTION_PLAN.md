@@ -182,28 +182,28 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
 - **Objective:** Value-add features beyond core operations.
 - **Sub-Phases Execution & Status:**
   - **Phase 6A - Entitlements, Module Configuration & Shared SaaS Infrastructure:** **COMPLETE & FULLY VERIFIED**.
-  - **Phase 6B - Library Management:** **IMPLEMENTED & AUTOMATED VERIFICATION COMPLETE (Pending Final Commit & Browser Auth)**
+  - **Phase 6B - Library Management:** **COMPLETE & FULLY VERIFIED (Pending Manual Browser Auth)**
     - **Scope Completed:** Built `lib_book_categories`, `lib_books`, `lib_book_items`, `lib_policies`, `lib_book_loans`, and `lib_audit_logs`. Implemented library catalog (category/book/item creation) and circulation state machine (issue, return, mark lost). Strict enforcement of `BorrowerType` invariant (student vs staff) through application logic and PostgreSQL `CHECK` constraint. Enforced Tenant/School/Campus boundary isolation natively and protected historical circulation data with `onDelete: Restrict`.
     - **Integrations:** Idempotent Finance invoice auto-generation for LOST books. Built Student Library portal (`/portal/student/library`) relying on zero-trust identity extraction, and Admin Library UI (`/dashboard/library`).
     - **Verification Evidence:**
       - **Phase 6B E2E Suite:** `38/38 PASSED` (`packages/core-platform/src/scripts/test-phase6b-library-e2e.ts`) relocated correctly to `src/scripts/` per canonical pattern.
       - **Phase 5 Regression Suites:** Step 3 (`25/25`), Step 4 (`22/22`), Step 5 (`28/28`), Step 6 (`10/10`), Phase 5H (`8/8`), Phase 5I (`10/10`) all PASSED unchanged.
       - **Build Integrity:** Core Platform typecheck (`0 errors`), API Gateway build (`0 errors`), Web App build (`51/51` pages), Prisma migration `20261002050000_add_phase_6b_library_management_models` applied successfully. `git diff --check` PASSED.
-    - **Status:** **PENDING CHECKPOINT COMMIT**. Working tree is clean except for valid Phase 6B files. Browser manual acceptance for Phase 5H and Phase 6B remains **PENDING USER VERIFICATION**. Next phase: Phase 6C (CBT/Examinations) or User-directed feature.
-    - **Scope Completed:** Tenant-scoped `TenantEntitlement` model and School-scoped `SchoolModuleSetting` model (`sys_tenant_entitlements` and `sys_school_module_settings` tables via migration `20260927173000_add_entitlements_and_module_settings`). Added composite key `@@unique([tenantId, id])` to `School`. Implemented `EntitlementsModule`, `EntitlementsRepository`, `EntitlementsService`, `EntitlementsController` (`GET /api/v1/entitlements`, `PATCH /api/v1/entitlements/:moduleKey`), `SchoolModuleSettingsController` (`GET /api/v1/schools/module-settings/:moduleKey`, `PATCH /api/v1/schools/module-settings/:moduleKey`), `@RequireModule(ModuleKey)` decorator, and `ModuleEntitlementGuard`. Seeded canonical permissions `tenant:manage_entitlements` and `school:manage_module_settings`. Integrated audit logging (`ENTITLEMENT_UPDATED`, `SCHOOL_MODULE_SETTING_UPDATED`). Created Module Management dashboard UI (`/dashboard/settings/modules`).
-    - **Security Architecture:** Enforced zero-trust workspace authorization inside `ModuleEntitlementGuard` before evaluating entitlement data. Validates JWT `user.sub`, `UserTenantMembership`, and `UserSchoolAccess` inside `tenantContext.run({ tenantId }, ...)`. Prevented arbitrary header spoofing with `403 Forbidden` checks. Preserved undecorated Phase 1–5 core controllers with 100% backward compatibility.
-    - **Verification Evidence:**
-      - **Live E2E & Security Suite:** `13/13 PASSED` (`scratch/test-phase6a-live-flow.js`)
-      - **Unit Test Suite:** `6/6 PASSED` (`apps/api-gateway/src/modules/entitlements/services/entitlements.service.spec.ts`)
-      - **Production Frontend Build:** `npm run build` passed (`40/40` static/dynamic pages)
-      - **Production Backend Build:** `npm run build` passed (0 errors)
-      - **Database Migration Status:** `npx prisma migrate status` ("Database schema is up to date!")
-      - **Whitespace Check:** `git diff --check` passed (0 errors)
-    - **Status:** **COMPLETE & VERIFIED**
-  - **Phase 6B — Library Management:** **NEXT APPROVED ROADMAP SUB-PHASE** (Book catalog, physical copy tracking, loans, borrowing limits, and overdue fine billing via `FinanceService`).
-  - **Phase 6C — Transport & Fleet Management:** PLANNED
-  - **Phase 6D — Hostel & Boarding Management:** PLANNED
-  - **Phase 6E — School Website Builder & Public CMS:** PLANNED
-  - **Phase 6F — Marketplace & Subscription Billing Engine:** PLANNED
-  - **Phase 6G — Advanced School AI Engine (Sandboxed & Advisory):** PLANNED
+    - **Status:** **COMPLETE**. Commit `d70b0718` pushed. Browser manual acceptance for Phase 5H and Phase 6B remains **PENDING USER VERIFICATION**.
+    - **Next phase:** Phase 6C � CBT & Examinations.
+  - **Phase 6C � CBT & Examinations:** **NEXT APPROVED ROADMAP SUB-PHASE**
+    - **Scope Note:** This is not a new greenfield module. The repository already contains substantial CBT scaffolding, including `CBTExam`, `CBTQuestion`, `CBTAttempt`, `CBTAttemptAnswer`, `CBTStatus`, `CBTAttemptStatus`, and an existing CBT authoring UI (`/dashboard/cbt`).
+    - **Pre-requisite Gate:** The immediate next step must be a dedicated **Phase 6C CBT & Examinations READ-ONLY Design & Architecture Gate** to audit the existing implementation before any code is changed. Do not assume the existing scaffold is production-ready.
+  - **Phase 6D � Transport & Fleet Management:** PLANNED
+  - **Phase 6E � Hostel & Boarding Management:** PLANNED
+  - **Phase 6F � School Website Builder & Public CMS:** PLANNED
+  - **Phase 6G � Marketplace & Subscription Billing Engine:** PLANNED
+  - **Phase 6H � Advanced School AI Engine (Sandboxed & Advisory):** PLANNED
 
+### Formal Deferred Requirements & Features
+The following features are intentionally deferred unless the canonical roadmap explicitly assigns them to an upcoming phase:
+- **Finance Wallet:** Wallet-related schema/data structures (`fin_wallets`, `fin_wallet_transactions`) exist, but complete wallet functionality is not yet established as a completed module. Exact roadmap phase assignment must be explicitly established from canonical documentation.
+- **Admissions multi-campus target-campus scoping**
+- **Student QR attendance / ID Card attendance integration**
+- **Student movement drop-off/pick-up notifications**
+- **Staff QR attendance**
