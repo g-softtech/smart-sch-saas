@@ -90,6 +90,21 @@ export class CBTAttemptService {
     return { ...payload, questions: sanitizedQuestions, correctOption: undefined, correctAnswerPayload: undefined, gradingSnapshot: undefined };
   }
 
+  private isOptionValid(question: any, opt: any): boolean {
+     if (!Array.isArray(question.options)) return false;
+     
+     // Match either primitive string value, primitive number index, or object ID
+     const isValidPrimitive = question.options.some((o: any) => o === opt || o?.id === opt);
+     if (isValidPrimitive) return true;
+
+     // Strict numeric bounds check if index format is used
+     if (typeof opt === "number" && opt >= 0 && opt < question.options.length) {
+         return true;
+     }
+
+     return false;
+  }
+
   async saveAnswer(tenantId: string, schoolId: string, userId: string, examId: string, payload: any) {
     const { questionId, answerPayload, expectedVersion } = payload;
     return tenantContext.run({ tenantId }, async () => {
@@ -123,27 +138,27 @@ export class CBTAttemptService {
         throw new BadRequestException("Invalid question ID for this exam.");
       }
 
-      // Payload structure validation based on type and published snapshot
+      // Strict Answer Payload Validation
       if (question.questionType === QuestionType.SINGLE_CHOICE || question.questionType === QuestionType.TRUE_FALSE) {
          const selectedOption = answerPayload?.selectedOption;
-         if (typeof selectedOption !== "number" && typeof selectedOption !== "string") throw new BadRequestException("Invalid answer payload for single choice.");
-         // Verify option actually exists in question.options
-         if (Array.isArray(question.options) && !question.options.some((opt: any) => opt.id === selectedOption || opt === selectedOption)) {
-            // For boolean or index types, it could just be an index. Allow numbers strictly within options bounds.
-            if (typeof selectedOption === "number" && (selectedOption < 0 || selectedOption >= question.options.length)) {
-                throw new BadRequestException("Selected option index out of bounds.");
-            }
+         if (typeof selectedOption !== "number" && typeof selectedOption !== "string") {
+            throw new BadRequestException("Invalid answer payload for single choice.");
+         }
+         if (!this.isOptionValid(question, selectedOption)) {
+            throw new BadRequestException("Selected option does not exist in the published question options.");
          }
       } else if (question.questionType === QuestionType.MULTIPLE_CHOICE) {
          const selectedOptions = answerPayload?.selectedOptions;
-         if (!Array.isArray(selectedOptions)) throw new BadRequestException("Invalid answer payload for multiple choice.");
+         if (!Array.isArray(selectedOptions)) {
+             throw new BadRequestException("Invalid answer payload for multiple choice.");
+         }
          const uniqueSelections = new Set(selectedOptions);
-         if (uniqueSelections.size !== selectedOptions.length) throw new BadRequestException("Duplicate options selected.");
-         if (Array.isArray(question.options)) {
-             for (const opt of selectedOptions) {
-                 if (typeof opt === "number" && (opt < 0 || opt >= question.options.length)) {
-                     throw new BadRequestException("Selected option index out of bounds.");
-                 }
+         if (uniqueSelections.size !== selectedOptions.length) {
+             throw new BadRequestException("Duplicate options selected.");
+         }
+         for (const opt of selectedOptions) {
+             if (!this.isOptionValid(question, opt)) {
+                 throw new BadRequestException("Selected option does not exist in the published question options.");
              }
          }
       } else if (question.questionType === QuestionType.SUBJECTIVE) {
@@ -216,19 +231,18 @@ export class CBTAttemptService {
         if (!attempt) throw new NotFoundException("Attempt not found.");
         if (attempt.status !== "IN_PROGRESS") return { success: true, status: attempt.status, totalScore: attempt.totalScore };
 
-        // TRUE ATOMIC STATE TRANSITION
+        // TRUE ATOMIC STATE TRANSITION (IN_PROGRESS -> SUBMITTED)
         const updateResult = await tx.cBTAttempt.updateMany({
           where: { id: attempt.id, status: CBTAttemptStatus.IN_PROGRESS },
           data: { status: CBTAttemptStatus.SUBMITTED, submitTime: new Date() }
         });
 
         if (updateResult.count === 0) {
-           // Concurrently modified by another submission process
            const latest = await tx.cBTAttempt.findUnique({ where: { id: attemptId } });
            return { success: true, status: latest?.status, totalScore: latest?.totalScore };
         }
 
-        // Step 2: Evaluate Answers
+        // Evaluate Objective Answers and Determine Routing (PENDING_REVIEW vs GRADED)
         const payload = attempt.exam.publishedPayload as any;
         const questions = payload.questions as any[];
         
@@ -249,7 +263,7 @@ export class CBTAttemptService {
             }
           } else if (q.questionType === QuestionType.MULTIPLE_CHOICE) {
             const selectedOptions = (ans.answerPayload as any)?.selectedOptions as any[];
-            const correctOptions = (q.correctAnswerPayload as any)?.correctOptions as any[]; // From architecture correctly referencing correctAnswerPayload
+            const correctOptions = (q.correctAnswerPayload as any)?.correctOptions as any[];
             if (Array.isArray(selectedOptions) && Array.isArray(correctOptions)) {
                const isCorrect = selectedOptions.length === correctOptions.length &&
                                  correctOptions.every(co => selectedOptions.includes(co));
@@ -269,11 +283,14 @@ export class CBTAttemptService {
           }
         }
 
-        const newStatus = requiresManualReview ? CBTAttemptStatus.PENDING_REVIEW : CBTAttemptStatus.GRADED;
+        // State Machine Resolution:
+        // Purely objective attempts jump directly to GRADED.
+        // Attempts with SUBJECTIVE questions route to PENDING_REVIEW.
+        const finalStatus = requiresManualReview ? CBTAttemptStatus.PENDING_REVIEW : CBTAttemptStatus.GRADED;
 
         const updated = await tx.cBTAttempt.update({
           where: { id: attempt.id },
-          data: { status: newStatus, totalScore }
+          data: { status: finalStatus, totalScore }
         });
         
         return { success: true, status: updated.status, totalScore: updated.totalScore };
