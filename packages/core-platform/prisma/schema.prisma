@@ -1241,6 +1241,8 @@ model AssessmentScore {
   maxScore              Float
   score                 Float?
   isAbsent              Boolean              @default(false)
+  isExempt              Boolean              @default(false)
+  provenance            ScoreProvenance      @default(MANUAL)
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   auditLogs             ScoreAuditLog[]
@@ -1828,6 +1830,12 @@ enum AssignmentStatus {
   DRAFT
   PUBLISHED
   CLOSED
+}
+
+enum ScoreProvenance {
+  MANUAL
+  CBT
+  CBT_MANUAL_OVERRIDE
 }
 
 enum SubmissionStatus {
