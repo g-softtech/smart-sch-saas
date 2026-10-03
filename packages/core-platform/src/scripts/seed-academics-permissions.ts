@@ -55,13 +55,36 @@ export const CANONICAL_ACADEMIC_PERMISSIONS = [
   },
 ];
 
+export const CANONICAL_LIBRARY_PERMISSIONS = [
+  {
+    name: "library:read_catalog",
+    description: "Read library catalog titles, categories, physical copies, and borrowing policies",
+  },
+  {
+    name: "library:manage_catalog",
+    description: "Create, update, and manage library catalog titles, categories, and physical copies",
+  },
+  {
+    name: "library:read_loans",
+    description: "Read and view active and historical circulation loans across borrowers",
+  },
+  {
+    name: "library:manage_loans",
+    description: "Issue loans, check-in returns, mark copies lost, and bill overdue fines",
+  },
+  {
+    name: "library:manage_policies",
+    description: "Configure library borrowing policies, fine rates, and loan durations",
+  },
+];
+
 /**
  * Ensures canonical academic permissions exist in global Permission catalog.
  */
 export async function seedCanonicalAcademicPermissions() {
   const seededPermissions: Record<string, string> = {};
 
-  for (const perm of CANONICAL_ACADEMIC_PERMISSIONS) {
+  for (const perm of [...CANONICAL_ACADEMIC_PERMISSIONS, ...CANONICAL_LIBRARY_PERMISSIONS]) {
     const record = await kernel.db.permission.upsert({
       where: { name: perm.name },
       update: { description: perm.description },

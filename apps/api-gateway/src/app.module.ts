@@ -22,6 +22,7 @@ import { PortalParentModule } from "./modules/portal-parent/portal-parent.module
 import { PortalAccountModule } from "./modules/portal-account/portal-account.module";
 import { PortalTeacherModule } from "./modules/portal-teacher/portal-teacher.module";
 import { EntitlementsModule } from "./modules/entitlements/entitlements.module";
+import { LibraryModule } from "./modules/library/library.module";
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { EntitlementsModule } from "./modules/entitlements/entitlements.module";
     PortalAccountModule,
     PortalTeacherModule,
     EntitlementsModule,
+    LibraryModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

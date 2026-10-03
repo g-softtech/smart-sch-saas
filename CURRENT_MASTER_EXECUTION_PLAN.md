@@ -176,12 +176,20 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Phase 5I Dedicated Suite:** `10/10 PASSED` (`packages/core-platform/src/scripts/test-phase5i-lesson-notes-e2e.ts`).
       - **Regression Suites:** Step 3 Security (`25/25`), Step 4 Gradebook (`22/22`), Step 5 Workflow (`28/28`), Step 6 Portal Results (`10/10`), Phase 5H Assignments (`8/8`).
       - **Build Integrity:** Core Platform typecheck PASSED (`0 errors`), API Gateway build PASSED (`0 errors`), Web App build PASSED (`49/49 static/dynamic pages prerendered`), Prisma migration status PASSED (`29 migrations up to date`), `git diff --check` PASSED.
-    - **Current Status:** **Phase 5 (All Sub-phases 5A–5I) COMPLETE & FULLY VERIFIED.** Ready for Phase 6B (Library Management) authorization. Phase 6B remains paused until explicit user directive.
+    - **Current Status:** **Phase 5 (All Sub-phases 5A-5I) COMPLETE & FULLY VERIFIED.**
 
 ### Phase 6: Future SaaS Expansion
 - **Objective:** Value-add features beyond core operations.
 - **Sub-Phases Execution & Status:**
-  - **Phase 6A — Entitlements, Module Configuration & Shared SaaS Infrastructure:** **COMPLETE & FULLY VERIFIED**.
+  - **Phase 6A - Entitlements, Module Configuration & Shared SaaS Infrastructure:** **COMPLETE & FULLY VERIFIED**.
+  - **Phase 6B - Library Management:** **IMPLEMENTED & AUTOMATED VERIFICATION COMPLETE (Pending Final Commit & Browser Auth)**
+    - **Scope Completed:** Built `lib_book_categories`, `lib_books`, `lib_book_items`, `lib_policies`, `lib_book_loans`, and `lib_audit_logs`. Implemented library catalog (category/book/item creation) and circulation state machine (issue, return, mark lost). Strict enforcement of `BorrowerType` invariant (student vs staff) through application logic and PostgreSQL `CHECK` constraint. Enforced Tenant/School/Campus boundary isolation natively and protected historical circulation data with `onDelete: Restrict`.
+    - **Integrations:** Idempotent Finance invoice auto-generation for LOST books. Built Student Library portal (`/portal/student/library`) relying on zero-trust identity extraction, and Admin Library UI (`/dashboard/library`).
+    - **Verification Evidence:**
+      - **Phase 6B E2E Suite:** `38/38 PASSED` (`packages/core-platform/src/scripts/test-phase6b-library-e2e.ts`) relocated correctly to `src/scripts/` per canonical pattern.
+      - **Phase 5 Regression Suites:** Step 3 (`25/25`), Step 4 (`22/22`), Step 5 (`28/28`), Step 6 (`10/10`), Phase 5H (`8/8`), Phase 5I (`10/10`) all PASSED unchanged.
+      - **Build Integrity:** Core Platform typecheck (`0 errors`), API Gateway build (`0 errors`), Web App build (`51/51` pages), Prisma migration `20261002050000_add_phase_6b_library_management_models` applied successfully. `git diff --check` PASSED.
+    - **Status:** **PENDING CHECKPOINT COMMIT**. Working tree is clean except for valid Phase 6B files. Browser manual acceptance for Phase 5H and Phase 6B remains **PENDING USER VERIFICATION**. Next phase: Phase 6C (CBT/Examinations) or User-directed feature.
     - **Scope Completed:** Tenant-scoped `TenantEntitlement` model and School-scoped `SchoolModuleSetting` model (`sys_tenant_entitlements` and `sys_school_module_settings` tables via migration `20260927173000_add_entitlements_and_module_settings`). Added composite key `@@unique([tenantId, id])` to `School`. Implemented `EntitlementsModule`, `EntitlementsRepository`, `EntitlementsService`, `EntitlementsController` (`GET /api/v1/entitlements`, `PATCH /api/v1/entitlements/:moduleKey`), `SchoolModuleSettingsController` (`GET /api/v1/schools/module-settings/:moduleKey`, `PATCH /api/v1/schools/module-settings/:moduleKey`), `@RequireModule(ModuleKey)` decorator, and `ModuleEntitlementGuard`. Seeded canonical permissions `tenant:manage_entitlements` and `school:manage_module_settings`. Integrated audit logging (`ENTITLEMENT_UPDATED`, `SCHOOL_MODULE_SETTING_UPDATED`). Created Module Management dashboard UI (`/dashboard/settings/modules`).
     - **Security Architecture:** Enforced zero-trust workspace authorization inside `ModuleEntitlementGuard` before evaluating entitlement data. Validates JWT `user.sub`, `UserTenantMembership`, and `UserSchoolAccess` inside `tenantContext.run({ tenantId }, ...)`. Prevented arbitrary header spoofing with `403 Forbidden` checks. Preserved undecorated Phase 1–5 core controllers with 100% backward compatibility.
     - **Verification Evidence:**

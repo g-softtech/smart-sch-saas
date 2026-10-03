@@ -90,6 +90,12 @@ model Tenant {
   assignmentMigrationQuarantines AssignmentMigrationQuarantine[]
   lessonNotes           LessonNote[]
   lessonNoteAuditLogs   LessonNoteAuditLog[]
+  bookCategories        BookCategory[]
+  books                 Book[]
+  bookItems             BookItem[]
+  libraryPolicies       LibraryPolicy[]
+  bookLoans             BookLoan[]
+  libraryAuditLogs      LibraryAuditLog[]
 
   @@map("plt_tenants")
 }
@@ -275,6 +281,12 @@ model School {
   gradebookSubmissions  GradebookSubmission[]
   lessonNotes           LessonNote[]
   lessonNoteAuditLogs   LessonNoteAuditLog[]
+  bookCategories        BookCategory[]
+  books                 Book[]
+  bookItems             BookItem[]
+  libraryPolicies       LibraryPolicy[]
+  bookLoans             BookLoan[]
+  libraryAuditLogs      LibraryAuditLog[]
 
   @@unique([tenantId, id])
 }
@@ -436,6 +448,8 @@ model Campus {
   staffAssignments    StaffCampusAssignment[]
   enrollments         Enrollment[]
   lessonNotes         LessonNote[]
+  bookItems           BookItem[]
+  bookLoans           BookLoan[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -647,6 +661,7 @@ model Student {
   enrollments          Enrollment[]
   photo                StudentPhoto?
   guardians            StudentGuardian[]
+  bookLoans            BookLoan[]
   school               School                 @relation(fields: [schoolId], references: [id])
   tenant               Tenant                 @relation(fields: [tenantId], references: [id])
   user                 User?                  @relation(fields: [userId], references: [id])
@@ -922,6 +937,7 @@ model StaffProfile {
   teacherSubjectAssignments TeacherSubjectAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
   lessonNotes           LessonNote[]
+  bookLoans             BookLoan[]
   department        Department?             @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   school            School                  @relation(fields: [schoolId], references: [id])
   tenant            Tenant                  @relation(fields: [tenantId], references: [id])
@@ -2132,4 +2148,160 @@ model LessonNoteAuditLog {
 
   @@index([tenantId, schoolId, lessonNoteId])
   @@map("acd_lesson_note_audit_logs")
+}
+
+enum BorrowerType {
+  STUDENT
+  STAFF
+}
+
+enum BookItemStatus {
+  AVAILABLE
+  BORROWED
+  RESERVED
+  MAINTENANCE
+  LOST
+}
+
+enum BookLoanStatus {
+  ISSUED
+  OVERDUE
+  RETURNED
+  LOST
+}
+
+model BookCategory {
+  id          String   @id @default(uuid())
+  tenantId    String
+  schoolId    String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  books       Book[]
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, schoolId, name])
+  @@map("lib_book_categories")
+}
+
+model Book {
+  id              String   @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  categoryId      String
+  title           String
+  author          String
+  isbn            String?
+  publisher       String?
+  publicationYear Int?
+  totalCopies     Int      @default(0)
+  availableCopies Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category BookCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  school   School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items    BookItem[]
+
+  @@index([tenantId, schoolId, categoryId])
+  @@index([tenantId, schoolId, title])
+  @@map("lib_books")
+}
+
+model BookItem {
+  id         String         @id @default(uuid())
+  tenantId   String
+  schoolId   String
+  campusId   String?
+  bookId     String
+  assetTag   String
+  copyNumber Int
+  status     BookItemStatus @default(AVAILABLE)
+  location   String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  book   Book    @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  campus Campus? @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  loans  BookLoan[]
+
+  @@unique([tenantId, schoolId, assetTag])
+  @@unique([bookId, copyNumber])
+  @@index([tenantId, schoolId, campusId])
+  @@map("lib_book_items")
+}
+
+model LibraryPolicy {
+  id               String       @id @default(uuid())
+  tenantId         String
+  schoolId         String
+  borrowerType     BorrowerType
+  maxBooksAllowed  Int          @default(3)
+  loanDurationDays Int          @default(14)
+  gracePeriodDays  Int          @default(2)
+  finePerDay       Decimal      @default(0.00) @db.Decimal(10, 2)
+  maxFineAmount    Decimal      @default(0.00) @db.Decimal(10, 2)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, schoolId, borrowerType])
+  @@map("lib_policies")
+}
+
+model BookLoan {
+  id             String         @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  campusId       String?
+  bookItemId     String
+  borrowerType   BorrowerType
+  studentId      String?
+  staffProfileId String?
+  issuedById     String
+  issuedAt       DateTime       @default(now())
+  dueDate        DateTime
+  returnedAt     DateTime?
+  status         BookLoanStatus @default(ISSUED)
+  fineAmount     Decimal        @default(0.00) @db.Decimal(10, 2)
+  invoiceId      String?        @unique
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  bookItem     BookItem      @relation(fields: [bookItemId], references: [id], onDelete: Restrict)
+  campus       Campus?       @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student      Student?      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  staffProfile StaffProfile? @relation(fields: [staffProfileId], references: [id], onDelete: Restrict)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, schoolId, studentId])
+  @@index([tenantId, schoolId, staffProfileId])
+  @@index([tenantId, schoolId, status])
+  @@map("lib_book_loans")
+}
+
+model LibraryAuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String
+  schoolId  String
+  userId    String
+  action    String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, schoolId, userId])
+  @@map("lib_audit_logs")
 }
