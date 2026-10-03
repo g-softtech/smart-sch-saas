@@ -1,4 +1,4 @@
-﻿import { Injectable, ConflictException, BadRequestException, ForbiddenException } from "@nestjs/common";
+import { Injectable, ConflictException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { kernel, tenantContext, ScoreProvenance, CBTAttemptStatus, QuestionType, WorkflowStatus, ResultStatus } from "@saas/core-platform";
 import { ResultsService } from "../../academics/services/results.service";
 
@@ -141,6 +141,9 @@ export class CBTCompilerService {
       }
 
       return kernel.db.$transaction(async (tx) => {
+        // Atomic locking: serialize concurrent GradebookSubmission creations via the assignment row
+        await tx.$executeRawUnsafe('SELECT id FROM stf_teacher_subject_assignments WHERE id = $1 FOR UPDATE', assignment.id);
+
         let submission = await tx.gradebookSubmission.findFirst({
           where: {
             tenantId, schoolId,
@@ -212,7 +215,7 @@ export class CBTCompilerService {
               continue; 
             }
 
-            const oldScore = existingScore.score;
+            const oldScore = existingScore.score; if (oldScore === attempt.totalScore) continue;
             await tx.assessmentScore.update({
               where: { id: existingScore.id },
               data: {
