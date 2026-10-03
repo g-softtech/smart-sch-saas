@@ -24,101 +24,100 @@ enum EntitlementStatus {
   EXPIRED
 }
 
-
 model Tenant {
-  id                    String                   @id @default(uuid())
-  name                  String
-  slug                  String                   @unique
-  status                TenantStatus             @default(ACTIVE)
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
-  pickupAuthorizations  PickupAuthorization[]
-  schools               School[]
-  StudentArrival        StudentArrival[]
-  departures            StudentDeparture[]
-  academicYears         AcademicYear[]
-  arms                  Arm[]
-  AssessmentComponent   AssessmentComponent[]
-  AssessmentScore       AssessmentScore[]
-  AssignmentSubmission  AssignmentSubmission[]
-  Assignment            Assignment[]
-  campuses              Campus[]
-  CBTAttempt            CBTAttempt[]
-  CBTExam               CBTExam[]
-  classes               Class[]
-  departments           Department[]
-  GradeBoundary         GradeBoundary[]
-  GradingScale          GradingScale[]
-  subjectGroups         SubjectGroup[]
-  SubjectResult         SubjectResult[]
-  subjects              Subject[]
-  terms                 Term[]
-  TimetableEntry        TimetableEntry[]
-  TimetablePeriod       TimetablePeriod[]
-  applicants            Applicant[]
-  admissionApplications AdmissionApplication[]
-  AdmissionExam         AdmissionExam[]
-  PaymentTransaction    PaymentTransaction[]
-  publishedForms        PublishedAdmissionForm[]
-  admissionReviews      AdmissionReview[]
-  attendanceRecords     AttendanceRecord[]
-  attendanceRegisters   AttendanceRegister[]
-  FeeStructure          FeeStructure[]           @relation("FeeStructureTenant")
-  Invoice               Invoice[]                @relation("InvoiceTenant")
-  PaymentReceipt        PaymentReceipt[]         @relation("ReceiptTenant")
-  Payment               Payment[]                @relation("PaymentTenant")
-  guardianCredentials   GuardianCredential[]
-  auditLogs             AuditLog[]
-  roles                 Role[]
-  users                 UserTenantMembership[]
-  schoolAccess          UserSchoolAccess[]
-  StaffCampusAssignment StaffCampusAssignment[]
-  staffCredentials      StaffCredential[]
-  staffProfiles         StaffProfile[]
-  StudentCredential     StudentCredential[]
-  guardians             Guardian[]
-  studentPhotos         StudentPhoto[]
-  staffPhotos           StaffPhoto[]
-  students              Student[]
-  entitlements          TenantEntitlement[]
-  schoolModuleSettings  SchoolModuleSetting[]
-  teacherSubjectAssignments TeacherSubjectAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  gradebookSubmissions  GradebookSubmission[]
-  scoreAuditLogs        ScoreAuditLog[]
-  workflowAuditLogs     WorkflowAuditLog[]
+  id                             String                          @id @default(uuid())
+  name                           String
+  slug                           String                          @unique
+  status                         TenantStatus                    @default(ACTIVE)
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+  pickupAuthorizations           PickupAuthorization[]
+  schools                        School[]
+  StudentArrival                 StudentArrival[]
+  departures                     StudentDeparture[]
+  academicYears                  AcademicYear[]
+  arms                           Arm[]
+  AssessmentComponent            AssessmentComponent[]
+  AssessmentScore                AssessmentScore[]
+  AssignmentSubmission           AssignmentSubmission[]
+  Assignment                     Assignment[]
+  campuses                       Campus[]
+  CBTAttempt                     CBTAttempt[]
+  CBTExam                        CBTExam[]
+  classes                        Class[]
+  departments                    Department[]
+  GradeBoundary                  GradeBoundary[]
+  GradingScale                   GradingScale[]
+  subjectGroups                  SubjectGroup[]
+  SubjectResult                  SubjectResult[]
+  subjects                       Subject[]
+  terms                          Term[]
+  TimetableEntry                 TimetableEntry[]
+  TimetablePeriod                TimetablePeriod[]
+  applicants                     Applicant[]
+  admissionApplications          AdmissionApplication[]
+  AdmissionExam                  AdmissionExam[]
+  PaymentTransaction             PaymentTransaction[]
+  publishedForms                 PublishedAdmissionForm[]
+  admissionReviews               AdmissionReview[]
+  attendanceRecords              AttendanceRecord[]
+  attendanceRegisters            AttendanceRegister[]
+  FeeStructure                   FeeStructure[]                  @relation("FeeStructureTenant")
+  Invoice                        Invoice[]                       @relation("InvoiceTenant")
+  PaymentReceipt                 PaymentReceipt[]                @relation("ReceiptTenant")
+  Payment                        Payment[]                       @relation("PaymentTenant")
+  guardianCredentials            GuardianCredential[]
+  auditLogs                      AuditLog[]
+  roles                          Role[]
+  users                          UserTenantMembership[]
+  schoolAccess                   UserSchoolAccess[]
+  StaffCampusAssignment          StaffCampusAssignment[]
+  staffCredentials               StaffCredential[]
+  staffProfiles                  StaffProfile[]
+  StudentCredential              StudentCredential[]
+  guardians                      Guardian[]
+  studentPhotos                  StudentPhoto[]
+  staffPhotos                    StaffPhoto[]
+  students                       Student[]
+  entitlements                   TenantEntitlement[]
+  schoolModuleSettings           SchoolModuleSetting[]
+  teacherSubjectAssignments      TeacherSubjectAssignment[]
+  classTeacherAssignments        ClassTeacherAssignment[]
+  gradebookSubmissions           GradebookSubmission[]
+  scoreAuditLogs                 ScoreAuditLog[]
+  workflowAuditLogs              WorkflowAuditLog[]
   assignmentMigrationQuarantines AssignmentMigrationQuarantine[]
-  lessonNotes           LessonNote[]
-  lessonNoteAuditLogs   LessonNoteAuditLog[]
-  bookCategories        BookCategory[]
-  books                 Book[]
-  bookItems             BookItem[]
-  libraryPolicies       LibraryPolicy[]
-  bookLoans             BookLoan[]
-  libraryAuditLogs      LibraryAuditLog[]
+  lessonNotes                    LessonNote[]
+  lessonNoteAuditLogs            LessonNoteAuditLog[]
+  bookCategories                 BookCategory[]
+  books                          Book[]
+  bookItems                      BookItem[]
+  libraryPolicies                LibraryPolicy[]
+  bookLoans                      BookLoan[]
+  libraryAuditLogs               LibraryAuditLog[]
 
   @@map("plt_tenants")
 }
 
 model User {
-  id                String                 @id @default(uuid())
-  email             String                 @unique
-  passwordHash      String?
-  globalRole        GlobalRole             @default(USER)
-  emailVerified     DateTime?
-  preferredTenantId String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  deletedAt         DateTime?
-  admissionReviews  AdmissionReview[]
-  auditLogs         AuditLog[]
-  memberships       UserTenantMembership[]
-  schoolAccess      UserSchoolAccess[]
-  staffProfiles     StaffProfile[]
-  students          Student[]
-  guardians         Guardian[]
+  id                  String                 @id @default(uuid())
+  email               String                 @unique
+  passwordHash        String?
+  globalRole          GlobalRole             @default(USER)
+  emailVerified       DateTime?
+  preferredTenantId   String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  deletedAt           DateTime?
+  admissionReviews    AdmissionReview[]
+  auditLogs           AuditLog[]
+  memberships         UserTenantMembership[]
+  schoolAccess        UserSchoolAccess[]
+  staffProfiles       StaffProfile[]
+  students            Student[]
+  guardians           Guardian[]
   passwordResetTokens PasswordResetToken[]
-  lessonNoteReviews LessonNote[]             @relation("LessonNoteReviewer")
+  lessonNoteReviews   LessonNote[]           @relation("LessonNoteReviewer")
 
   @@map("idm_users")
 }
@@ -163,22 +162,22 @@ model UserSchoolAccess {
 }
 
 model PortalInvitation {
-  id           String           @id @default(uuid())
-  tenantId     String
-  schoolId     String
-  userId       String
-  tokenHash    String           @unique
-  targetType   PortalTargetType
-  studentId    String?
-  guardianId   String?
-  staffId      String?
-  expiresAt    DateTime
-  isConsumed   Boolean          @default(false)
-  consumedAt   DateTime?
-  createdById  String
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  staff        StaffProfile?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  id          String           @id @default(uuid())
+  tenantId    String
+  schoolId    String
+  userId      String
+  tokenHash   String           @unique
+  targetType  PortalTargetType
+  studentId   String?
+  guardianId  String?
+  staffId     String?
+  expiresAt   DateTime
+  isConsumed  Boolean          @default(false)
+  consumedAt  DateTime?
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  staff       StaffProfile?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId])
   @@index([tenantId, studentId])
@@ -233,74 +232,74 @@ model RolePermission {
 }
 
 model School {
-  id                    String                   @id @default(uuid())
-  tenantId              String
-  name                  String
-  pickupAuthorizations  PickupAuthorization[]
-  tenant                Tenant                   @relation(fields: [tenantId], references: [id])
-  StudentArrival        StudentArrival[]
-  departures            StudentDeparture[]
-  academicYears         AcademicYear[]
-  AssessmentComponent   AssessmentComponent[]
-  AssessmentScore       AssessmentScore[]
-  AssignmentSubmission  AssignmentSubmission[]
-  Assignment            Assignment[]
-  campuses              Campus[]
-  CBTAttempt            CBTAttempt[]
-  CBTExam               CBTExam[]
-  classes               Class[]
-  departments           Department[]
-  GradeBoundary         GradeBoundary[]
-  GradingScale          GradingScale[]
-  subjectGroups         SubjectGroup[]
-  SubjectResult         SubjectResult[]
-  subjects              Subject[]
-  TimetableEntry        TimetableEntry[]
-  TimetablePeriod       TimetablePeriod[]
-  applicants            Applicant[]
-  admissionApplications AdmissionApplication[]
-  AdmissionExam         AdmissionExam[]
-  PaymentTransaction    PaymentTransaction[]
-  publishedForms        PublishedAdmissionForm[]
-  attendanceRecords     AttendanceRecord[]
-  attendanceRegisters   AttendanceRegister[]
-  FeeStructure          FeeStructure[]           @relation("FeeStructureSchool")
-  Invoice               Invoice[]                @relation("InvoiceSchool")
-  PaymentReceipt        PaymentReceipt[]         @relation("ReceiptSchool")
-  Payment               Payment[]                @relation("PaymentSchool")
-  userAccess            UserSchoolAccess[]
-  staffCredentials      StaffCredential[]
-  staffProfiles         StaffProfile[]
-  StudentCredential     StudentCredential[]
-  studentPhotos         StudentPhoto[]
-  staffPhotos           StaffPhoto[]
-  students              Student[]
-  moduleSettings        SchoolModuleSetting[]
+  id                        String                     @id @default(uuid())
+  tenantId                  String
+  name                      String
+  pickupAuthorizations      PickupAuthorization[]
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  StudentArrival            StudentArrival[]
+  departures                StudentDeparture[]
+  academicYears             AcademicYear[]
+  AssessmentComponent       AssessmentComponent[]
+  AssessmentScore           AssessmentScore[]
+  AssignmentSubmission      AssignmentSubmission[]
+  Assignment                Assignment[]
+  campuses                  Campus[]
+  CBTAttempt                CBTAttempt[]
+  CBTExam                   CBTExam[]
+  classes                   Class[]
+  departments               Department[]
+  GradeBoundary             GradeBoundary[]
+  GradingScale              GradingScale[]
+  subjectGroups             SubjectGroup[]
+  SubjectResult             SubjectResult[]
+  subjects                  Subject[]
+  TimetableEntry            TimetableEntry[]
+  TimetablePeriod           TimetablePeriod[]
+  applicants                Applicant[]
+  admissionApplications     AdmissionApplication[]
+  AdmissionExam             AdmissionExam[]
+  PaymentTransaction        PaymentTransaction[]
+  publishedForms            PublishedAdmissionForm[]
+  attendanceRecords         AttendanceRecord[]
+  attendanceRegisters       AttendanceRegister[]
+  FeeStructure              FeeStructure[]             @relation("FeeStructureSchool")
+  Invoice                   Invoice[]                  @relation("InvoiceSchool")
+  PaymentReceipt            PaymentReceipt[]           @relation("ReceiptSchool")
+  Payment                   Payment[]                  @relation("PaymentSchool")
+  userAccess                UserSchoolAccess[]
+  staffCredentials          StaffCredential[]
+  staffProfiles             StaffProfile[]
+  StudentCredential         StudentCredential[]
+  studentPhotos             StudentPhoto[]
+  staffPhotos               StaffPhoto[]
+  students                  Student[]
+  moduleSettings            SchoolModuleSetting[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  gradebookSubmissions  GradebookSubmission[]
-  lessonNotes           LessonNote[]
-  lessonNoteAuditLogs   LessonNoteAuditLog[]
-  bookCategories        BookCategory[]
-  books                 Book[]
-  bookItems             BookItem[]
-  libraryPolicies       LibraryPolicy[]
-  bookLoans             BookLoan[]
-  libraryAuditLogs      LibraryAuditLog[]
+  classTeacherAssignments   ClassTeacherAssignment[]
+  gradebookSubmissions      GradebookSubmission[]
+  lessonNotes               LessonNote[]
+  lessonNoteAuditLogs       LessonNoteAuditLog[]
+  bookCategories            BookCategory[]
+  books                     Book[]
+  bookItems                 BookItem[]
+  libraryPolicies           LibraryPolicy[]
+  bookLoans                 BookLoan[]
+  libraryAuditLogs          LibraryAuditLog[]
 
   @@unique([tenantId, id])
 }
 
 model TenantEntitlement {
-  id          String            @id @default(uuid())
-  tenantId    String
-  moduleKey   ModuleKey
-  status      EntitlementStatus @default(ACTIVE)
-  validUntil  DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id         String            @id @default(uuid())
+  tenantId   String
+  moduleKey  ModuleKey
+  status     EntitlementStatus @default(ACTIVE)
+  validUntil DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 
-  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, moduleKey])
   @@index([tenantId])
@@ -318,14 +317,13 @@ model SchoolModuleSetting {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  school        School    @relation(fields: [tenantId, schoolId], references: [tenantId, id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [tenantId, schoolId], references: [tenantId, id], onDelete: Cascade)
 
   @@unique([schoolId, moduleKey])
   @@index([tenantId, schoolId])
   @@map("sys_school_module_settings")
 }
-
 
 model StudentPhoto {
   id        String   @id @default(uuid())
@@ -457,30 +455,30 @@ model Campus {
 }
 
 model AcademicYear {
-  id                  String                   @id @default(uuid())
-  tenantId            String
-  schoolId            String
-  name                String
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  endDate             DateTime?                @db.Date
-  startDate           DateTime?                @db.Date
-  school              School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  tenant              Tenant                   @relation(fields: [tenantId], references: [id])
-  AssessmentComponent AssessmentComponent[]
-  SubjectResult       SubjectResult[]
-  terms               Term[]
-  TimetableEntry      TimetableEntry[]
-  TimetablePeriod     TimetablePeriod[]
-  publishedForms      PublishedAdmissionForm[]
-  attendanceRegisters AttendanceRegister[]
-  FeeStructure        FeeStructure[]
-  Invoice             Invoice[]
-  enrollments         Enrollment[]
+  id                        String                     @id @default(uuid())
+  tenantId                  String
+  schoolId                  String
+  name                      String
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  endDate                   DateTime?                  @db.Date
+  startDate                 DateTime?                  @db.Date
+  school                    School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  AssessmentComponent       AssessmentComponent[]
+  SubjectResult             SubjectResult[]
+  terms                     Term[]
+  TimetableEntry            TimetableEntry[]
+  TimetablePeriod           TimetablePeriod[]
+  publishedForms            PublishedAdmissionForm[]
+  attendanceRegisters       AttendanceRegister[]
+  FeeStructure              FeeStructure[]
+  Invoice                   Invoice[]
+  enrollments               Enrollment[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  gradebookSubmissions  GradebookSubmission[]
-  lessonNotes           LessonNote[]
+  classTeacherAssignments   ClassTeacherAssignment[]
+  gradebookSubmissions      GradebookSubmission[]
+  lessonNotes               LessonNote[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -488,26 +486,26 @@ model AcademicYear {
 }
 
 model Term {
-  id                  String                @id @default(uuid())
-  tenantId            String
-  academicYearId      String
-  name                String
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  endDate             DateTime?             @db.Date
-  startDate           DateTime?             @db.Date
-  AssessmentComponent AssessmentComponent[]
-  SubjectResult       SubjectResult[]
-  academicYear        AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  tenant              Tenant                @relation(fields: [tenantId], references: [id])
-  TimetableEntry      TimetableEntry[]
-  attendanceRegisters AttendanceRegister[]
-  FeeStructure        FeeStructure[]
-  Invoice             Invoice[]
+  id                        String                     @id @default(uuid())
+  tenantId                  String
+  academicYearId            String
+  name                      String
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  endDate                   DateTime?                  @db.Date
+  startDate                 DateTime?                  @db.Date
+  AssessmentComponent       AssessmentComponent[]
+  SubjectResult             SubjectResult[]
+  academicYear              AcademicYear               @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  TimetableEntry            TimetableEntry[]
+  attendanceRegisters       AttendanceRegister[]
+  FeeStructure              FeeStructure[]
+  Invoice                   Invoice[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  gradebookSubmissions  GradebookSubmission[]
-  lessonNotes           LessonNote[]
+  classTeacherAssignments   ClassTeacherAssignment[]
+  gradebookSubmissions      GradebookSubmission[]
+  lessonNotes               LessonNote[]
 
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
@@ -531,25 +529,25 @@ model Department {
 }
 
 model Class {
-  id                  String                   @id @default(uuid())
-  tenantId            String
-  schoolId            String
-  name                String
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  arms                Arm[]
-  AssessmentComponent AssessmentComponent[]
-  school              School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  tenant              Tenant                   @relation(fields: [tenantId], references: [id])
-  TimetableEntry      TimetableEntry[]
-  publishedForms      PublishedAdmissionForm[]
-  attendanceRegisters AttendanceRegister[]
-  FeeStructure        FeeStructure[]
-  enrollments         Enrollment[]
+  id                        String                     @id @default(uuid())
+  tenantId                  String
+  schoolId                  String
+  name                      String
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  arms                      Arm[]
+  AssessmentComponent       AssessmentComponent[]
+  school                    School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  TimetableEntry            TimetableEntry[]
+  publishedForms            PublishedAdmissionForm[]
+  attendanceRegisters       AttendanceRegister[]
+  FeeStructure              FeeStructure[]
+  enrollments               Enrollment[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  gradebookSubmissions  GradebookSubmission[]
-  lessonNotes           LessonNote[]
+  classTeacherAssignments   ClassTeacherAssignment[]
+  gradebookSubmissions      GradebookSubmission[]
+  lessonNotes               LessonNote[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -557,25 +555,25 @@ model Class {
 }
 
 model Arm {
-  id                  String                @id @default(uuid())
-  tenantId            String
-  classId             String
-  campusId            String
-  name                String
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  campus              Campus                @relation(fields: [campusId], references: [id])
-  class               Class                 @relation(fields: [classId], references: [id])
-  tenant              Tenant                @relation(fields: [tenantId], references: [id])
-  AssessmentComponent AssessmentComponent[]
-  TimetableEntry      TimetableEntry[]
-  attendanceRegisters AttendanceRegister[]
-  FeeStructure        FeeStructure[]
-  enrollments         Enrollment[]
+  id                        String                     @id @default(uuid())
+  tenantId                  String
+  classId                   String
+  campusId                  String
+  name                      String
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  campus                    Campus                     @relation(fields: [campusId], references: [id])
+  class                     Class                      @relation(fields: [classId], references: [id])
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  AssessmentComponent       AssessmentComponent[]
+  TimetableEntry            TimetableEntry[]
+  attendanceRegisters       AttendanceRegister[]
+  FeeStructure              FeeStructure[]
+  enrollments               Enrollment[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  gradebookSubmissions  GradebookSubmission[]
-  lessonNotes           LessonNote[]
+  classTeacherAssignments   ClassTeacherAssignment[]
+  gradebookSubmissions      GradebookSubmission[]
+  lessonNotes               LessonNote[]
 
   @@unique([tenantId, classId, campusId, name])
   @@index([tenantId])
@@ -599,22 +597,22 @@ model SubjectGroup {
 }
 
 model Subject {
-  id                  String                @id @default(uuid())
-  tenantId            String
-  schoolId            String
-  name                String
-  subjectGroupId      String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  AssessmentComponent AssessmentComponent[]
-  SubjectResult       SubjectResult[]
-  school              School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subjectGroup        SubjectGroup?         @relation(fields: [subjectGroupId], references: [id])
-  tenant              Tenant                @relation(fields: [tenantId], references: [id])
-  TimetableEntry      TimetableEntry[]
+  id                        String                     @id @default(uuid())
+  tenantId                  String
+  schoolId                  String
+  name                      String
+  subjectGroupId            String?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  AssessmentComponent       AssessmentComponent[]
+  SubjectResult             SubjectResult[]
+  school                    School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectGroup              SubjectGroup?              @relation(fields: [subjectGroupId], references: [id])
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  TimetableEntry            TimetableEntry[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
-  gradebookSubmissions  GradebookSubmission[]
-  lessonNotes           LessonNote[]
+  gradebookSubmissions      GradebookSubmission[]
+  lessonNotes               LessonNote[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
@@ -908,40 +906,40 @@ model StaffNumberSequence {
 }
 
 model StaffProfile {
-  id                String                  @id @default(uuid())
-  tenantId          String
-  schoolId          String
-  userId            String?
-  departmentId      String?
-  staffNumber       String
-  firstName         String
-  lastName          String
-  middleName        String?
-  email             String?
-  phone             String?
-  dateOfBirth       DateTime?
-  gender            GenderEnum?
-  joiningDate       DateTime
-  designation       String?
-  type              StaffType
-  status            StaffStatus             @default(ACTIVE)
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  Assignment        Assignment[]
-  CBTExam           CBTExam[]
-  TimetableEntry    TimetableEntry[]
-  campusAssignments StaffCampusAssignment[]
-  credentials       StaffCredential[]
-  invitations       PortalInvitation[]
-  photo             StaffPhoto?
+  id                        String                     @id @default(uuid())
+  tenantId                  String
+  schoolId                  String
+  userId                    String?
+  departmentId              String?
+  staffNumber               String
+  firstName                 String
+  lastName                  String
+  middleName                String?
+  email                     String?
+  phone                     String?
+  dateOfBirth               DateTime?
+  gender                    GenderEnum?
+  joiningDate               DateTime
+  designation               String?
+  type                      StaffType
+  status                    StaffStatus                @default(ACTIVE)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  Assignment                Assignment[]
+  CBTExam                   CBTExam[]
+  TimetableEntry            TimetableEntry[]
+  campusAssignments         StaffCampusAssignment[]
+  credentials               StaffCredential[]
+  invitations               PortalInvitation[]
+  photo                     StaffPhoto?
   teacherSubjectAssignments TeacherSubjectAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  lessonNotes           LessonNote[]
-  bookLoans             BookLoan[]
-  department        Department?             @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  school            School                  @relation(fields: [schoolId], references: [id])
-  tenant            Tenant                  @relation(fields: [tenantId], references: [id])
-  user              User?                   @relation(fields: [userId], references: [id])
+  classTeacherAssignments   ClassTeacherAssignment[]
+  lessonNotes               LessonNote[]
+  bookLoans                 BookLoan[]
+  department                Department?                @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  school                    School                     @relation(fields: [schoolId], references: [id])
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  user                      User?                      @relation(fields: [userId], references: [id])
 
   @@unique([tenantId, schoolId, staffNumber])
   @@index([tenantId])
@@ -1338,6 +1336,8 @@ model CBTExam {
   availableTo           DateTime
   durationMinutes       Int
   status                CBTStatus           @default(DRAFT)
+  publishedPayload      Json? // gradingSnapshot (Server-Only)
+  presentationPayload   Json? // presentationSnapshot (Student-Facing)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   attempts              CBTAttempt[]
@@ -1351,14 +1351,16 @@ model CBTExam {
 }
 
 model CBTQuestion {
-  id            String             @id @default(uuid())
-  examId        String
-  questionText  String
-  options       Json
-  correctOption Int
-  points        Float
-  answers       CBTAttemptAnswer[]
-  exam          CBTExam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  id                   String             @id @default(uuid())
+  examId               String
+  questionType         QuestionType       @default(SINGLE_CHOICE)
+  questionText         String
+  options              Json
+  correctOption        Int?
+  correctAnswerPayload Json?
+  points               Float
+  answers              CBTAttemptAnswer[]
+  exam                 CBTExam            @relation(fields: [examId], references: [id], onDelete: Cascade)
 
   @@map("acd_cbt_questions")
 }
@@ -1386,13 +1388,15 @@ model CBTAttempt {
 }
 
 model CBTAttemptAnswer {
-  id             String      @id @default(uuid())
-  attemptId      String
-  questionId     String
-  selectedOption Int
-  awardedScore   Float
-  attempt        CBTAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question       CBTQuestion @relation(fields: [questionId], references: [id])
+  id            String      @id @default(uuid())
+  attemptId     String
+  questionId    String
+  answerPayload Json
+  awardedScore  Float?
+  attempt       CBTAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question      CBTQuestion @relation(fields: [questionId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@unique([attemptId, questionId])
   @@map("acd_cbt_attempt_answers")
@@ -1832,6 +1836,13 @@ enum SubmissionStatus {
   GRADED
 }
 
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SUBJECTIVE
+}
+
 enum CBTStatus {
   DRAFT
   PUBLISHED
@@ -1842,6 +1853,7 @@ enum CBTStatus {
 enum CBTAttemptStatus {
   IN_PROGRESS
   SUBMITTED
+  PENDING_REVIEW
   GRADED
 }
 
@@ -1891,7 +1903,7 @@ model PasswordResetToken {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
@@ -1928,15 +1940,15 @@ model TeacherSubjectAssignment {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
-  tenant           Tenant          @relation(fields: [tenantId], references: [id])
-  school           School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  academicYear     AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  term             Term            @relation(fields: [termId], references: [id], onDelete: Cascade)
-  class            Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
-  arm              Arm?            @relation(fields: [armId], references: [id], onDelete: Cascade)
-  subject          Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  teacher          StaffProfile    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  lessonNotes      LessonNote[]
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  term         Term         @relation(fields: [termId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  arm          Arm?         @relation(fields: [armId], references: [id], onDelete: Cascade)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher      StaffProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  lessonNotes  LessonNote[]
 
   @@index([tenantId, schoolId, teacherId])
   @@index([tenantId, schoolId, classId, armId])
@@ -1957,13 +1969,13 @@ model ClassTeacherAssignment {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  tenant         Tenant          @relation(fields: [tenantId], references: [id])
-  school         School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  term           Term            @relation(fields: [termId], references: [id], onDelete: Cascade)
-  class          Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
-  arm            Arm?            @relation(fields: [armId], references: [id], onDelete: Cascade)
-  teacher        StaffProfile    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  term         Term         @relation(fields: [termId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  arm          Arm?         @relation(fields: [armId], references: [id], onDelete: Cascade)
+  teacher      StaffProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, schoolId, teacherId])
   @@map("stf_class_teacher_assignments")
@@ -1995,36 +2007,36 @@ model GradebookSubmission {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  tenant          Tenant          @relation(fields: [tenantId], references: [id])
-  school          School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  academicYear    AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  term            Term            @relation(fields: [termId], references: [id], onDelete: Cascade)
-  class           Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
-  arm             Arm?            @relation(fields: [armId], references: [id], onDelete: Cascade)
-  subject         Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  term         Term         @relation(fields: [termId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  arm          Arm?         @relation(fields: [armId], references: [id], onDelete: Cascade)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, schoolId, academicYearId, termId, classId, subjectId])
   @@map("acd_gradebook_submissions")
 }
 
 model ScoreAuditLog {
-  id                  String          @id @default(uuid())
-  tenantId            String
-  schoolId            String
-  assessmentScoreId  String
-  studentId           String
-  subjectResultId     String
-  actorUserId         String
-  actorRole           String
-  previousScore       Float?
-  newScore            Float?
-  previousIsAbsent    Boolean         @default(false)
-  newIsAbsent         Boolean         @default(false)
-  reason              String?
-  createdAt           DateTime        @default(now())
+  id                String   @id @default(uuid())
+  tenantId          String
+  schoolId          String
+  assessmentScoreId String
+  studentId         String
+  subjectResultId   String
+  actorUserId       String
+  actorRole         String
+  previousScore     Float?
+  newScore          Float?
+  previousIsAbsent  Boolean  @default(false)
+  newIsAbsent       Boolean  @default(false)
+  reason            String?
+  createdAt         DateTime @default(now())
 
-  tenant              Tenant          @relation(fields: [tenantId], references: [id])
-  assessmentScore     AssessmentScore @relation(fields: [assessmentScoreId], references: [id], onDelete: Cascade)
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  assessmentScore AssessmentScore @relation(fields: [assessmentScoreId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, schoolId, assessmentScoreId])
   @@map("acd_score_audit_logs")
@@ -2042,7 +2054,7 @@ model WorkflowAuditLog {
   reason                String?
   createdAt             DateTime       @default(now())
 
-  tenant                Tenant         @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, schoolId, gradebookSubmissionId])
   @@map("acd_workflow_audit_logs")
@@ -2062,7 +2074,7 @@ model AssignmentMigrationQuarantine {
   migrationBatchId String   @default("MIGRATION_5G_001")
   createdAt        DateTime @default(now())
 
-  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, schoolId, migrationBatchId])
   @@map("stf_assignment_migration_quarantine")
@@ -2080,7 +2092,7 @@ enum LessonNoteStatus {
 }
 
 model LessonNote {
-  id                String                   @id @default(uuid())
+  id                String           @id @default(uuid())
   tenantId          String
   schoolId          String
   campusId          String?
@@ -2101,13 +2113,13 @@ model LessonNote {
   presentationSteps Json
   evaluation        String?
   assignment        String?
-  status            LessonNoteStatus         @default(DRAFT)
+  status            LessonNoteStatus @default(DRAFT)
   submittedAt       DateTime?
   reviewedAt        DateTime?
   reviewedById      String?
   rejectionReason   String?
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   tenant            Tenant                   @relation(fields: [tenantId], references: [id])
   school            School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -2130,21 +2142,21 @@ model LessonNote {
 }
 
 model LessonNoteAuditLog {
-  id            String            @id @default(uuid())
-  tenantId      String
-  schoolId      String
-  lessonNoteId  String
-  fromStatus    LessonNoteStatus?
-  toStatus      LessonNoteStatus
-  action        String
-  reason        String?
-  actorUserId   String
-  actorRole     String
-  createdAt     DateTime          @default(now())
+  id           String            @id @default(uuid())
+  tenantId     String
+  schoolId     String
+  lessonNoteId String
+  fromStatus   LessonNoteStatus?
+  toStatus     LessonNoteStatus
+  action       String
+  reason       String?
+  actorUserId  String
+  actorRole    String
+  createdAt    DateTime          @default(now())
 
-  tenant        Tenant            @relation(fields: [tenantId], references: [id])
-  school        School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  lessonNote    LessonNote        @relation(fields: [lessonNoteId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lessonNote LessonNote @relation(fields: [lessonNoteId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, schoolId, lessonNoteId])
   @@map("acd_lesson_note_audit_logs")
@@ -2225,10 +2237,10 @@ model BookItem {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
-  book   Book    @relation(fields: [bookId], references: [id], onDelete: Restrict)
-  campus Campus? @relation(fields: [campusId], references: [id], onDelete: Restrict)
-  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  book   Book       @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  campus Campus?    @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  school School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   loans  BookLoan[]
 
   @@unique([tenantId, schoolId, assetTag])
