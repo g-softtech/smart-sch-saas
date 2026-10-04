@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { GraduationCap, MapPin, Mail, Phone, ExternalLink } from "lucide-react";
 
 async function getSchoolData(slug: string) {
-  const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001/api';
+  const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001';
   const res = await fetch(`${url}/v1/public/cms/${slug}/resolve`, {
     next: { tags: [`cms-school-${slug}`] }
   });
@@ -14,7 +14,7 @@ async function getSchoolData(slug: string) {
 }
 
 async function getNavigation(slug: string) {
-  const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001/api';
+  const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001';
   const res = await fetch(`${url}/v1/public/cms/${slug}/navigation`, {
     next: { tags: [`cms-school-${slug}`] }
   });
