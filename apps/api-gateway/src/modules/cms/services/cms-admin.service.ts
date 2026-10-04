@@ -71,9 +71,9 @@ export class CmsAdminService {
   }
 
   
-  private sanitizeContent(content: string): string {
-    if (!content) return content;
-    const dangerous = /<script[^<]*(?:(?!</script>)<[^<]*)*</script>|javascript:/gi;
+  private sanitizeContent(content: string | undefined | null): any {
+    if (!content) return content as any;
+    const dangerous = new RegExp("<script\\b[^<]*(?:(?!<\\/script>)<[^<]*)*<\\/script>|javascript:", "gi");
     if (dangerous.test(content)) {
       throw new BadRequestException("Unsafe HTML or JavaScript detected");
     }
@@ -82,11 +82,12 @@ export class CmsAdminService {
 
   async createPage(tenantId: string, schoolId: string, userId: string, dto: CreateCmsPageDto) {
     if (dto.slug === 'home') throw new BadRequestException('home slug is reserved');
+    const safeContent = this.sanitizeContent(dto.content);
     try {
       const page = await kernel.db.cmsPage.create({
         data: {
           tenantId, schoolId, authorId: userId,
-          title: dto.title, slug: dto.slug, content: this.sanitizeContent(dto.content)
+          title: dto.title, slug: dto.slug, content: safeContent
         }
       });
       await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_PAGE_CREATED', entity: 'cms_pages', entityId: page.id, severity: 'MEDIUM', metadata: { slug: page.slug } });

@@ -1,26 +1,29 @@
-const fs = require("fs");
-const path = "C:/Users/gbemi/OneDrive/Desktop/schoolOS/packages/core-platform/src/scripts/test-phase6f-cms-e2e.ts";
-
-const content = `import { kernel, PrismaClient, CmsPublicationStatus } from '../index';
-import { CmsAdminService } from '../../../apps/api-gateway/src/modules/cms/services/cms-admin.service';
-import { CmsPublicService } from '../../../apps/api-gateway/src/modules/cms/services/cms-public.service';
-import { AuditService } from '../audit/audit.service';
+import { kernel, PrismaClient, CmsPublicationStatus } from '@saas/core-platform';
+import { Test, TestingModule } from '@nestjs/testing';
+import { AuditService } from '@saas/core-platform';
+import { CmsModule } from './modules/cms/cms.module';
+import { CmsAdminService } from './modules/cms/services/cms-admin.service';
+import { CmsPublicService } from './modules/cms/services/cms-public.service';
 
 async function runTest() {
   console.log('Starting EXHAUSTIVE Phase 6F CMS E2E verification...');
   const prisma = new PrismaClient();
-  const audit = new AuditService();
-  const adminService = new CmsAdminService(audit);
-  const publicService = new CmsPublicService();
 
-  const tenant = await prisma.tenant.create({ data: { name: 'CMS Test Tenant', status: 'ACTIVE' } });
-  const tenant2 = await prisma.tenant.create({ data: { name: 'Malicious Tenant', status: 'ACTIVE' } });
+  const moduleRef: TestingModule = await Test.createTestingModule({
+    imports: [CmsModule],
+  }).overrideProvider(AuditService).useValue({ log: () => {}, logEvent: () => {} }).overrideProvider('AuditMaskingService').useValue({}).overrideProvider('AuditRetentionPolicy').useValue({})
+  }).compile();
+
+  const adminService = moduleRef.get<CmsAdminService>(CmsAdminService);
+  const publicService = moduleRef.get<CmsPublicService>(CmsPublicService);
+
+  const tenant = await prisma.tenant.create({ data: { name: 'CMS Test Tenant', slug: 'cms-tenant', status: 'ACTIVE' } });
+  const tenant2 = await prisma.tenant.create({ data: { name: 'Malicious Tenant', slug: 'malicious-tenant', status: 'ACTIVE' } });
   const school = await prisma.school.create({ data: { name: 'CMS School', tenantId: tenant.id, publicSlug: 'cms-test-school' } });
   const school2 = await prisma.school.create({ data: { name: 'Other School', tenantId: tenant2.id, publicSlug: 'other-school' } });
   const user = { id: 'user-1' };
 
   try {
-    // 1. Config creation and Optimistic Locking
     const config = await adminService.getSiteConfig(tenant.id, school.id, user.id);
     let updatedConfig = await adminService.updateSiteConfig(tenant.id, school.id, user.id, {
       status: CmsPublicationStatus.PUBLISHED, expectedVersion: config.version, enableAdmissionsCta: true, themePayload: { colorMode: 'dark' }
@@ -37,9 +40,8 @@ async function runTest() {
       console.log('? Optimistic locking properly threw HTTP 409 (Conflict).');
     }
 
-    // 2. Media Isolation
     const otherMedia = await prisma.cmsMedia.create({
-      data: { tenantId: tenant2.id, schoolId: school2.id, filename: 'hack.png', mimeType: 'image/png', sizeBytes: 100, storagePath: '/foo' }
+      data: { tenantId: tenant2.id, schoolId: school2.id, mimeType: 'image/png', data: Buffer.from('fake'), authorId: user.id }
     });
     try {
       await adminService.updateSiteConfig(tenant.id, school.id, user.id, {
@@ -51,7 +53,6 @@ async function runTest() {
       console.log('? Cross-school Media assignment correctly rejected (HTTP 403).');
     }
 
-    // 3. Page Lifecycle and XSS Validation
     try {
       await adminService.createPage(tenant.id, school.id, user.id, {
         title: 'XSS', slug: 'xss-page', content: '<script>alert(1)</script>'
@@ -82,8 +83,6 @@ async function runTest() {
       console.log('? Invalid lifecycle transition (ARCHIVED -> PUBLISHED) correctly rejected.');
     }
 
-    // 4. Public Resolution and Malicious Identifiers
-    // The public renderer ONLY takes slug. It never takes tenantId or schoolId from client.
     const resolved = await publicService.resolveSchool('cms-test-school');
     if (resolved.school.tenantId !== tenant.id) throw new Error('Tenant resolution mismatch');
     console.log('? Server-side public school resolution correctly mapped publicSlug to Tenant without client-supplied IDs.');
@@ -94,18 +93,14 @@ async function runTest() {
     console.error(err);
     process.exit(1);
   } finally {
-    // Cleanup
     await prisma.cmsMedia.deleteMany({});
     await prisma.cmsPage.deleteMany({});
     await prisma.cmsSiteConfig.deleteMany({});
     await prisma.school.deleteMany({ where: { id: { in: [school.id, school2.id] } } });
     await prisma.tenant.deleteMany({ where: { id: { in: [tenant.id, tenant2.id] } } });
     await prisma.$disconnect();
+    await moduleRef.close();
   }
 }
 
 runTest();
-`
-
-fs.writeFileSync(path, content);
-console.log("Rewrote E2E test with exhaustive checks.");
