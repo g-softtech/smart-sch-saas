@@ -191,7 +191,7 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Build Integrity:** Core Platform typecheck (`0 errors`), API Gateway build (`0 errors`), Web App build (`51/51` pages), Prisma migration `20261002050000_add_phase_6b_library_management_models` applied successfully. `git diff --check` PASSED.
     - **Status:** **COMPLETE**. Commit `d70b0718` pushed. Browser manual acceptance for Phase 5H and Phase 6B remains **PENDING USER VERIFICATION**.
     - **Next phase:** Phase 6C Ã¯Â¿Â½ CBT & Examinations.
-  - **Phase 6C â€” CBT & Examinations:** **COMPLETE & VERIFIED**
+  - **Phase 6C â€” CBT & Examinations:** **PARTIAL / REMEDIATION REQUIRED**
     - **Scope Completed:** Full end-to-end integration of the CBT sub-system with Phase 5G Gradebook. Completed via structured gates:
       - **Step 2.3A/2.3B:** Assessed and hardened student response state machine.
       - **Step 2.3C (Compiler):** Built deterministic server-authoritative CBT compiler mapping objective answers directly to AssessmentScore with strictly protected subjective override paths.
