@@ -41,11 +41,11 @@ export default async function PublicWebsiteLayout({
   const navigation = await getNavigation(schoolSlug);
   
   const tp = config.themePayload || {};
-  const primary = tp.primaryColor || "#0f172a"; // Deep navy
-  const secondary = tp.secondaryColor || "#0d9488"; // Restrained teal
-  const accent = tp.accentColor || "#fbbf24"; // Warm gold
+  const primary = tp.primaryColor || "#0A192E"; // Deep navy
+  const secondary = tp.secondaryColor || "#039771"; // Restrained teal
+  const accent = tp.accentColor || "#D2AD36"; // Warm gold
   const bg = tp.lightDark === "dark" ? "#020617" : "#f8fafc"; // Off-white/dark
-  const text = tp.lightDark === "dark" ? "#f8fafc" : "#0f172a";
+  const text = tp.lightDark === "dark" ? "#f8fafc" : "#0A192E";
   
   // Safe mapping for border radius
   const brMap: Record<string, string> = {
@@ -123,8 +123,8 @@ export default async function PublicWebsiteLayout({
             </nav>
 
             <div className="flex items-center gap-4">
-              {config.enableAdmissionsCta && (
-                <Link href={`/admissions/${school.id}`} className="cms-btn cms-btn-accent hidden sm:flex items-center gap-2 shadow-sm">
+              {config.enableAdmissionsCta && data.admissionsToken && (
+                <Link href={`/admissions/${data.admissionsToken}`} className="cms-btn cms-btn-accent hidden sm:flex items-center gap-2 shadow-sm">
                   Apply Now <ExternalLink size={16} />
                 </Link>
               )}

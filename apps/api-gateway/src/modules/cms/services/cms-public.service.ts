@@ -24,7 +24,15 @@ export class CmsPublicService {
       throw new NotFoundException('Site is not published');
     }
 
-    return { school, config };
+    
+    // Fetch canonical active admission form
+    const activeAdmissionForm = await this.rawPrisma.publishedAdmissionForm.findFirst({
+      where: { schoolId: school.id, tenantId: school.tenantId, isActive: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    return { school, config, admissionsToken: activeAdmissionForm?.publicToken || null };
+    
   }
 
   async getPage(tenantId: string, schoolId: string, pageSlug: string) {

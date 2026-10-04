@@ -81,8 +81,8 @@ export default async function PublicWebsiteHomepage({
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            {config.enableAdmissionsCta && (
-              <Link href={`/admissions/${school.id}`} className="cms-btn cms-btn-accent px-8 py-4 text-lg w-full sm:w-auto shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
+            {config.enableAdmissionsCta && data.admissionsToken && (
+              <Link href={`/admissions/${data.admissionsToken}`} className="cms-btn cms-btn-accent px-8 py-4 text-lg w-full sm:w-auto shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
                 Apply for Admission
               </Link>
             )}
@@ -157,7 +157,7 @@ export default async function PublicWebsiteHomepage({
             >
               <h3 className="font-bold text-2xl mb-2 text-white">Join Us Today</h3>
               <p className="opacity-90 mb-6 font-medium">Take the first step towards a brighter future.</p>
-              <Link href={`/admissions/${school.id}`} className="cms-btn w-full bg-white transition-all transform hover:scale-105" style={{ color: "var(--cms-secondary)", fontWeight: 600 }}>
+              <Link href={`/admissions/${data.admissionsToken}`} className="cms-btn w-full bg-white transition-all transform hover:scale-105" style={{ color: "var(--cms-secondary)", fontWeight: 600 }}>
                 Start Application
               </Link>
             </div>
