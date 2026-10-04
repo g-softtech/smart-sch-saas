@@ -204,7 +204,7 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Status:** **COMPLETE**. Commit e98c59d0 pushed.
   - **Phase 6D: Transport & Fleet Management:** COMPLETE & VERIFIED (Implementation: 1fdaa860)
   - **Phase 6E Ã¯Â¿Â½ Hostel & Boarding Management:** PLANNED
-  - **Phase 6F â€” School Website Builder & Public CMS:** COMPLETE & VERIFIED (Implementation: b2beda10)
+  - **Phase 6F � School Website Builder & Public CMS:** COMPLETE & VERIFIED (Implementation: 776992f5)
   - **Phase 6G Ã¯Â¿Â½ Marketplace & Subscription Billing Engine:** PLANNED
   - **Phase 6H Ã¯Â¿Â½ Advanced School AI Engine (Sandboxed & Advisory):** PLANNED
 
