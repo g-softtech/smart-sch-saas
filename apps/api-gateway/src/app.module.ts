@@ -1,3 +1,4 @@
+import { AuditModule } from './modules/audit/audit.module';
 import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { TenantMiddleware } from "@saas/core-platform/dist/tenant/tenant.middleware.js";
 import { IdentityModule } from "./modules/identity/identity.module";
@@ -28,6 +29,7 @@ import { CmsModule } from "./modules/cms/cms.module";
 
 @Module({
   imports: [
+    AuditModule,
     IdentityModule,
     PaymentsModule,
     AcademicsModule,
