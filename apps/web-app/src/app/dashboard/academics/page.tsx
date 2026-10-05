@@ -713,6 +713,12 @@ export default function AcademicsPage() {
           >
             Gradebook Workflow & Approvals
           </Link>
+          <Link
+            href="/dashboard/results"
+            className="inline-flex items-center rounded-md border border-brand-gold bg-[#0A192E] px-3.5 py-2 text-xs font-bold text-brand-gold shadow-sm hover:bg-brand-gold hover:text-brand-navy transition-colors"
+          >
+            Results & Grading
+          </Link>
         </div>
         {activeTab === 'academic-years' && (
           <button
