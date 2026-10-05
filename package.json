@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "pnpm --recursive run build",
+    "build": "pnpm --filter core-platform run build && pnpm --filter \"!core-platform\" --recursive run build",
     "test": "pnpm --recursive run test",
     "lint": "pnpm --recursive run lint",
     "format": "pnpm --recursive run format",

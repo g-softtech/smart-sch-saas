@@ -43,6 +43,7 @@ export class AssignmentsService {
           type: "ASSIGNMENT",
           title: dto.title,
           maxScore: dto.maxScore,
+          weight: (dto as any).weight ?? 10,
         },
       });
 
