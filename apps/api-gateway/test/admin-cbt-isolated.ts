@@ -1,4 +1,4 @@
-import { PrismaClient, AssessmentComponentType, QuestionType, CBTStatus } from "@saas/core-platform";
+import { PrismaClient, QuestionType, CBTStatus } from "@saas/core-platform";
 import { AdminCBTService } from "../src/modules/cbt/services/admin-cbt.service";
 import { kernel, tenantContext, AuditService, AuditMaskingService, AuditRetentionPolicy } from "@saas/core-platform";
 import assert from "assert";
@@ -31,9 +31,13 @@ async function runTest() {
     const cls = await prisma.class.create({ data: { tenantId, schoolId, name: "Class 1" }});
     const sub = await prisma.subject.create({ data: { tenantId, schoolId, name: "Math" }});
     await prisma.staffProfile.create({ data: { id: teacherId, tenantId, schoolId, userId, staffNumber: "STF-"+Date.now(), firstName: "T", lastName: "T", gender: "MALE", status: "ACTIVE", joiningDate: new Date(), type: "TEACHING" } });
+
+    const cbtType = await prisma.assessmentType.create({
+      data: { tenantId, schoolId, code: "CBT", name: "Computer Based Test", isSystem: true, isActive: true }
+    });
     
     const component = await prisma.assessmentComponent.create({
-      data: { tenantId, schoolId, academicYearId: ay.id, termId: term.id, classId: cls.id, subjectId: sub.id, title: "Midterm", type: "CBT", maxScore: 100, weight: 100 }
+      data: { tenantId, schoolId, academicYearId: ay.id, termId: term.id, classId: cls.id, subjectId: sub.id, title: "Midterm", assessmentTypeId: cbtType.id, maxScore: 100, weight: 100 }
     });
 
     const student = await prisma.student.create({ data: { tenantId, schoolId, userId: studentUserId, studentNumber: "STU-" + Date.now(), firstName: "John", lastName: "Doe", gender: "MALE", admissionDate: new Date(), status: "ACTIVE" }});

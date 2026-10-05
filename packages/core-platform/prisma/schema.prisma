@@ -37,6 +37,7 @@ model Tenant {
   departures                     StudentDeparture[]
   academicYears                  AcademicYear[]
   arms                           Arm[]
+  assessmentTypes                AssessmentType[]
   AssessmentComponent            AssessmentComponent[]
   AssessmentScore                AssessmentScore[]
   AssignmentSubmission           AssignmentSubmission[]
@@ -254,6 +255,7 @@ model School {
   StudentArrival            StudentArrival[]
   departures                StudentDeparture[]
   academicYears             AcademicYear[]
+  assessmentTypes           AssessmentType[]
   AssessmentComponent       AssessmentComponent[]
   AssessmentScore           AssessmentScore[]
   AssignmentSubmission      AssignmentSubmission[]
@@ -1268,55 +1270,77 @@ model SubjectResult {
 }
 
 model AssessmentScore {
-  id                    String               @id @default(uuid())
+  id                    String              @id @default(uuid())
   tenantId              String
   schoolId              String
   subjectResultId       String
-  type                  String
   maxScore              Float
   score                 Float?
-  isAbsent              Boolean              @default(false)
-  isExempt              Boolean              @default(false)
-  provenance            ScoreProvenance      @default(MANUAL)
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  isAbsent              Boolean             @default(false)
+  isExempt              Boolean             @default(false)
+  provenance            ScoreProvenance     @default(MANUAL)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
   auditLogs             ScoreAuditLog[]
-  assessmentComponentId String?
-  assessmentComponent   AssessmentComponent? @relation(fields: [assessmentComponentId], references: [id], onDelete: Restrict)
-  school                School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subjectResult         SubjectResult        @relation(fields: [subjectResultId], references: [id], onDelete: Cascade)
-  tenant                Tenant               @relation(fields: [tenantId], references: [id])
+  assessmentComponentId String
+  assessmentComponent   AssessmentComponent @relation(fields: [assessmentComponentId], references: [id], onDelete: Restrict)
+  school                School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectResult         SubjectResult       @relation(fields: [subjectResultId], references: [id], onDelete: Cascade)
+  tenant                Tenant              @relation(fields: [tenantId], references: [id])
 
-  @@unique([tenantId, schoolId, subjectResultId, type])
-  @@unique([tenantId, schoolId, subjectResultId, assessmentComponentId])
+  @@unique([tenantId, schoolId, subjectResultId, assessmentComponentId], map: "acd_assessment_scores_tenantId_schoolId_subjectResultId_ass_key")
   @@map("acd_assessment_scores")
 }
 
-model AssessmentComponent {
-  id             String                  @id @default(uuid())
-  tenantId       String
-  schoolId       String
-  academicYearId String
-  termId         String
-  classId        String
-  armId          String?
-  subjectId      String
-  type           AssessmentComponentType
-  title          String
-  maxScore       Float
-  weight         Float
-  academicYear   AcademicYear            @relation(fields: [academicYearId], references: [id])
-  arm            Arm?                    @relation(fields: [armId], references: [id])
-  class          Class                   @relation(fields: [classId], references: [id])
-  school         School                  @relation(fields: [schoolId], references: [id])
-  subject        Subject                 @relation(fields: [subjectId], references: [id])
-  tenant         Tenant                  @relation(fields: [tenantId], references: [id])
-  term           Term                    @relation(fields: [termId], references: [id])
-  scores         AssessmentScore[]
-  Assignment     Assignment?
-  CBTExam        CBTExam?
+model AssessmentType {
+  id                   String                @id @default(uuid())
+  tenantId             String
+  schoolId             String
+  code                 String
+  name                 String
+  description          String?
+  isSystem             Boolean               @default(false)
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  school               School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assessmentComponents AssessmentComponent[]
 
+  @@unique([tenantId, schoolId, code])
+  @@index([tenantId, schoolId, isActive])
+  @@map("acd_assessment_types")
+}
+
+model AssessmentComponent {
+  id               String            @id @default(uuid())
+  tenantId         String
+  schoolId         String
+  academicYearId   String
+  termId           String
+  classId          String
+  armId            String?
+  subjectId        String
+  assessmentTypeId String
+  title            String
+  maxScore         Float
+  weight           Float
+  academicYear     AcademicYear      @relation(fields: [academicYearId], references: [id])
+  arm              Arm?              @relation(fields: [armId], references: [id])
+  class            Class             @relation(fields: [classId], references: [id])
+  school           School            @relation(fields: [schoolId], references: [id])
+  subject          Subject           @relation(fields: [subjectId], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  term             Term              @relation(fields: [termId], references: [id])
+  assessmentType   AssessmentType    @relation(fields: [assessmentTypeId], references: [id], onDelete: Restrict)
+  scores           AssessmentScore[]
+  Assignment       Assignment?
+  CBTExam          CBTExam?
+
+  @@unique([tenantId, schoolId, academicYearId, termId, classId, subjectId, assessmentTypeId], map: "acd_assessment_components_class_wide_key")
+  @@unique([tenantId, schoolId, academicYearId, termId, classId, armId, subjectId, assessmentTypeId], map: "acd_assessment_components_arm_specific_key")
   @@index([tenantId, schoolId, subjectId])
+  @@index([assessmentTypeId])
   @@map("acd_assessment_components")
 }
 
@@ -1855,13 +1879,6 @@ enum ResultStatus {
   DRAFT
   FINALIZED
   PUBLISHED
-}
-
-enum AssessmentComponentType {
-  ASSIGNMENT
-  CBT
-  MANUAL_CA
-  EXAM
 }
 
 enum AssignmentStatus {

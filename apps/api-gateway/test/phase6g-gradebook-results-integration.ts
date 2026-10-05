@@ -1,4 +1,4 @@
-import { PrismaClient, StaffType, ResultStatus, WorkflowStatus, AssessmentComponentType } from '@saas/core-platform';
+import { PrismaClient, StaffType, ResultStatus, WorkflowStatus } from '@saas/core-platform';
 import { kernel, tenantContext } from '@saas/core-platform';
 import { TeacherGradebookService } from '../src/modules/academics/services/teacher-gradebook.service';
 import { TeacherAssignmentsService } from '../src/modules/academics/services/teacher-assignments.service';
@@ -118,6 +118,14 @@ async function runGradebookIntegrationTest() {
       data: { tenantId, schoolId, academicYearId: ay.id, termId: term1.id, gradingScaleId: scale.id },
     });
 
+    // 5b. Setup Assessment Types
+    const caType = await prisma.assessmentType.create({
+      data: { tenantId, schoolId, code: 'MANUAL_CA', name: 'Continuous Assessment', isSystem: true, isActive: true },
+    });
+    const examType = await prisma.assessmentType.create({
+      data: { tenantId, schoolId, code: 'EXAM', name: 'Terminal Exam', isSystem: true, isActive: true },
+    });
+
     // 6. Setup AssessmentComponents (CA = MANUAL_CA 40%, EXAM = 60%)
     const caComp = await prisma.assessmentComponent.create({
       data: {
@@ -127,7 +135,7 @@ async function runGradebookIntegrationTest() {
         termId: term1.id,
         classId: targetClass.id,
         subjectId: subject.id,
-        type: AssessmentComponentType.MANUAL_CA,
+        assessmentTypeId: caType.id,
         title: 'Continuous Assessment',
         maxScore: 40,
         weight: 40,
@@ -142,7 +150,7 @@ async function runGradebookIntegrationTest() {
         termId: term1.id,
         classId: targetClass.id,
         subjectId: subject.id,
-        type: AssessmentComponentType.EXAM,
+        assessmentTypeId: examType.id,
         title: 'Terminal Exam',
         maxScore: 60,
         weight: 60,
@@ -192,8 +200,8 @@ async function runGradebookIntegrationTest() {
           {
             studentId,
             scores: [
-              { assessmentComponentId: caComp.id, type: AssessmentComponentType.MANUAL_CA, score: 32, maxScore: 40 },
-              { assessmentComponentId: examComp.id, type: AssessmentComponentType.EXAM, score: 48, maxScore: 60 },
+              { assessmentComponentId: caComp.id, score: 32, maxScore: 40 },
+              { assessmentComponentId: examComp.id, score: 48, maxScore: 60 },
             ],
           },
         ],
@@ -216,8 +224,8 @@ async function runGradebookIntegrationTest() {
 
       // Verify AssessmentScores component ID link
       assert.strictEqual(res.scores.length, 2, 'Must have 2 score records');
-      const caScore = res.scores.find((s) => s.type === AssessmentComponentType.MANUAL_CA);
-      const examScore = res.scores.find((s) => s.type === AssessmentComponentType.EXAM);
+      const caScore = res.scores.find((s) => s.assessmentComponentId === caComp.id);
+      const examScore = res.scores.find((s) => s.assessmentComponentId === examComp.id);
       assert.strictEqual(caScore?.assessmentComponentId, caComp.id, 'CA score component ID must match');
       assert.strictEqual(examScore?.assessmentComponentId, examComp.id, 'EXAM score component ID must match');
       console.log('[STEP 6 PASSED]: AssessmentScore assessmentComponentId linkage verified.');
@@ -233,7 +241,7 @@ async function runGradebookIntegrationTest() {
           entries: [
             {
               studentId,
-              scores: [{ type: AssessmentComponentType.MANUAL_CA, score: 20, maxScore: 40 }],
+              scores: [{ assessmentComponentId: caComp.id, score: 20, maxScore: 40 }],
             },
           ],
         });
@@ -269,8 +277,8 @@ async function runGradebookIntegrationTest() {
             {
               studentId,
               scores: [
-                { assessmentComponentId: caComp.id, type: AssessmentComponentType.MANUAL_CA, score: 35, maxScore: 40 },
-                { assessmentComponentId: examComp.id, type: AssessmentComponentType.EXAM, score: 55, maxScore: 60 },
+                { assessmentComponentId: caComp.id, score: 35, maxScore: 40 },
+                { assessmentComponentId: examComp.id, score: 55, maxScore: 60 },
               ],
             },
           ],
@@ -297,8 +305,8 @@ async function runGradebookIntegrationTest() {
           {
             studentId,
             scores: [
-              { assessmentComponentId: caComp.id, type: AssessmentComponentType.MANUAL_CA, score: 36, maxScore: 40 },
-              { assessmentComponentId: examComp.id, type: AssessmentComponentType.EXAM, score: 54, maxScore: 60 },
+              { assessmentComponentId: caComp.id, score: 36, maxScore: 40 },
+              { assessmentComponentId: examComp.id, score: 54, maxScore: 60 },
             ],
           },
         ],

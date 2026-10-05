@@ -201,7 +201,6 @@ export class TeacherGradebookService {
           lastName: e.student.lastName,
           scores: res ? res.scores.map((s) => ({
             assessmentScoreId: s.id,
-            type: s.type,
             assessmentComponentId: s.assessmentComponentId,
             score: s.score,
             maxScore: s.maxScore,
@@ -331,31 +330,21 @@ export class TeacherGradebookService {
 
           // Process score items
           for (const scoreItem of entry.scores) {
+            if (!scoreItem.assessmentComponentId) {
+              throw new BadRequestException("assessmentComponentId is required for score entries.");
+            }
             if (scoreItem.score !== undefined && scoreItem.score !== null && scoreItem.score > scoreItem.maxScore) {
               throw new BadRequestException(`Score (${scoreItem.score}) cannot exceed maxScore (${scoreItem.maxScore}).`);
             }
 
-            let existingScore = null;
-            if (scoreItem.assessmentComponentId) {
-              existingScore = await tx.assessmentScore.findFirst({
-                where: {
-                  tenantId,
-                  schoolId,
-                  subjectResultId: subjectResult.id,
-                  assessmentComponentId: scoreItem.assessmentComponentId,
-                },
-              });
-            }
-            if (!existingScore && scoreItem.type) {
-              existingScore = await tx.assessmentScore.findFirst({
-                where: {
-                  tenantId,
-                  schoolId,
-                  subjectResultId: subjectResult.id,
-                  type: scoreItem.type,
-                },
-              });
-            }
+            const existingScore = await tx.assessmentScore.findFirst({
+              where: {
+                tenantId,
+                schoolId,
+                subjectResultId: subjectResult.id,
+                assessmentComponentId: scoreItem.assessmentComponentId,
+              },
+            });
 
             const isAbsent = scoreItem.isAbsent ?? false;
             const newScoreValue = isAbsent ? 0 : (scoreItem.score ?? 0);
@@ -369,8 +358,7 @@ export class TeacherGradebookService {
                   score: newScoreValue,
                   maxScore: scoreItem.maxScore,
                   isAbsent,
-                  ...(scoreItem.type ? { type: scoreItem.type } : {}),
-                  ...(scoreItem.assessmentComponentId ? { assessmentComponentId: scoreItem.assessmentComponentId } : {}),
+                  assessmentComponentId: scoreItem.assessmentComponentId,
                 },
               });
 
@@ -397,8 +385,7 @@ export class TeacherGradebookService {
                   tenantId,
                   schoolId,
                   subjectResultId: subjectResult.id,
-                  type: scoreItem.type || "ASSESSMENT",
-                  assessmentComponentId: scoreItem.assessmentComponentId || null,
+                  assessmentComponentId: scoreItem.assessmentComponentId,
                   score: newScoreValue,
                   maxScore: scoreItem.maxScore,
                   isAbsent,

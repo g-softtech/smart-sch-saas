@@ -66,6 +66,15 @@ interface AcademicGradingConfig {
   gradingScale: GradingScale;
 }
 
+interface AssessmentType {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  isActive: boolean;
+}
+
 interface AssessmentComponent {
   id: string;
   academicYearId: string;
@@ -73,7 +82,8 @@ interface AssessmentComponent {
   classId: string;
   armId?: string | null;
   subjectId: string;
-  type: "MANUAL_CA" | "EXAM" | "ASSIGNMENT" | "CBT";
+  assessmentTypeId: string;
+  assessmentType?: AssessmentType;
   title: string;
   maxScore: number;
   weight: number;
@@ -88,6 +98,7 @@ export default function ResultsAndGradingPage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [arms, setArms] = useState<ArmItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
+  const [assessmentTypes, setAssessmentTypes] = useState<AssessmentType[]>([]);
 
   // Selected Contexts
   const [selectedYearId, setSelectedYearId] = useState<string>("");
@@ -116,8 +127,14 @@ export default function ResultsAndGradingPage() {
   const [boundaryRemark, setBoundaryRemark] = useState("");
   const [addingBoundary, setAddingBoundary] = useState(false);
 
+  // Assessment Types Form State
+  const [newTypeCode, setNewTypeCode] = useState("");
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeDesc, setNewTypeDesc] = useState("");
+  const [creatingType, setCreatingType] = useState(false);
+
   const [compTitle, setCompTitle] = useState("");
-  const [compType, setCompType] = useState<"MANUAL_CA" | "EXAM" | "ASSIGNMENT" | "CBT">("MANUAL_CA");
+  const [compAssessmentTypeId, setCompAssessmentTypeId] = useState<string>("");
   const [compMaxScore, setCompMaxScore] = useState("40");
   const [compWeight, setCompWeight] = useState("40");
   const [compArmId, setCompArmId] = useState("");
@@ -131,12 +148,13 @@ export default function ResultsAndGradingPage() {
   useEffect(() => {
     async function loadRefData() {
       try {
-        const [yRes, tRes, cRes, sRes, scalesRes] = await Promise.all([
+        const [yRes, tRes, cRes, sRes, scalesRes, typesRes] = await Promise.all([
           apiClient.get<AcademicYear[]>("/api/v1/academics/academic-years"),
           apiClient.get<Term[]>("/api/v1/academics/terms"),
           apiClient.get<ClassItem[]>("/api/v1/academics/classes"),
           apiClient.get<SubjectItem[]>("/api/v1/academics/subjects"),
           apiClient.get<any>("/api/v1/academics/results/scales"),
+          apiClient.get<any>("/api/v1/academics/results/assessment-types"),
         ]);
 
         const yList = yRes || [];
@@ -144,14 +162,20 @@ export default function ResultsAndGradingPage() {
         const cList = cRes || [];
         const sList = sRes || [];
         const scalesList = scalesRes?.data || scalesRes || [];
+        const typesList = typesRes?.data || typesRes || [];
 
         setAcademicYears(yList);
         setTerms(tList);
         setClasses(cList);
         setSubjects(sList);
         setGradingScales(Array.isArray(scalesList) ? scalesList : []);
+        setAssessmentTypes(Array.isArray(typesList) ? typesList : []);
 
         if (yList.length > 0) setSelectedYearId(yList[0].id);
+        if (Array.isArray(typesList) && typesList.length > 0) {
+          const firstActive = typesList.find((t: any) => t.isActive);
+          if (firstActive) setCompAssessmentTypeId(firstActive.id);
+        }
       } catch (err: any) {
         console.error("Failed to load reference data", err);
         setError("Failed to load academic reference data.");
@@ -323,10 +347,57 @@ export default function ResultsAndGradingPage() {
     }
   };
 
+  // Create Custom Assessment Type
+  const handleCreateAssessmentType = async () => {
+    if (!newTypeCode.trim() || !newTypeName.trim()) {
+      setError("Please provide a type code (e.g. PRACTICAL) and name.");
+      return;
+    }
+    try {
+      setCreatingType(true);
+      setError(null);
+      setSuccess(null);
+
+      const res = await apiClient.post<any>("/api/v1/academics/results/assessment-types", {
+        code: newTypeCode.trim().toUpperCase(),
+        name: newTypeName.trim(),
+        description: newTypeDesc.trim() || undefined,
+      });
+
+      setSuccess(`Assessment Type '${newTypeName}' created successfully.`);
+      setNewTypeCode("");
+      setNewTypeName("");
+      setNewTypeDesc("");
+
+      const typesRes = await apiClient.get<any>("/api/v1/academics/results/assessment-types");
+      const list = typesRes?.data || typesRes || [];
+      setAssessmentTypes(Array.isArray(list) ? list : []);
+    } catch (err: any) {
+      setError(err.message || "Failed to create assessment type.");
+    } finally {
+      setCreatingType(false);
+    }
+  };
+
+  // Toggle Assessment Type active status
+  const handleToggleAssessmentType = async (id: string) => {
+    try {
+      setError(null);
+      setSuccess(null);
+      await apiClient.put(`/api/v1/academics/results/assessment-types/${id}/toggle-active`, {});
+      const typesRes = await apiClient.get<any>("/api/v1/academics/results/assessment-types");
+      const list = typesRes?.data || typesRes || [];
+      setAssessmentTypes(Array.isArray(list) ? list : []);
+      setSuccess("Assessment type status updated.");
+    } catch (err: any) {
+      setError(err.message || "Failed to toggle assessment type.");
+    }
+  };
+
   // Create Assessment Component
   const handleCreateComponent = async () => {
-    if (!selectedYearId || !selectedTermId || !selectedClassId || !selectedSubjectId || !compTitle.trim()) {
-      setError("Please select Year, Term, Class, Subject, and provide a component title.");
+    if (!selectedYearId || !selectedTermId || !selectedClassId || !selectedSubjectId || !compAssessmentTypeId || !compTitle.trim()) {
+      setError("Please select Year, Term, Class, Subject, Assessment Type, and provide a component title.");
       return;
     }
     try {
@@ -340,7 +411,7 @@ export default function ResultsAndGradingPage() {
         classId: selectedClassId,
         armId: compArmId || undefined,
         subjectId: selectedSubjectId,
-        type: compType,
+        assessmentTypeId: compAssessmentTypeId,
         title: compTitle.trim(),
         maxScore: Number(compMaxScore),
         weight: Number(compWeight),
@@ -724,21 +795,96 @@ export default function ResultsAndGradingPage() {
           </div>
         </div>
 
+        {/* Assessment Types Management */}
+        <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">School Assessment Types</h3>
+            <span className="text-[10px] text-slate-400 font-mono">{assessmentTypes.length} types registered</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              type="text"
+              placeholder="Code (e.g. PRACTICAL)"
+              value={newTypeCode}
+              onChange={(e) => setNewTypeCode(e.target.value.toUpperCase())}
+              className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
+            />
+            <input
+              type="text"
+              placeholder="Name (e.g. Practical Exam)"
+              value={newTypeName}
+              onChange={(e) => setNewTypeName(e.target.value)}
+              className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
+            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Description (Optional)"
+                value={newTypeDesc}
+                onChange={(e) => setNewTypeDesc(e.target.value)}
+                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
+              />
+              <button
+                onClick={handleCreateAssessmentType}
+                disabled={creatingType || !newTypeCode.trim() || !newTypeName.trim()}
+                className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shrink-0 disabled:opacity-50 transition-colors"
+              >
+                {creatingType && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <Plus className="h-3.5 w-3.5" /> Add
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            {assessmentTypes.map((t) => (
+              <div
+                key={t.id}
+                className={`px-3 py-1.5 rounded-xl border text-xs flex items-center gap-2 ${
+                  t.isActive
+                    ? "bg-slate-900 border-slate-700 text-white"
+                    : "bg-slate-950/40 border-slate-800/60 text-slate-500"
+                }`}
+              >
+                <span className="font-bold">{t.name}</span>
+                <span className="text-[10px] font-mono text-[#D2AD36]">({t.code})</span>
+                {t.isSystem && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">System</span>
+                )}
+                {!t.isSystem && (
+                  <button
+                    onClick={() => handleToggleAssessmentType(t.id)}
+                    className={`text-[10px] font-semibold underline ml-1 ${
+                      t.isActive ? "text-amber-400 hover:text-amber-300" : "text-emerald-400 hover:text-emerald-300"
+                    }`}
+                  >
+                    {t.isActive ? "Deactivate" : "Activate"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Component Creation Form */}
         <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Add Assessment Component</h3>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div>
-              <label className="block text-[10px] text-slate-400 mb-1">Type</label>
+              <label className="block text-[10px] text-slate-400 mb-1">Assessment Type</label>
               <select
-                value={compType}
-                onChange={(e) => setCompType(e.target.value as any)}
+                value={compAssessmentTypeId}
+                onChange={(e) => setCompAssessmentTypeId(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
               >
-                <option value="MANUAL_CA">Continuous Assessment (CA)</option>
-                <option value="EXAM">Terminal Exam</option>
-                <option value="ASSIGNMENT">Assignment</option>
-                <option value="CBT">Computer-Based Test (CBT)</option>
+                <option value="">Select Type...</option>
+                {assessmentTypes
+                  .filter((t) => t.isActive)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.code})
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -746,7 +892,7 @@ export default function ResultsAndGradingPage() {
               <label className="block text-[10px] text-slate-400 mb-1">Component Title</label>
               <input
                 type="text"
-                placeholder="e.g. Midterm CA or Terminal Exam"
+                placeholder="e.g. Midterm CA or Laboratory Practical"
                 value={compTitle}
                 onChange={(e) => setCompTitle(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
@@ -779,7 +925,7 @@ export default function ResultsAndGradingPage() {
           <div className="flex justify-end">
             <button
               onClick={handleCreateComponent}
-              disabled={creatingComp || !selectedClassId || !selectedSubjectId || !compTitle.trim()}
+              disabled={creatingComp || !selectedClassId || !selectedSubjectId || !compAssessmentTypeId || !compTitle.trim()}
               className="px-4 py-2 rounded-xl bg-[#D2AD36] hover:bg-[#c29d2b] text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
             >
               {creatingComp && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -815,7 +961,9 @@ export default function ResultsAndGradingPage() {
                     <tr key={c.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
                       <td className="p-3 font-bold text-white">{c.title}</td>
                       <td className="p-3">
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-mono">{c.type}</span>
+                        <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-[#D2AD36]">
+                          {c.assessmentType?.name || c.assessmentType?.code || "Component"}
+                        </span>
                       </td>
                       <td className="p-3 text-slate-400">
                         {c.class?.name} {c.arm ? `(${c.arm.name})` : "(Class-wide)"} • {c.subject?.name}

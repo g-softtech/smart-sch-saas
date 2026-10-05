@@ -43,6 +43,20 @@ export class SetAcademicGradingConfigDto {
   gradingScaleId: string;
 }
 
+export class CreateAssessmentTypeDto {
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+}
+
 export class CreateAssessmentComponentDto {
   @IsString()
   @IsNotEmpty()
@@ -66,7 +80,7 @@ export class CreateAssessmentComponentDto {
 
   @IsString()
   @IsNotEmpty()
-  type: string;
+  assessmentTypeId: string;
 
   @IsString()
   @IsNotEmpty()
@@ -101,15 +115,11 @@ export class RecordScoreDto {
 
   @IsString()
   @IsNotEmpty()
-  type: string;
+  assessmentComponentId: string;
 
   @IsNumber()
   @Min(0)
   maxScore: number;
-
-  @IsString()
-  @IsOptional()
-  assessmentComponentId?: string;
 
   @IsNumber()
   @Min(0)

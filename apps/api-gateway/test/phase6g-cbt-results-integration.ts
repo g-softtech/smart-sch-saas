@@ -1,4 +1,4 @@
-import { PrismaClient, StaffType, ResultStatus, WorkflowStatus, ScoreProvenance, CBTAttemptStatus, CBTStatus, AssessmentComponentType } from '@saas/core-platform';
+import { PrismaClient, StaffType, ResultStatus, WorkflowStatus, ScoreProvenance, CBTAttemptStatus, CBTStatus } from '@saas/core-platform';
 import { kernel, tenantContext } from '@saas/core-platform';
 import { CBTCompilerService } from '../src/modules/cbt/services/cbt-compiler.service';
 import { ResultsService } from '../src/modules/academics/services/results.service';
@@ -114,6 +114,11 @@ async function runCbtIntegrationTest() {
       data: { tenantId, schoolId, academicYearId: ay.id, termId: term1.id, gradingScaleId: scale.id },
     });
 
+    // 5b. Setup CBT AssessmentType
+    const examType = await prisma.assessmentType.create({
+      data: { tenantId, schoolId, code: 'CBT', name: 'Computer Based Test', isSystem: true, isActive: true },
+    });
+
     // 6. Setup AssessmentComponent for Exam (100% weight for clean total score evaluation)
     const examComp = await prisma.assessmentComponent.create({
       data: {
@@ -123,7 +128,7 @@ async function runCbtIntegrationTest() {
         termId: term1.id,
         classId: targetClass.id,
         subjectId: subject.id,
-        type: AssessmentComponentType.EXAM,
+        assessmentTypeId: examType.id,
         title: 'CBT Terminal Exam Component',
         maxScore: 100,
         weight: 100,
@@ -233,7 +238,7 @@ async function runCbtIntegrationTest() {
           termId: term2NoConfig.id,
           classId: targetClass.id,
           subjectId: subject.id,
-          type: AssessmentComponentType.EXAM,
+          assessmentTypeId: examType.id,
           title: 'Term 2 CBT Component',
           maxScore: 100,
           weight: 100,

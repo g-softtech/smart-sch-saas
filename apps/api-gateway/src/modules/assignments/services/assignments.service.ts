@@ -29,7 +29,13 @@ export class AssignmentsService {
       if (!arm || arm.tenantId !== tenantId || arm.classId !== dto.classId) throw new NotFoundException("Invalid Arm");
     }
 
-    // 2. Transactional Creation of Component and Assignment
+    // 2. Resolve ASSIGNMENT system type
+    const assignmentType = await kernel.db.assessmentType.findFirst({
+      where: { tenantId, schoolId, code: "ASSIGNMENT", isSystem: true }
+    });
+    if (!assignmentType) throw new NotFoundException("ASSIGNMENT assessment type not found for this school. Ensure system types are seeded.");
+
+    // 3. Transactional Creation of Component and Assignment
     return kernel.db.$transaction(async (tx) => {
       const component = await tx.assessmentComponent.create({
         data: {
@@ -40,7 +46,7 @@ export class AssignmentsService {
           classId: dto.classId,
           armId: dto.armId || null,
           subjectId: dto.subjectId,
-          type: "ASSIGNMENT",
+          assessmentTypeId: assignmentType.id,
           title: dto.title,
           maxScore: dto.maxScore,
           weight: (dto as any).weight ?? 10,
@@ -169,7 +175,6 @@ export class AssignmentsService {
       termId: assignment.assessmentComponent.termId,
       studentId,
       subjectId: assignment.assessmentComponent.subjectId,
-      type: "ASSIGNMENT",
       assessmentComponentId: assignment.assessmentComponentId,
       maxScore: assignment.assessmentComponent.maxScore,
       score: dto.score

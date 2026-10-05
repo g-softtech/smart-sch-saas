@@ -77,16 +77,16 @@ export class ResultsEngineService {
       },
     });
 
-    // Resolve overrides (ARM_SPECIFIC overrides CLASS_WIDE for the same type)
-    const activeComponentsMap = new Map();
+    // Resolve overrides (ARM_SPECIFIC overrides CLASS_WIDE for the same AssessmentType)
+    const activeComponentsMap = new Map<string, any>();
     for (const comp of components) {
-      const existing = activeComponentsMap.get(comp.type);
+      const existing = activeComponentsMap.get(comp.assessmentTypeId);
       if (!existing) {
-        activeComponentsMap.set(comp.type, comp);
+        activeComponentsMap.set(comp.assessmentTypeId, comp);
       } else {
         // If we already have one, keep the ARM_SPECIFIC one
         if (comp.armId !== null) {
-          activeComponentsMap.set(comp.type, comp);
+          activeComponentsMap.set(comp.assessmentTypeId, comp);
         }
       }
     }
@@ -108,7 +108,7 @@ export class ResultsEngineService {
     let finalTotalScore = 0;
 
     for (const comp of activeComponents) {
-      const scoreRecord = scores.find(s => s.type === comp.type || s.assessmentComponentId === comp.id);
+      const scoreRecord = scores.find((s: any) => s.assessmentComponentId === comp.id);
       if (scoreRecord && !scoreRecord.isAbsent && scoreRecord.score !== null) {
         const contribution = (scoreRecord.score / comp.maxScore) * comp.weight;
         finalTotalScore += contribution;

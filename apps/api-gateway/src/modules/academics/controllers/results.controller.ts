@@ -4,6 +4,7 @@ import {
   Get,
   Patch,
   Delete,
+  Put,
   Query,
   Body,
   Param,
@@ -18,7 +19,7 @@ import { PoliciesGuard } from "../../identity/security/policies.guard";
 import { RequirePermission } from "../../identity/security/require-permission.decorator";
 import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
 import { AcademicsPrismaExceptionFilter } from "../filters/prisma-exception.filter";
-import { CreateGradingScaleDto, CreateGradeBoundaryDto, RecordScoreDto, SetAcademicGradingConfigDto, CreateAssessmentComponentDto } from "../dto/results.dto";
+import { CreateGradingScaleDto, CreateGradeBoundaryDto, RecordScoreDto, SetAcademicGradingConfigDto, CreateAssessmentComponentDto, CreateAssessmentTypeDto } from "../dto/results.dto";
 
 @Controller("api/v1/academics/results")
 @UseGuards(JwtAuthGuard, PoliciesGuard)
@@ -26,6 +27,44 @@ import { CreateGradingScaleDto, CreateGradeBoundaryDto, RecordScoreDto, SetAcade
 @UseFilters(AcademicsPrismaExceptionFilter)
 export class ResultsController {
   constructor(private readonly resultsService: ResultsService) {}
+
+  @Get("assessment-types")
+  @RequirePermission("academics:read_gradebook")
+  async listAssessmentTypes(@Req() req: Request & { workspace: any }) {
+    const types = await this.resultsService.listAssessmentTypes(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+    );
+    return { success: true, data: types };
+  }
+
+  @Post("assessment-types")
+  @RequirePermission("academics:manage_assignments")
+  async createAssessmentType(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateAssessmentTypeDto,
+  ) {
+    const type = await this.resultsService.createAssessmentType(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      dto,
+    );
+    return { success: true, data: type };
+  }
+
+  @Put("assessment-types/:id/toggle-active")
+  @RequirePermission("academics:manage_assignments")
+  async toggleAssessmentTypeActive(
+    @Req() req: Request & { workspace: any },
+    @Param("id") id: string,
+  ) {
+    const type = await this.resultsService.toggleAssessmentTypeActive(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      id,
+    );
+    return { success: true, data: type };
+  }
 
   @Get("grading-config")
   @RequirePermission("academics:read_gradebook")

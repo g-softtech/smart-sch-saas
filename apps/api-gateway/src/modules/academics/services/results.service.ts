@@ -136,6 +136,50 @@ export class ResultsService {
     });
   }
 
+  async listAssessmentTypes(tenantId: string, schoolId: string) {
+    return prisma.assessmentType.findMany({
+      where: { tenantId, schoolId },
+      orderBy: [{ isSystem: "desc" }, { name: "asc" }],
+    });
+  }
+
+  async createAssessmentType(tenantId: string, schoolId: string, dto: { code: string; name: string; description?: string }) {
+    const normalizedCode = dto.code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_");
+    if (!normalizedCode) throw new BadRequestException("Invalid assessment type code.");
+
+    try {
+      return await prisma.assessmentType.create({
+        data: {
+          tenantId,
+          schoolId,
+          code: normalizedCode,
+          name: dto.name,
+          description: dto.description,
+          isSystem: false,
+          isActive: true,
+        },
+      });
+    } catch (e: any) {
+      if (e.code === "P2002") {
+        throw new ConflictException(`Assessment type code '${normalizedCode}' already exists for this school.`);
+      }
+      throw e;
+    }
+  }
+
+  async toggleAssessmentTypeActive(tenantId: string, schoolId: string, id: string) {
+    const typeRecord = await prisma.assessmentType.findFirst({
+      where: { id, tenantId, schoolId },
+    });
+    if (!typeRecord) throw new NotFoundException("Assessment type not found.");
+    if (typeRecord.isSystem) throw new ForbiddenException("System assessment types cannot be deactivated.");
+
+    return prisma.assessmentType.update({
+      where: { id },
+      data: { isActive: !typeRecord.isActive },
+    });
+  }
+
   async listAssessmentComponents(tenantId: string, schoolId: string, academicYearId: string, termId: string, classId?: string, subjectId?: string) {
     return prisma.assessmentComponent.findMany({
       where: {
@@ -150,6 +194,7 @@ export class ResultsService {
         class: true,
         arm: true,
         subject: true,
+        assessmentType: true,
       },
       orderBy: { title: "asc" },
     });
@@ -191,6 +236,14 @@ export class ResultsService {
       throw new NotFoundException("Subject not found.");
     }
 
+    // Validate AssessmentType
+    const assessmentType = await prisma.assessmentType.findFirst({
+      where: { id: dto.assessmentTypeId, tenantId, schoolId, isActive: true },
+    });
+    if (!assessmentType) {
+      throw new NotFoundException("Active Assessment Type not found for this school context.");
+    }
+
     try {
       return await prisma.assessmentComponent.create({
         data: {
@@ -201,7 +254,7 @@ export class ResultsService {
           classId: dto.classId,
           armId: dto.armId || null,
           subjectId: dto.subjectId,
-          type: dto.type,
+          assessmentTypeId: dto.assessmentTypeId,
           title: dto.title,
           maxScore: dto.maxScore,
           weight: dto.weight,
@@ -210,6 +263,7 @@ export class ResultsService {
           class: true,
           arm: true,
           subject: true,
+          assessmentType: true,
         },
       });
     } catch (e: any) {
@@ -312,28 +366,15 @@ export class ResultsService {
         }
       }
 
-      // Upsert AssessmentScore using the appropriate idempotency boundary
-      let existingScore = null;
-      if (dto.assessmentComponentId) {
-        existingScore = await tx.assessmentScore.findFirst({
-          where: {
-            tenantId,
-            schoolId,
-            subjectResultId: subjectResult.id,
-            assessmentComponentId: dto.assessmentComponentId,
-          },
-        });
-      }
-      if (!existingScore) {
-        existingScore = await tx.assessmentScore.findFirst({
-          where: {
-            tenantId,
-            schoolId,
-            subjectResultId: subjectResult.id,
-            type: dto.type,
-          },
-        });
-      }
+      // Upsert AssessmentScore using the authoritative assessmentComponentId
+      const existingScore = await tx.assessmentScore.findFirst({
+        where: {
+          tenantId,
+          schoolId,
+          subjectResultId: subjectResult.id,
+          assessmentComponentId: dto.assessmentComponentId,
+        },
+      });
 
       if (existingScore) {
         await tx.assessmentScore.update({
@@ -341,8 +382,6 @@ export class ResultsService {
           data: {
             score: dto.score,
             maxScore: dto.maxScore,
-            type: dto.type,
-            ...(dto.assessmentComponentId ? { assessmentComponentId: dto.assessmentComponentId } : {}),
           },
         });
       } else {
@@ -351,8 +390,7 @@ export class ResultsService {
             tenantId,
             schoolId,
             subjectResultId: subjectResult.id,
-            type: dto.type,
-            assessmentComponentId: dto.assessmentComponentId || null,
+            assessmentComponentId: dto.assessmentComponentId,
             score: dto.score,
             maxScore: dto.maxScore,
           },

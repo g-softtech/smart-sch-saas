@@ -55,7 +55,13 @@ interface AssessmentComponent {
   classId: string;
   armId?: string | null;
   subjectId: string;
-  type: string;
+  assessmentTypeId?: string;
+  assessmentType?: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  type?: string;
   title: string;
   maxScore: number;
   weight: number;
@@ -249,7 +255,7 @@ export default function TeacherGradebookPage() {
           );
           compScores[comp.id] = {
             assessmentComponentId: comp.id,
-            type: comp.type,
+            type: comp.assessmentType?.code || comp.type || "COMPONENT",
             score: match?.score !== undefined && match?.score !== null ? String(match.score) : "",
             maxScore: comp.maxScore,
             isAbsent: match?.isAbsent || false,
@@ -629,7 +635,7 @@ export default function TeacherGradebookPage() {
                             <div className="flex flex-col items-center">
                               <span className="text-white font-bold">{comp.title}</span>
                               <span className="text-[10px] text-[#D2AD36] font-mono">
-                                ({comp.type} • {comp.maxScore}pts • {comp.weight}%)
+                                ({comp.assessmentType?.name || comp.assessmentType?.code || comp.type || "Component"} • {comp.maxScore}pts • {comp.weight}%)
                               </span>
                             </div>
                           </th>
