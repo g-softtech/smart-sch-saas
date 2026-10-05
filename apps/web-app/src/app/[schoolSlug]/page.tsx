@@ -37,8 +37,19 @@ export default async function PublicWebsiteHomepage({ params, searchParams }: { 
   const announcements = await getAnnouncements(schoolSlug, school.tenantId, school.id);
   const homePage = await getHomepage(schoolSlug, school.tenantId, school.id);
 
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001';
+  const tp = config.themePayload || {};
+  const heroImageUrl = tp.heroImageMediaId
+    ? `${apiBase}/v1/public/cms/${schoolSlug}/media/${tp.heroImageMediaId}`
+    : null;
+
   return (
     <div className="w-full">
+      {heroImageUrl && (
+        <div className="w-full h-64 md:h-96 overflow-hidden">
+          <img src={heroImageUrl} alt="Hero" className="w-full h-full object-cover" />
+        </div>
+      )}
       {homePage ? (
          <div dangerouslySetInnerHTML={{ __html: homePage.content }} className="w-full" />
       ) : (

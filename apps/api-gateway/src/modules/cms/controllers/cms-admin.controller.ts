@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, Res, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../identity/security/jwt-auth.guard';
 import { PoliciesGuard } from '../../identity/security/policies.guard';
 import { RequirePermission } from '../../identity/security/require-permission.decorator';
 import { WorkspaceContextInterceptor } from '../../identity/interceptors/workspace-context.interceptor';
 import { UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { CmsAdminService } from '../services/cms-admin.service';
 import { UpdateSiteConfigDto, CreateCmsPageDto, UpdateCmsPageDto, CreateCmsAnnouncementDto, UpdateCmsAnnouncementDto, SyncNavigationDto } from '../dto/cms.dto';
 
@@ -77,5 +79,44 @@ export class CmsAdminController {
   @RequirePermission('website:manage_content')
   async deleteAnnouncement(@Req() req: any, @Param('id') id: string) {
     return this.service.deleteAnnouncement(req.workspace.tenantId, req.workspace.schoolId, id, req.user.id);
+  }
+
+  // ─── CMS Media Upload Endpoints ──────────────────────────────────────────────
+
+  @Post('media/upload')
+  @RequirePermission('website:manage_config')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadMedia(
+    @Req() req: any,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /\.(png|jpeg|jpg|webp|gif|ico|svg)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    if (!schoolId) throw new BadRequestException('School context required');
+    const media = await this.service.uploadMedia(tenantId, schoolId, req.user.id, file);
+    return { id: media.id, filename: media.filename, mimeType: media.mimeType, serveUrl: `/api/v1/cms/admin/media/${media.id}/serve` };
+  }
+
+  @Get('media/:id/serve')
+  @RequirePermission('website:manage_config')
+  async serveMedia(@Req() req: any, @Param('id') id: string, @Res() res: Response) {
+    const media = await this.service.getMedia(req.workspace.tenantId, req.workspace.schoolId, id);
+    if (!media) throw new NotFoundException('Media not found');
+    res.set({ 'Content-Type': media.mimeType, 'Content-Disposition': 'inline', 'Cache-Control': 'private, max-age=3600' });
+    res.send(media.data);
+  }
+
+  @Delete('media/:id')
+  @RequirePermission('website:manage_config')
+  async deleteMedia(@Req() req: any, @Param('id') id: string) {
+    await this.service.deleteMedia(req.workspace.tenantId, req.workspace.schoolId, id, req.user.id);
+    return { success: true };
   }
 }

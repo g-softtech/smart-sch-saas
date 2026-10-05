@@ -80,4 +80,11 @@ export class CmsPublicService {
       orderBy: { publishedAt: 'desc' }
     });
   }
+
+  async getPublicMedia(schoolId: string, mediaId: string) {
+    const media = await kernel.db.cmsMedia.findUnique({ where: { id: mediaId } });
+    // Ensure media belongs to this school — prevents cross-school leakage
+    if (!media || media.schoolId !== schoolId) return null;
+    return media;
+  }
 }

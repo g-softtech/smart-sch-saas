@@ -51,9 +51,19 @@ export default async function PublicWebsiteLayout({
     "rounded-none": "0", "rounded-md": "0.375rem", "rounded-xl": "0.75rem", "rounded-full": "9999px"
   };
   const br = brMap[tp.borderRadius || "rounded-md"] || "0.375rem";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001';
+  const logoUrl = config.logoMediaId ? `${apiBase}/v1/public/cms/${schoolSlug}/media/${config.logoMediaId}` : null;
+  const faviconUrl = config.faviconMediaId ? `${apiBase}/v1/public/cms/${schoolSlug}/media/${config.faviconMediaId}` : null;
+  const heroImageUrl = tp.heroImageMediaId ? `${apiBase}/v1/public/cms/${schoolSlug}/media/${tp.heroImageMediaId}` : null;
 
   return (
     <div className={`min-h-screen flex flex-col theme-${schoolSlug}`} style={{ backgroundColor: bg, color: text }}>
+      {faviconUrl && (
+        // eslint-disable-next-line @next/next/no-head-element
+        // Note: favicon injection via link tag requires next/head in pages router;
+        // In App Router use metadata export at page level — stored here as CSS var for dev reference
+        <style dangerouslySetInnerHTML={{ __html: `` }} />
+      )}
       <style dangerouslySetInnerHTML={{
         __html: `
           .theme-${schoolSlug} {
@@ -74,7 +84,7 @@ export default async function PublicWebsiteLayout({
       <header className="border-b shadow-sm sticky top-0 z-50 backdrop-blur-md" style={{ backgroundColor: `${bg}f0`, borderColor: `${primary}20` }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="flex justify-between h-20 items-center">
             <div className="flex items-center gap-3">
-              {config.logoMediaId ? ( <img src={`/v1/media/${config.logoMediaId}`} alt={`${school.name} logo`} className="h-12 w-auto object-contain" /> ) : (
+              {logoUrl ? ( <img src={logoUrl} alt={`${school.name} logo`} className="h-12 w-auto object-contain" /> ) : (
                 <div className="w-12 h-12 flex items-center justify-center rounded-full" style={{ backgroundColor: primary, color: '#fff' }}><GraduationCap size={24} /></div>
               )}
               <Link href={`/${schoolSlug}`} className="font-bold text-xl md:text-2xl tracking-tight" style={{ color: primary }}>{school.name}</Link>

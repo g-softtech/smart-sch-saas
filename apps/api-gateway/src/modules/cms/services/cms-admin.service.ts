@@ -198,4 +198,75 @@ export class CmsAdminService {
       return created;
     });
   }
+
+
+  // ─── CMS Media ───────────────────────────────────────────────────────────────
+
+  private readonly ALLOWED_MIME_TYPES = [
+    'image/png', 'image/jpeg', 'image/jpg', 'image/webp',
+    'image/gif', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml',
+  ];
+
+  private readonly MAGIC_BYTES: Record<string, number[][]> = {
+    'image/png':  [[0x89, 0x50, 0x4E, 0x47]],
+    'image/jpeg': [[0xFF, 0xD8, 0xFF]],
+    'image/gif':  [[0x47, 0x49, 0x46, 0x38]],
+    'image/webp': [[0x52, 0x49, 0x46, 0x46]],
+  };
+
+  private validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
+    const signatures = this.MAGIC_BYTES[mimeType];
+    if (!signatures) return true; // SVG, ICO - skip binary check
+    return signatures.some(sig => sig.every((byte, i) => buffer[i] === byte));
+  }
+
+  async uploadMedia(tenantId: string, schoolId: string, userId: string, file: Express.Multer.File) {
+    const mime = file.mimetype.toLowerCase();
+    if (!this.ALLOWED_MIME_TYPES.includes(mime)) {
+      throw new BadRequestException("File type '" + mime + "' is not allowed. Allowed: PNG, JPEG, WebP, GIF, ICO, SVG");
+    }
+    if (!this.validateMagicBytes(file.buffer, mime)) {
+      throw new BadRequestException('File content does not match declared MIME type');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('File exceeds 5 MB limit');
+    }
+
+    const media = await kernel.db.cmsMedia.create({
+      data: {
+        tenantId,
+        schoolId,
+        authorId: userId,
+        filename: file.originalname,
+        mimeType: mime,
+        data: file.buffer,
+      },
+    });
+
+    await this.auditService.logAction(kernel.db as any, {
+      tenantId, userId, action: 'CMS_MEDIA_UPLOADED', entity: 'cms_media',
+      entityId: media.id, severity: 'LOW' as any, metadata: { filename: media.filename, mimeType: mime },
+    });
+
+    return media;
+  }
+
+  async getMedia(tenantId: string, schoolId: string, id: string) {
+    const media = await kernel.db.cmsMedia.findUnique({ where: { id } });
+    if (!media || media.tenantId !== tenantId || media.schoolId !== schoolId) return null;
+    return media;
+  }
+
+  async deleteMedia(tenantId: string, schoolId: string, id: string, userId: string) {
+    const media = await kernel.db.cmsMedia.findUnique({ where: { id } });
+    if (!media || media.tenantId !== tenantId || media.schoolId !== schoolId) {
+      throw new NotFoundException('Media not found');
+    }
+    await kernel.db.cmsMedia.delete({ where: { id } });
+    await this.auditService.logAction(kernel.db as any, {
+      tenantId, userId, action: 'CMS_MEDIA_DELETED', entity: 'cms_media',
+      entityId: id, severity: 'LOW' as any, metadata: {},
+    });
+  }
+
 }

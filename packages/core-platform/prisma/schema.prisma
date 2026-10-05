@@ -2598,6 +2598,7 @@ model CmsMedia {
   id        String   @id @default(uuid())
   tenantId  String
   schoolId  String
+  filename  String?
   mimeType  String
   data      Bytes
   authorId  String
