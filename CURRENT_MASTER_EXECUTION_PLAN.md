@@ -204,7 +204,8 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Status:** **COMPLETE**. Commit e98c59d0 pushed.
   - **Phase 6D: Transport & Fleet Management:** COMPLETE & VERIFIED (Implementation: 1fdaa860)
   - **Phase 6E Ã¯Â¿Â½ Hostel & Boarding Management:** PLANNED
-  - **Phase 6F � School Website Builder & Public CMS:** COMPLETE & VERIFIED (Implementation: 776992f5)
+  - **Phase 6F – School Website Builder & Public CMS:** COMPLETE & VERIFIED
+    - **Note:** Default Website = configurable single-page school website with anchor navigation. Future advanced multi-page CMS capability remains preserved. (Implementation: 776992f5)
   - **Phase 6G - Results & Grading Management:** **IMPLEMENTATION CHECKPOINT COMPLETE / VERIFIED**
     - **Scope Completed:**
       - `AcademicGradingConfig` domain model & `20261004182930_phase_6g_grading_engine` migration.
