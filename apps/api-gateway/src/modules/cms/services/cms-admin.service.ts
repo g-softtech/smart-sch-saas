@@ -46,23 +46,76 @@ export class CmsAdminService {
       }
     }
 
+    // 1. Slug Validation & Update
+    if (dto.publicSlug) {
+      const slug = dto.publicSlug.trim().toLowerCase();
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        throw new BadRequestException('Slug can only contain lowercase letters, numbers, and hyphens');
+      }
+      const reserved = ['api', 'admin', 'dashboard', 'portal', 'auth', 'webhook'];
+      if (reserved.includes(slug)) {
+        throw new BadRequestException('This slug is reserved and cannot be used');
+      }
+
+      // Check for uniqueness across all tenants (slugs are globally unique for the public renderer)
+      const existingSchool = await kernel.db.school.findFirst({
+        where: { publicSlug: slug, NOT: { id: schoolId } }
+      });
+      if (existingSchool) {
+        throw new ConflictException('This public slug is already taken by another school');
+      }
+
+      // Update the school record directly
+      await kernel.db.school.update({
+        where: { id: schoolId },
+        data: { publicSlug: slug }
+      });
+    }
+
+    // 2. Draft/Publish Logic
+    let updateData: any = { version: { increment: 1 } };
+    let themePayload = (existing.themePayload as any) || {};
+
+    if (dto.publishAction === 'DRAFT') {
+      // Store all UI fields in workingDraft
+      updateData.themePayload = {
+        ...themePayload,
+        workingDraft: {
+          primaryColor: dto.primaryColor,
+          secondaryColor: dto.secondaryColor,
+          logoMediaId: dto.logoMediaId,
+          faviconMediaId: dto.faviconMediaId,
+          contactEmail: dto.contactEmail,
+          contactPhone: dto.contactPhone,
+          enableAdmissionsCta: dto.enableAdmissionsCta,
+          themePayload: dto.themePayload,
+        }
+      };
+      // Do not update root fields, keep existing status
+    } else {
+      // PUBLISH action
+      // Clear workingDraft and promote fields to root
+      const { workingDraft, ...restThemePayload } = themePayload;
+      updateData.themePayload = {
+        ...restThemePayload,
+        ...dto.themePayload,
+      };
+      updateData.status = dto.status || CmsPublicationStatus.PUBLISHED; // Ensure status moves to published
+      updateData.primaryColor = dto.primaryColor;
+      updateData.secondaryColor = dto.secondaryColor;
+      updateData.logoMediaId = dto.logoMediaId;
+      updateData.faviconMediaId = dto.faviconMediaId;
+      updateData.contactEmail = dto.contactEmail;
+      updateData.contactPhone = dto.contactPhone;
+      updateData.enableAdmissionsCta = dto.enableAdmissionsCta;
+    }
+
     const updated = await kernel.db.cmsSiteConfig.update({
       where: { schoolId },
-      data: {
-        status: dto.status,
-        logoMediaId: dto.logoMediaId,
-        faviconMediaId: dto.faviconMediaId,
-        themePayload: dto.themePayload ?? existing.themePayload,
-        primaryColor: dto.primaryColor,
-        secondaryColor: dto.secondaryColor,
-        contactEmail: dto.contactEmail,
-        contactPhone: dto.contactPhone,
-        enableAdmissionsCta: dto.enableAdmissionsCta,
-        version: { increment: 1 }
-      }
+      data: updateData
     });
 
-    await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_CONFIG_UPDATED', entity: 'cms_site_configs', entityId: updated.id, severity: 'MEDIUM', metadata: { version: updated.version } });
+    await this.auditService.logAction(kernel.db as any, { tenantId, userId, action: 'CMS_CONFIG_UPDATED', entity: 'cms_site_configs', entityId: updated.id, severity: 'MEDIUM', metadata: { version: updated.version, publishAction: dto.publishAction } });
     return updated;
   }
 
