@@ -37,7 +37,8 @@ export default function WebsiteSettingsPage() {
       const payload = {
         status: config.status,
         expectedVersion: config.version,
-        themeColor: config.themeColor,
+        primaryColor: config.primaryColor,
+        secondaryColor: config.secondaryColor,
         logoMediaId: config.logoMediaId || undefined,
         faviconMediaId: config.faviconMediaId || undefined,
         themePayload: config.themePayload,
