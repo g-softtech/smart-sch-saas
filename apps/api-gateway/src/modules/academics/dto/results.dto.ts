@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, Min } from "class-validator";
+import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, Max } from "class-validator";
 import { ResultStatus } from "@saas/core-platform";
 
 export class CreateGradingScaleDto {
@@ -27,6 +27,59 @@ export class CreateGradeBoundaryDto {
   @IsString()
   @IsOptional()
   remark?: string;
+}
+
+export class SetAcademicGradingConfigDto {
+  @IsString()
+  @IsNotEmpty()
+  academicYearId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  termId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  gradingScaleId: string;
+}
+
+export class CreateAssessmentComponentDto {
+  @IsString()
+  @IsNotEmpty()
+  academicYearId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  termId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  classId: string;
+
+  @IsString()
+  @IsOptional()
+  armId?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  subjectId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  type: string;
+
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @IsNumber()
+  @Min(0.01)
+  maxScore: number;
+
+  @IsNumber()
+  @Min(0.01)
+  @Max(100)
+  weight: number;
 }
 
 export class RecordScoreDto {

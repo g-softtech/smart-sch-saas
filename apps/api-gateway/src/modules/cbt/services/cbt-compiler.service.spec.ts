@@ -1,3 +1,4 @@
+import { ResultsEngineService } from '../../academics/services/results-engine.service';
 ﻿import { Test, TestingModule } from "@nestjs/testing";
 import { CBTCompilerService } from "./cbt-compiler.service";
 import { TeacherAssignmentsService } from "../../academics/services/teacher-assignments.service";
@@ -44,7 +45,7 @@ describe("CBTCompilerService & Authorization", () => {
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        CBTCompilerService,
+        CBTCompilerService, { provide: ResultsEngineService, useValue: { recalculateSubjectResult: jest.fn() } },
         { provide: TeacherAssignmentsService, useValue: assignMock }
       ]
     }).compile();

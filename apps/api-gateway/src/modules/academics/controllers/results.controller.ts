@@ -3,6 +3,8 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
+  Query,
   Body,
   Param,
   Req,
@@ -12,18 +14,101 @@ import {
 } from "@nestjs/common";
 import { ResultsService } from "../services/results.service";
 import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
+import { PoliciesGuard } from "../../identity/security/policies.guard";
+import { RequirePermission } from "../../identity/security/require-permission.decorator";
 import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
 import { AcademicsPrismaExceptionFilter } from "../filters/prisma-exception.filter";
-import { CreateGradingScaleDto, CreateGradeBoundaryDto, RecordScoreDto } from "../dto/results.dto";
+import { CreateGradingScaleDto, CreateGradeBoundaryDto, RecordScoreDto, SetAcademicGradingConfigDto, CreateAssessmentComponentDto } from "../dto/results.dto";
 
 @Controller("api/v1/academics/results")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 @UseInterceptors(WorkspaceContextInterceptor)
 @UseFilters(AcademicsPrismaExceptionFilter)
 export class ResultsController {
   constructor(private readonly resultsService: ResultsService) {}
 
+  @Get("grading-config")
+  @RequirePermission("academics:read_gradebook")
+  async getGradingConfig(
+    @Req() req: Request & { workspace: any },
+    @Query("academicYearId") academicYearId: string,
+    @Query("termId") termId: string,
+  ) {
+    const config = await this.resultsService.getAcademicGradingConfig(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      academicYearId,
+      termId,
+    );
+    return { success: true, data: config };
+  }
+
+  @Post("grading-config")
+  @RequirePermission("academics:manage_assignments")
+  async setGradingConfig(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: SetAcademicGradingConfigDto,
+  ) {
+    const config = await this.resultsService.setAcademicGradingConfig(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      dto.academicYearId,
+      dto.termId,
+      dto.gradingScaleId,
+    );
+    return { success: true, data: config };
+  }
+
+  @Get("components")
+  @RequirePermission("academics:read_gradebook")
+  async listAssessmentComponents(
+    @Req() req: Request & { workspace: any },
+    @Query("academicYearId") academicYearId: string,
+    @Query("termId") termId: string,
+    @Query("classId") classId?: string,
+    @Query("subjectId") subjectId?: string,
+  ) {
+    const components = await this.resultsService.listAssessmentComponents(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      academicYearId,
+      termId,
+      classId,
+      subjectId,
+    );
+    return { success: true, data: components };
+  }
+
+  @Post("components")
+  @RequirePermission("academics:manage_assignments")
+  async createAssessmentComponent(
+    @Req() req: Request & { workspace: any },
+    @Body() dto: CreateAssessmentComponentDto,
+  ) {
+    const comp = await this.resultsService.createAssessmentComponent(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      dto,
+    );
+    return { success: true, data: comp };
+  }
+
+  @Delete("components/:id")
+  @RequirePermission("academics:manage_assignments")
+  async deleteAssessmentComponent(
+    @Req() req: Request & { workspace: any },
+    @Param("id") id: string,
+  ) {
+    await this.resultsService.deleteAssessmentComponent(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      id,
+    );
+    return { success: true };
+  }
+
   @Post("scales")
+  @RequirePermission("academics:manage_assignments")
   async createGradingScale(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateGradingScaleDto,
@@ -32,6 +117,7 @@ export class ResultsController {
   }
 
   @Post("boundaries")
+  @RequirePermission("academics:manage_assignments")
   async addGradeBoundary(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateGradeBoundaryDto,
@@ -40,6 +126,7 @@ export class ResultsController {
   }
 
   @Get("scales")
+  @RequirePermission("academics:read_gradebook")
   async listGradingScales(@Req() req: Request & { workspace: any }) {
     const { tenantId, schoolId } = req.workspace;
     const items = await this.resultsService.listGradingScales(tenantId, schoolId);
@@ -47,6 +134,7 @@ export class ResultsController {
   }
 
   @Post("record-score")
+  @RequirePermission("academics:enter_scores")
   async recordScore(
     @Req() req: Request & { workspace: any },
     @Body() dto: RecordScoreDto,
@@ -55,6 +143,7 @@ export class ResultsController {
   }
 
   @Patch(":resultId/scale/:scaleId")
+  @RequirePermission("academics:manage_assignments")
   async attachGradingScale(
     @Req() req: Request & { workspace: any },
     @Param("resultId") resultId: string,
@@ -64,13 +153,12 @@ export class ResultsController {
   }
 
   @Patch("publish/term/:termId/class/:classId")
+  @RequirePermission("academics:publish_results")
   async publishResults(
     @Req() req: Request & { workspace: any },
     @Param("termId") termId: string,
     @Param("classId") classId: string,
   ) {
-    // Note: Specific permission required to publish results
-    // Example: @RequirePermission("academics:publish_results") could be added here
     return this.resultsService.publishResults(req.workspace.tenantId, req.workspace.schoolId, termId, classId);
   }
 }

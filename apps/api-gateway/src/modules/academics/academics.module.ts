@@ -14,6 +14,8 @@ import { TeacherGradebookService } from "./services/teacher-gradebook.service";
 import { GradebookWorkflowService } from "./services/gradebook-workflow.service";
 import { LessonNotesService } from "./services/lesson-notes.service";
 import { AcademicsRepository } from "./repositories/academics.repository";
+import { ResultsEngineService } from "./services/results-engine.service";
+import { AcademicGradingConfigService } from "./services/academic-grading-config.service";
 
 @Module({
   controllers: [
@@ -34,6 +36,8 @@ import { AcademicsRepository } from "./repositories/academics.repository";
     GradebookWorkflowService,
     LessonNotesService,
     AcademicsRepository,
+    ResultsEngineService,
+    AcademicGradingConfigService,
   ],
   exports: [
     AcademicsService,
@@ -43,6 +47,8 @@ import { AcademicsRepository } from "./repositories/academics.repository";
     TeacherGradebookService,
     GradebookWorkflowService,
     LessonNotesService,
+    ResultsEngineService,
+    AcademicGradingConfigService,
   ],
 })
 export class AcademicsModule {}

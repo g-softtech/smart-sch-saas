@@ -106,6 +106,7 @@ model Tenant {
   CmsNavigationItem              CmsNavigationItem[]
 
   @@map("plt_tenants")
+  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model User {
@@ -310,6 +311,7 @@ model School {
   CmsNavigationItem         CmsNavigationItem[]
 
   @@unique([tenantId, id])
+  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model TenantEntitlement {
@@ -509,6 +511,7 @@ model AcademicYear {
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
   @@map("acd_academic_years")
+  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model Term {
@@ -538,6 +541,7 @@ model Term {
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
   @@map("acd_terms")
+  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model Department {
@@ -1215,6 +1219,7 @@ model GradingScale {
 
   @@unique([tenantId, schoolId, name])
   @@map("acd_grading_scales")
+  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model GradeBoundary {
@@ -1299,6 +1304,7 @@ model AssessmentComponent {
   type           AssessmentComponentType
   title          String
   maxScore       Float
+  weight         Float
   academicYear   AcademicYear            @relation(fields: [academicYearId], references: [id])
   arm            Arm?                    @relation(fields: [armId], references: [id])
   class          Class                   @relation(fields: [classId], references: [id])
@@ -1855,6 +1861,7 @@ enum AssessmentComponentType {
   ASSIGNMENT
   CBT
   MANUAL_CA
+  EXAM
 }
 
 enum AssignmentStatus {
@@ -2606,4 +2613,20 @@ model CmsNavigationItem {
 
   @@unique([tenantId, schoolId, orderIndex])
   @@map("cms_navigation_items")
+}
+
+model AcademicGradingConfig {
+  id             String       @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  academicYearId String
+  termId         String
+  gradingScaleId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  term           Term         @relation(fields: [termId], references: [id])
+  gradingScale   GradingScale @relation(fields: [gradingScaleId], references: [id])
+  school         School       @relation(fields: [schoolId], references: [id])
+  tenant         Tenant       @relation(fields: [tenantId], references: [id])
+  @@unique([tenantId, schoolId, academicYearId, termId])
+  @@map("acd_academic_grading_configs")
 }

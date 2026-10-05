@@ -179,6 +179,34 @@ export default function CBTPage() {
     }
   };
 
+  // Compile CBT to Gradebook
+  const [compilingId, setCompilingId] = useState<string | null>(null);
+  const [compileResult, setCompileResult] = useState<{
+    examTitle: string;
+    compiledCount: number;
+    skippedCount: number;
+  } | null>(null);
+
+  const handleCompileToGradebook = async (exam: any) => {
+    setCompilingId(exam.id);
+    setCompileResult(null);
+    try {
+      // Single canonical administrative compile endpoint
+      const res: any = await apiClient.post(`api/v1/academics/cbt/admin/exams/${exam.id}/compile`, {});
+
+      setCompileResult({
+        examTitle: exam.title,
+        compiledCount: res.compiledCount ?? 0,
+        skippedCount: res.skippedCount ?? 0,
+      });
+      fetchExams();
+    } catch (e: any) {
+      alert(e.message || "Failed to compile CBT scores to Gradebook");
+    } finally {
+      setCompilingId(null);
+    }
+  };
+
   // Question Authoring
   const handleAddQuestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,6 +405,27 @@ export default function CBTPage() {
             </button>
           </div>
 
+          {compileResult && (
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex justify-between items-center text-sm">
+              <div className="space-y-1">
+                <div className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Gradebook Compilation Successful: {compileResult.examTitle}
+                </div>
+                <div className="text-xs text-emerald-800 dark:text-emerald-400">
+                  Compiled {compileResult.compiledCount} student score(s) into dynamic Gradebook columns.
+                  {compileResult.skippedCount > 0 && ` (${compileResult.skippedCount} skipped due to existing manual protection)`}
+                </div>
+              </div>
+              <button
+                onClick={() => setCompileResult(null)}
+                className="text-xs px-2.5 py-1 bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-200 rounded font-medium hover:bg-emerald-300"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {loadingList ? (
             <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
               Loading CBT exams...
@@ -409,7 +458,7 @@ export default function CBTPage() {
                         {item.title}
                       </td>
                       <td className="p-3 text-xs text-gray-600 dark:text-gray-300">
-                        {new Date(item.availableFrom).toLocaleString()} $\rightarrow$ <br />
+                        {new Date(item.availableFrom).toLocaleString()} &rarr; <br />
                         {new Date(item.availableTo).toLocaleString()}
                       </td>
                       <td className="p-3 font-semibold text-gray-900 dark:text-white">
@@ -482,6 +531,15 @@ export default function CBTPage() {
                               Close
                             </button>
                           </>
+                        )}
+                        {(item.status === "CLOSED" || item.status === "ACTIVE") && (
+                          <button
+                            onClick={() => handleCompileToGradebook(item)}
+                            disabled={compilingId === item.id}
+                            className="px-2.5 py-1 bg-[#D2AD36] text-[#0A192E] rounded text-xs hover:bg-[#c19c28] font-semibold disabled:opacity-50 transition-colors shadow-sm"
+                          >
+                            {compilingId === item.id ? "Compiling..." : "Compile to Gradebook"}
+                          </button>
                         )}
                       </td>
                     </tr>

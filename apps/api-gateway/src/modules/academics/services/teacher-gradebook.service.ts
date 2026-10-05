@@ -1,3 +1,4 @@
+import { ResultsEngineService } from "./results-engine.service";
 import {
   Injectable,
   NotFoundException,
@@ -19,7 +20,8 @@ import {
 export class TeacherGradebookService {
   constructor(
     private readonly assignmentsService: TeacherAssignmentsService,
-    private readonly resultsService: ResultsService
+    private readonly resultsService: ResultsService,
+    private readonly resultsEngine: ResultsEngineService
   ) {}
 
   /**
@@ -245,6 +247,13 @@ export class TeacherGradebookService {
   }
 
   /**
+   * Alias for saveGradebookDraft to satisfy saveDraftGradebook API contract.
+   */
+  async saveDraftGradebook(tenantId: string, schoolId: string, userId: string, dto: SaveGradebookDraftDto) {
+    return this.saveGradebookDraft(tenantId, schoolId, userId, dto);
+  }
+
+  /**
    * Saves gradebook scores as DRAFT transactionally.
    */
   async saveGradebookDraft(tenantId: string, schoolId: string, userId: string, dto: SaveGradebookDraftDto) {
@@ -416,20 +425,9 @@ export class TeacherGradebookService {
             }
           }
 
-          // Recalculate deterministic total score
-          const allScores = await tx.assessmentScore.findMany({
-            where: { subjectResultId: subjectResult.id },
-          });
-
-          const totalScore = allScores.reduce((acc, curr) => acc + (curr.isAbsent ? 0 : (curr.score || 0)), 0);
-
-          await tx.subjectResult.update({
-            where: { id: subjectResult.id },
-            data: {
-              totalScore,
-              status: ResultStatus.DRAFT,
-            },
-          });
+          // Phase 6G Results Engine recalculation
+          await this.resultsEngine.recalculateSubjectResult(tenantId, schoolId, subjectResult.id, tx);
+          await tx.subjectResult.update({ where: { id: subjectResult.id }, data: { status: ResultStatus.DRAFT } });
 
           savedCount++;
         }

@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { kernel, tenantContext, ScoreProvenance, CBTAttemptStatus, QuestionType, WorkflowStatus, ResultStatus } from "@saas/core-platform";
 import { ResultsService } from "../../academics/services/results.service";
+import { ResultsEngineService } from "../../academics/services/results-engine.service";
 
 export class ReviewAnswerDto {
   answerId: string;
@@ -13,7 +14,10 @@ export class ReviewAttemptDto {
 
 @Injectable()
 export class CBTCompilerService {
-  constructor(private readonly resultsService: ResultsService) {}
+  constructor(
+    private readonly resultsService: ResultsService,
+    private readonly resultsEngine: ResultsEngineService
+  ) {}
 
   async verifyTeacherAuthority(tenantId: string, schoolId: string, actorUserId: string, component: any) {
     const staff = await kernel.db.staffProfile.findFirst({
@@ -234,8 +238,9 @@ export class CBTCompilerService {
                 reason: "CBT Auto-Compilation"
               }
             });
-            compiledCount++;
-          } else {
+            await this.resultsEngine.recalculateSubjectResult(tenantId, schoolId, subjectResult.id, tx);
+              compiledCount++;
+            } else {
             const createdScore = await tx.assessmentScore.create({
               data: {
                 tenantId, schoolId, subjectResultId: subjectResult.id,
@@ -255,11 +260,12 @@ export class CBTCompilerService {
                 reason: "CBT Initial Auto-Compilation"
               }
             });
-            compiledCount++;
+            await this.resultsEngine.recalculateSubjectResult(tenantId, schoolId, subjectResult.id, tx);
+              compiledCount++;
+            }
           }
-        }
-        
-        return { success: true, compiledCount, skippedCount, gradebookSubmissionId: submission.id };
+
+          return { success: true, compiledCount, skippedCount, gradebookSubmissionId: submission.id };
       });
     });
   }

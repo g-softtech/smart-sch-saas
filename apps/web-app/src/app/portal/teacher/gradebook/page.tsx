@@ -18,18 +18,18 @@ import {
   UserX,
   AlertCircle,
   Loader2,
+  ShieldAlert,
+  Cpu,
 } from "lucide-react";
 
 interface AcademicYear {
   id: string;
   name: string;
-  isCurrent?: boolean;
 }
 
 interface Term {
   id: string;
   name: string;
-  isCurrent?: boolean;
 }
 
 interface TeacherScopeItem {
@@ -48,13 +48,27 @@ interface TeacherScopeItem {
   isPrimary: boolean;
 }
 
+interface AssessmentComponent {
+  id: string;
+  academicYearId: string;
+  termId: string;
+  classId: string;
+  armId?: string | null;
+  subjectId: string;
+  type: string;
+  title: string;
+  maxScore: number;
+  weight: number;
+}
+
 interface StudentScoreItem {
   assessmentScoreId?: string;
   type?: string;
   assessmentComponentId?: string;
-  score?: number;
+  score?: number | null;
   maxScore: number;
   isAbsent?: boolean;
+  provenance?: string;
 }
 
 interface GradebookStudent {
@@ -96,17 +110,21 @@ interface GradebookData {
   students: GradebookStudent[];
 }
 
-interface StudentFormRow {
+interface ComponentScoreForm {
+  assessmentComponentId: string;
+  type: string;
+  score: string;
+  maxScore: number;
+  isAbsent: boolean;
+  provenance?: string;
+}
+
+interface DynamicStudentRow {
   studentId: string;
   studentNumber: string | null;
   firstName: string;
   lastName: string;
-  caScore: string;
-  caMaxScore: number;
-  caIsAbsent: boolean;
-  examScore: string;
-  examMaxScore: number;
-  examIsAbsent: boolean;
+  componentScores: Record<string, ComponentScoreForm>;
   totalScore?: number | null;
   grade?: string | null;
   remark?: string | null;
@@ -126,7 +144,11 @@ export default function TeacherGradebookPage() {
   const [gradebookLoading, setGradebookLoading] = useState(false);
   const [gradebookError, setGradebookError] = useState<string | null>(null);
   const [gradebookData, setGradebookData] = useState<GradebookData | null>(null);
-  const [studentRows, setStudentRows] = useState<StudentFormRow[]>([]);
+
+  // Authoritative components & config
+  const [components, setComponents] = useState<AssessmentComponent[]>([]);
+  const [hasGradingConfig, setHasGradingConfig] = useState<boolean>(true);
+  const [studentRows, setStudentRows] = useState<DynamicStudentRow[]>([]);
 
   const [search, setSearch] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
@@ -134,7 +156,7 @@ export default function TeacherGradebookPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Initial reference data load
+  // Load reference data
   useEffect(() => {
     async function loadReferenceData() {
       try {
@@ -157,7 +179,7 @@ export default function TeacherGradebookPage() {
     loadReferenceData();
   }, []);
 
-  // Fetch teacher scope whenever Year & Term are selected
+  // Fetch teacher scope
   const fetchScope = useCallback(async () => {
     if (!selectedYearId || !selectedTermId) return;
     try {
@@ -184,7 +206,7 @@ export default function TeacherGradebookPage() {
     }
   }, [selectedYearId, selectedTermId, fetchScope]);
 
-  // Load Gradebook for a selected scope
+  // Load Gradebook & Dynamic Assessment Components for selected scope
   const loadGradebook = async (scopeItem: TeacherScopeItem) => {
     setSelectedScope(scopeItem);
     try {
@@ -198,33 +220,64 @@ export default function TeacherGradebookPage() {
         url += `&armId=${scopeItem.armId}`;
       }
 
-      const res = await apiClient.get<GradebookData>(url);
+      // Fetch Gradebook roster, components, and grading config concurrently
+      const [res, compRes, configRes] = await Promise.all([
+        apiClient.get<GradebookData>(url),
+        apiClient.get<any>(
+          `/api/v1/academics/results/components?academicYearId=${scopeItem.academicYearId}&termId=${scopeItem.termId}&classId=${scopeItem.classId}&subjectId=${scopeItem.subjectId}`
+        ),
+        apiClient.get<any>(
+          `/api/v1/academics/results/grading-config?academicYearId=${scopeItem.academicYearId}&termId=${scopeItem.termId}`
+        ),
+      ]);
+
+      const activeComps: AssessmentComponent[] = compRes?.data || compRes || [];
+      const config = configRes?.data !== undefined ? configRes.data : configRes;
+
       setGradebookData(res);
+      setComponents(activeComps);
+      setHasGradingConfig(!!config);
 
-      // Initialize form rows from student scores
-      const rows: StudentFormRow[] = (res.students || []).map((s) => {
-        const caScoreObj = s.scores.find(
-          (sc) => sc.type === "CA" || sc.assessmentComponentId?.toLowerCase().includes("ca")
-        );
-        const examScoreObj = s.scores.find(
-          (sc) => sc.type === "EXAM" || sc.assessmentComponentId?.toLowerCase().includes("exam")
-        );
+      // Build dynamic rows from components
+      const rows: DynamicStudentRow[] = (res.students || []).map((s) => {
+        const compScores: Record<string, ComponentScoreForm> = {};
 
-        // If no explicit CA or EXAM type found, pick by order
-        const fallbackCa = caScoreObj || s.scores[0];
-        const fallbackExam = examScoreObj || s.scores[1];
+        // For each active component, resolve existing score or fallback
+        activeComps.forEach((comp) => {
+          const match = s.scores.find(
+            (sc) => sc.assessmentComponentId === comp.id || sc.type === comp.type
+          );
+          compScores[comp.id] = {
+            assessmentComponentId: comp.id,
+            type: comp.type,
+            score: match?.score !== undefined && match?.score !== null ? String(match.score) : "",
+            maxScore: comp.maxScore,
+            isAbsent: match?.isAbsent || false,
+            provenance: match?.provenance,
+          };
+        });
+
+        // Fallback: If no components configured, map whatever raw scores exist
+        if (activeComps.length === 0) {
+          s.scores.forEach((sc, idx) => {
+            const fallbackId = sc.assessmentComponentId || `comp-${idx}`;
+            compScores[fallbackId] = {
+              assessmentComponentId: fallbackId,
+              type: sc.type || "CA",
+              score: sc.score !== undefined && sc.score !== null ? String(sc.score) : "",
+              maxScore: sc.maxScore || 100,
+              isAbsent: sc.isAbsent || false,
+              provenance: sc.provenance,
+            };
+          });
+        }
 
         return {
           studentId: s.studentId,
           studentNumber: s.studentNumber,
           firstName: s.firstName,
           lastName: s.lastName,
-          caScore: fallbackCa?.score !== undefined && fallbackCa?.score !== null ? String(fallbackCa.score) : "",
-          caMaxScore: fallbackCa?.maxScore || 40,
-          caIsAbsent: fallbackCa?.isAbsent || false,
-          examScore: fallbackExam?.score !== undefined && fallbackExam?.score !== null ? String(fallbackExam.score) : "",
-          examMaxScore: fallbackExam?.maxScore || 60,
-          examIsAbsent: fallbackExam?.isAbsent || false,
+          componentScores: compScores,
           totalScore: s.totalScore,
           grade: s.grade,
           remark: s.remark,
@@ -239,33 +292,48 @@ export default function TeacherGradebookPage() {
     }
   };
 
-  // Handle student row score changes
-  const handleScoreChange = (
-    studentId: string,
-    field: "caScore" | "examScore",
-    value: string
-  ) => {
+  // Handle score change for dynamic component
+  const handleScoreChange = (studentId: string, componentId: string, val: string) => {
     setStudentRows((prev) =>
       prev.map((row) => {
         if (row.studentId !== studentId) return row;
-        return { ...row, [field]: value };
+        const currentComp = row.componentScores[componentId];
+        if (!currentComp) return row;
+
+        return {
+          ...row,
+          componentScores: {
+            ...row.componentScores,
+            [componentId]: {
+              ...currentComp,
+              score: val,
+            },
+          },
+        };
       })
     );
   };
 
-  const handleAbsentToggle = (
-    studentId: string,
-    field: "caIsAbsent" | "examIsAbsent"
-  ) => {
+  // Toggle absent status
+  const handleAbsentToggle = (studentId: string, componentId: string) => {
     setStudentRows((prev) =>
       prev.map((row) => {
         if (row.studentId !== studentId) return row;
-        const newAbsent = !row[field];
-        if (field === "caIsAbsent") {
-          return { ...row, caIsAbsent: newAbsent, caScore: newAbsent ? "0" : row.caScore };
-        } else {
-          return { ...row, examIsAbsent: newAbsent, examScore: newAbsent ? "0" : row.examScore };
-        }
+        const currentComp = row.componentScores[componentId];
+        if (!currentComp) return row;
+
+        const newAbsent = !currentComp.isAbsent;
+        return {
+          ...row,
+          componentScores: {
+            ...row.componentScores,
+            [componentId]: {
+              ...currentComp,
+              isAbsent: newAbsent,
+              score: newAbsent ? "0" : currentComp.score,
+            },
+          },
+        };
       })
     );
   };
@@ -280,20 +348,13 @@ export default function TeacherGradebookPage() {
 
       const entries = studentRows.map((row) => ({
         studentId: row.studentId,
-        scores: [
-          {
-            type: "CA",
-            score: row.caIsAbsent ? 0 : row.caScore !== "" ? Number(row.caScore) : 0,
-            maxScore: row.caMaxScore,
-            isAbsent: row.caIsAbsent,
-          },
-          {
-            type: "EXAM",
-            score: row.examIsAbsent ? 0 : row.examScore !== "" ? Number(row.examScore) : 0,
-            maxScore: row.examMaxScore,
-            isAbsent: row.examIsAbsent,
-          },
-        ],
+        scores: Object.values(row.componentScores).map((s) => ({
+          assessmentComponentId: s.assessmentComponentId.startsWith("comp-") ? undefined : s.assessmentComponentId,
+          type: s.type,
+          score: s.isAbsent ? 0 : s.score !== "" ? Number(s.score) : 0,
+          maxScore: s.maxScore,
+          isAbsent: s.isAbsent,
+        })),
       }));
 
       const payload = {
@@ -308,7 +369,7 @@ export default function TeacherGradebookPage() {
       await apiClient.post("/api/v1/academics/teacher-portal/gradebooks/draft", payload);
       setActionSuccess("Gradebook draft saved successfully.");
 
-      // Reload gradebook to refresh total scores/status
+      // Reload gradebook to update total scores and status
       await loadGradebook(selectedScope);
     } catch (err: any) {
       setActionError(err.message || "Failed to save gradebook draft.");
@@ -325,44 +386,19 @@ export default function TeacherGradebookPage() {
       setActionError(null);
       setActionSuccess(null);
 
-      // Save draft first to commit current changes
-      const entries = studentRows.map((row) => ({
-        studentId: row.studentId,
-        scores: [
-          {
-            type: "CA",
-            score: row.caIsAbsent ? 0 : row.caScore !== "" ? Number(row.caScore) : 0,
-            maxScore: row.caMaxScore,
-            isAbsent: row.caIsAbsent,
-          },
-          {
-            type: "EXAM",
-            score: row.examIsAbsent ? 0 : row.examScore !== "" ? Number(row.examScore) : 0,
-            maxScore: row.examMaxScore,
-            isAbsent: row.examIsAbsent,
-          },
-        ],
-      }));
+      await handleSaveDraft();
 
-      await apiClient.post("/api/v1/academics/teacher-portal/gradebooks/draft", {
+      const payload = {
         academicYearId: selectedScope.academicYearId,
         termId: selectedScope.termId,
         classId: selectedScope.classId,
         armId: selectedScope.armId || undefined,
         subjectId: selectedScope.subjectId,
-        entries,
-      });
+      };
 
-      // Execute submission
-      await apiClient.post("/api/v1/academics/teacher-portal/gradebooks/submit", {
-        academicYearId: selectedScope.academicYearId,
-        termId: selectedScope.termId,
-        classId: selectedScope.classId,
-        armId: selectedScope.armId || undefined,
-        subjectId: selectedScope.subjectId,
-      });
+      await apiClient.post("/api/v1/academics/teacher-portal/gradebooks/submit", payload);
+      setActionSuccess("Gradebook submitted successfully for administrative approval.");
 
-      setActionSuccess("Gradebook submitted for administrative review.");
       await loadGradebook(selectedScope);
     } catch (err: any) {
       setActionError(err.message || "Failed to submit gradebook.");
@@ -371,412 +407,317 @@ export default function TeacherGradebookPage() {
     }
   };
 
-  const status = gradebookData?.submission.status || "DRAFT";
-  const isLocked = status === "SUBMITTED" || status === "APPROVED" || status === "PUBLISHED";
+  const status = gradebookData?.submission?.status || "DRAFT";
+  const isEditable = status === "DRAFT" || status === "REJECTED";
 
   const filteredRows = studentRows.filter((r) => {
-    const term = search.toLowerCase();
+    if (!search.trim()) return true;
+    const termStr = search.toLowerCase();
     return (
-      r.firstName.toLowerCase().includes(term) ||
-      r.lastName.toLowerCase().includes(term) ||
-      (r.studentNumber && r.studentNumber.toLowerCase().includes(term))
+      r.firstName.toLowerCase().includes(termStr) ||
+      r.lastName.toLowerCase().includes(termStr) ||
+      (r.studentNumber && r.studentNumber.toLowerCase().includes(termStr))
     );
   });
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Header & Academic Context Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1E3A5F] pb-6">
+    <div className="space-y-6 text-slate-100">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-3">
-            <GraduationCap className="h-8 w-8 text-[#D2AD36]" />
-            Teacher Gradebook Portal
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <GraduationCap className="h-6 w-6 text-[#D2AD36]" />
+            Teacher Gradebook & Scores Workspace
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Enter assessment scores, save drafts, and submit academic results for administrative approval.
+            Authoritative score entry & submission portal for assigned academic subjects.
           </p>
         </div>
+      </div>
 
-        {/* Academic Year & Term Dropdowns */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-[#0A192E] border border-[#1E3A5F] rounded-xl px-3 py-1.5">
-            <Calendar className="h-4 w-4 text-[#D2AD36]" />
+      {/* Scope Selector */}
+      <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+        <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-[#D2AD36]" /> Academic Year & Term Context
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Academic Year</label>
             <select
               value={selectedYearId}
               onChange={(e) => setSelectedYearId(e.target.value)}
-              className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
             >
+              <option value="">Select Year...</option>
               {academicYears.map((y) => (
-                <option key={y.id} value={y.id} className="bg-[#070B14] text-white">
+                <option key={y.id} value={y.id}>
                   {y.name}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="flex items-center gap-2 bg-[#0A192E] border border-[#1E3A5F] rounded-xl px-3 py-1.5">
-            <BookOpen className="h-4 w-4 text-[#D2AD36]" />
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Term</label>
             <select
               value={selectedTermId}
               onChange={(e) => setSelectedTermId(e.target.value)}
-              className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
             >
-              {terms.map((t) => (
-                <option key={t.id} value={t.id} className="bg-[#070B14] text-white">
-                  {t.name}
-                </option>
-              ))}
+              <option value="">Select Term...</option>
+              {terms
+                .filter((t) => !selectedYearId || (t as any).academicYearId === selectedYearId)
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
             </select>
           </div>
-
-          <button
-            onClick={fetchScope}
-            disabled={scopeLoading}
-            className="p-2 bg-[#1E3A5F] hover:bg-[#2A4D7C] text-slate-200 rounded-xl transition"
-            title="Refresh Scopes"
-          >
-            <RefreshCw className={`h-4 w-4 ${scopeLoading ? "animate-spin" : ""}`} />
-          </button>
         </div>
       </div>
 
-      {/* Action Messages */}
-      {actionSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span>{actionSuccess}</span>
-          </div>
-          <button onClick={() => setActionSuccess(null)} className="text-emerald-400 font-bold hover:underline">
-            Dismiss
-          </button>
+      {/* Scope Cards */}
+      {scopeLoading ? (
+        <div className="p-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-[#D2AD36]" /> Loading assigned gradebook scopes...
         </div>
-      )}
-
-      {actionError && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{actionError}</span>
-          </div>
-          <button onClick={() => setActionError(null)} className="text-rose-400 font-bold hover:underline">
-            Dismiss
-          </button>
+      ) : scopeError ? (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" /> {scopeError}
         </div>
-      )}
-
-      {!selectedScope ? (
-        /* ASSIGNED SCOPES LIST VIEW */
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-[#D2AD36]" />
-              Assigned Gradebook Scopes
-            </h2>
-            <span className="text-xs text-slate-400">
-              Select a class subject below to view roster & enter scores
-            </span>
-          </div>
-
-          {scopeLoading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-slate-400 space-y-3 bg-[#0A192E]/60 border border-[#1E3A5F] rounded-3xl">
-              <Loader2 className="h-10 w-10 animate-spin text-[#D2AD36]" />
-              <p className="text-sm font-medium">Fetching assigned gradebook scopes...</p>
-            </div>
-          ) : scopeError ? (
-            <div className="p-6 rounded-3xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 shrink-0" />
-              <span>{scopeError}</span>
-            </div>
-          ) : assignedScopes.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 space-y-2 bg-[#0A192E]/60 border border-[#1E3A5F] rounded-3xl">
-              <BookOpen className="h-10 w-10 text-slate-600 mx-auto" />
-              <p className="text-sm font-medium text-white">No active teaching assignments found for this term.</p>
-              <p className="text-xs text-slate-500">Contact your academic administrator if your subject assignment is missing.</p>
+      ) : !selectedScope ? (
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assigned Gradebook Scopes</h3>
+          {assignedScopes.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500 bg-slate-900/40 rounded-2xl border border-slate-800">
+              No active teaching assignments found for this term.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {assignedScopes.map((scope) => (
                 <div
                   key={scope.assignmentId}
                   onClick={() => loadGradebook(scope)}
-                  className="bg-[#0A192E]/90 border border-[#1E3A5F] hover:border-[#D2AD36] rounded-3xl p-6 shadow-xl cursor-pointer transition group space-y-4"
+                  className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#D2AD36]/50 cursor-pointer transition-all space-y-3 group"
                 >
-                  <div className="flex items-center justify-between border-b border-[#1E3A5F] pb-3">
-                    <div>
-                      <h3 className="text-base font-bold text-white group-hover:text-[#D2AD36] transition">
-                        {scope.className} {scope.armName ? `(${scope.armName})` : ""}
-                      </h3>
-                      <span className="text-xs text-[#D2AD36] font-semibold">{scope.subjectName}</span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-[#D2AD36] group-hover:translate-x-1 transition" />
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>
-                      Scope: <strong className="text-slate-200">{scope.scope}</strong>
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#D2AD36]/10 text-[#D2AD36] font-bold text-[10px]">
+                      {scope.className} {scope.armName ? `(${scope.armName})` : ""}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${scope.isPrimary ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-700 text-slate-300"}`}>
-                      {scope.isPrimary ? "Primary Teacher" : "Co-Teacher"}
-                    </span>
+                    <ChevronRight className="h-4 w-4 text-slate-500 group-hover:text-[#D2AD36] transition-colors" />
                   </div>
-
-                  <div className="pt-2 text-right">
-                    <span className="text-xs font-bold text-[#D2AD36] group-hover:underline">
-                      Open Gradebook &rarr;
-                    </span>
-                  </div>
+                  <h4 className="font-bold text-white text-base">{scope.subjectName}</h4>
+                  <p className="text-xs text-slate-400">{scope.academicYearName} • {scope.termName}</p>
                 </div>
               ))}
             </div>
           )}
         </div>
       ) : (
-        /* GRADEBOOK GRID SCORE ENTRY VIEW */
+        /* Selected Gradebook Roster View */
         <div className="space-y-6">
-          {/* Top Scope Header & Actions Bar */}
-          <div className="bg-[#0A192E]/90 border border-[#1E3A5F] rounded-3xl p-6 shadow-xl space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#1E3A5F] pb-6">
-              <div>
-                <button
-                  onClick={() => setSelectedScope(null)}
-                  className="mb-3 px-3 py-1.5 bg-[#1E3A5F] hover:bg-[#2A4D7C] text-slate-200 text-xs font-bold rounded-xl transition inline-flex items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4 text-[#D2AD36]" />
-                  Back to Scopes List
-                </button>
-                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-                  <span>{selectedScope.className} {selectedScope.armName ? `(${selectedScope.armName})` : ""}</span>
-                  <span className="text-slate-400">&bull;</span>
-                  <span className="text-[#D2AD36]">{selectedScope.subjectName}</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  Term: <span className="text-slate-200 font-semibold">{selectedScope.termName}</span> | Academic Year: <span className="text-slate-200 font-semibold">{selectedScope.academicYearName}</span>
-                </p>
-              </div>
+          {/* Top Bar Navigation */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+            <button
+              onClick={() => setSelectedScope(null)}
+              className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Scope List
+            </button>
 
-              {/* Status Badge & Action Controls */}
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Workflow Status Badge */}
-                <div className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
-                  status === "PUBLISHED"
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                    : status === "APPROVED"
-                    ? "bg-teal-500/20 text-teal-300 border-teal-500/40"
+            <div className="flex items-center gap-3">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                  status === "DRAFT"
+                    ? "bg-slate-800 text-slate-300 border-slate-700"
                     : status === "SUBMITTED"
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                    : status === "REJECTED"
-                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                    : "bg-slate-700/50 text-slate-300 border-slate-600"
-                }`}>
-                  {isLocked ? <Lock className="h-3.5 w-3.5" /> : null}
-                  <span>STATUS: {status}</span>
-                </div>
+                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    : status === "APPROVED"
+                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                    : status === "PUBLISHED"
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                }`}
+              >
+                Status: {status}
+              </span>
 
-                {/* Save Draft Button */}
-                {!isLocked && (
+              {isEditable && (
+                <>
                   <button
                     onClick={handleSaveDraft}
                     disabled={savingDraft || submitting}
-                    className="px-4 py-2 bg-[#1E3A5F] hover:bg-[#2A4D7C] text-white text-xs font-bold rounded-xl transition flex items-center gap-2 shadow-md disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
                   >
-                    <Save className={`h-4 w-4 text-[#D2AD36] ${savingDraft ? "animate-spin" : ""}`} />
-                    {savingDraft ? "Saving..." : "Save Draft"}
+                    {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <Save className="h-3.5 w-3.5 text-[#D2AD36]" /> Save Draft
                   </button>
-                )}
 
-                {/* Submit Button */}
-                {!isLocked && (
                   <button
                     onClick={handleSubmitGradebook}
-                    disabled={submitting || savingDraft || !selectedScope.isPrimary}
-                    title={!selectedScope.isPrimary ? "Only the primary assigned teacher can submit this gradebook." : "Submit gradebook for admin review"}
-                    className="px-4 py-2 bg-[#D2AD36] hover:bg-[#b8952b] text-[#0A192E] text-xs font-extrabold rounded-xl transition flex items-center gap-2 shadow-md disabled:opacity-50"
+                    disabled={savingDraft || submitting}
+                    className="px-4 py-2 rounded-xl bg-[#D2AD36] hover:bg-[#c29d2b] text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
                   >
-                    <Send className={`h-4 w-4 ${submitting ? "animate-spin" : ""}`} />
-                    {submitting ? "Submitting..." : "Submit Gradebook"}
+                    {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <Send className="h-3.5 w-3.5" /> Submit Gradebook
                   </button>
-                )}
-              </div>
+                </>
+              )}
             </div>
+          </div>
 
-            {/* Rejection Alert Banner */}
-            {status === "REJECTED" && (
-              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs space-y-1">
-                <div className="flex items-center gap-2 font-bold text-rose-200 text-sm">
-                  <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0" />
-                  <span>Gradebook Submission Rejected by Admin</span>
-                </div>
-                <p className="text-slate-300 font-mono text-[11px] bg-rose-950/40 p-2.5 rounded-xl border border-rose-500/20">
-                  Reason: &quot;{gradebookData?.submission.rejectionReason || "No explicit reason provided."}&quot;
-                </p>
-                <p className="text-[11px] text-rose-300/80">
-                  You can edit student scores below, save changes as draft, and resubmit for approval.
-                </p>
-              </div>
-            )}
+          {/* Warnings & Feedback */}
+          {!hasGradingConfig && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-300 text-xs flex items-center gap-3">
+              <ShieldAlert className="h-5 w-5 shrink-0 text-amber-400" />
+              <span>
+                <strong>Authoritative Grading Config Missing:</strong> An administrator has not assigned a Grading Scale to this term. Scores can be saved as draft, but total grades cannot be computed until configuration is completed.
+              </span>
+            </div>
+          )}
 
-            {/* Locked Info Banner */}
-            {isLocked && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-3">
-                <Lock className="h-5 w-5 text-amber-400 shrink-0" />
-                <div>
-                  <p className="font-bold text-amber-300">Gradebook Editing Locked</p>
-                  <p className="text-slate-300 text-[11px]">
-                    This gradebook has been submitted or approved ({status}). Further edits are disabled unless reopened by an administrator.
-                  </p>
-                </div>
-              </div>
-            )}
+          {actionError && (
+            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" /> {actionError}
+            </div>
+          )}
 
-            {/* Search Input */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+          {actionSuccess && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 text-xs flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" /> {actionSuccess}
+            </div>
+          )}
+
+          {/* Roster & Scores Table */}
+          <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-xs">
+                <Search className="h-4 w-4 absolute left-3 top-3 text-slate-500" />
                 <input
                   type="text"
+                  placeholder="Filter student roster..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search roster by student name..."
-                  className="w-full pl-9 pr-4 py-2 bg-[#070B14] border border-[#1E3A5F] rounded-xl text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-[#D2AD36]"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#D2AD36]"
                 />
               </div>
 
-              <span className="text-xs text-slate-400 font-medium">
-                Enrolled Roster: <span className="text-[#D2AD36] font-bold">{studentRows.length}</span> students
-              </span>
+              <div className="text-xs text-slate-400">
+                Class: <strong className="text-white">{selectedScope.className} {selectedScope.armName ? `(${selectedScope.armName})` : ""}</strong> • Subject: <strong className="text-white">{selectedScope.subjectName}</strong>
+              </div>
             </div>
 
-            {/* Roster Score Grid Table */}
             {gradebookLoading ? (
-              <div className="py-16 flex flex-col items-center justify-center text-slate-400 space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-[#D2AD36]" />
-                <p className="text-xs font-medium">Loading gradebook score matrix...</p>
-              </div>
-            ) : gradebookError ? (
-              <div className="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 shrink-0" />
-                <span>{gradebookError}</span>
+              <div className="p-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-[#D2AD36]" /> Loading roster...
               </div>
             ) : filteredRows.length === 0 ? (
-              <div className="py-12 text-center text-slate-400 space-y-2">
-                <UserX className="h-10 w-10 text-slate-600 mx-auto" />
-                <p className="text-sm font-medium text-white">No enrolled students found.</p>
+              <div className="p-8 text-center text-xs text-slate-500 bg-slate-950/40 rounded-2xl border border-slate-800">
+                No enrolled students found matching search criteria.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-[#1E3A5F]">
-                <table className="w-full text-left text-xs text-slate-200">
-                  <thead className="bg-[#070B14] text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-[#1E3A5F]">
-                    <tr>
-                      <th className="py-3 px-4">#</th>
-                      <th className="py-3 px-4">Student Name</th>
-                      <th className="py-3 px-4">Student No.</th>
-                      <th className="py-3 px-4 text-center">CA Score (Max 40)</th>
-                      <th className="py-3 px-4 text-center">CA Absent</th>
-                      <th className="py-3 px-4 text-center">Exam Score (Max 60)</th>
-                      <th className="py-3 px-4 text-center">Exam Absent</th>
-                      <th className="py-3 px-4 text-center">Total Score</th>
-                      <th className="py-3 px-4 text-center">Grade</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left text-slate-300">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase">
+                      <th className="p-3">Student</th>
+
+                      {/* Dynamic Component Columns */}
+                      {components.length > 0 ? (
+                        components.map((comp) => (
+                          <th key={comp.id} className="p-3 text-center">
+                            <div className="flex flex-col items-center">
+                              <span className="text-white font-bold">{comp.title}</span>
+                              <span className="text-[10px] text-[#D2AD36] font-mono">
+                                ({comp.type} • {comp.maxScore}pts • {comp.weight}%)
+                              </span>
+                            </div>
+                          </th>
+                        ))
+                      ) : (
+                        <th className="p-3 text-center text-amber-400">Unconfigured Assessment Component</th>
+                      )}
+
+                      <th className="p-3 text-right">Weighted Total</th>
+                      <th className="p-3 text-center">Grade</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1E3A5F]/60 bg-[#0A192E]">
-                    {filteredRows.map((row, idx) => {
-                      const caVal = row.caIsAbsent ? 0 : Number(row.caScore || 0);
-                      const examVal = row.examIsAbsent ? 0 : Number(row.examScore || 0);
-                      const totalPreview = caVal + examVal;
-                      const caInvalid = !row.caIsAbsent && row.caScore !== "" && (Number(row.caScore) < 0 || Number(row.caScore) > row.caMaxScore);
-                      const examInvalid = !row.examIsAbsent && row.examScore !== "" && (Number(row.examScore) < 0 || Number(row.examScore) > row.examMaxScore);
+                  <tbody>
+                    {filteredRows.map((row) => (
+                      <tr key={row.studentId} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+                        <td className="p-3 font-medium text-white">
+                          <div>
+                            {row.firstName} {row.lastName}
+                          </div>
+                          {row.studentNumber && <div className="text-[10px] text-slate-500 font-mono">{row.studentNumber}</div>}
+                        </td>
 
-                      return (
-                        <tr key={row.studentId} className="hover:bg-[#1E3A5F]/30 transition">
-                          <td className="py-3 px-4 text-slate-500 font-mono">{idx + 1}</td>
-                          <td className="py-3 px-4 font-bold text-white">
-                            {row.lastName}, {row.firstName}
-                          </td>
-                          <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">
-                            {row.studentNumber || "N/A"}
-                          </td>
+                        {/* Dynamic Component Score Inputs */}
+                        {components.length > 0 ? (
+                          components.map((comp) => {
+                            const scoreData = row.componentScores[comp.id] || {
+                              assessmentComponentId: comp.id,
+                              type: comp.type,
+                              score: "",
+                              maxScore: comp.maxScore,
+                              isAbsent: false,
+                            };
 
-                          {/* CA Score Input */}
-                          <td className="py-3 px-4 text-center">
-                            <input
-                              type="number"
-                              min={0}
-                              max={row.caMaxScore}
-                              step={0.5}
-                              disabled={isLocked || row.caIsAbsent}
-                              value={row.caScore}
-                              onChange={(e) => handleScoreChange(row.studentId, "caScore", e.target.value)}
-                              placeholder="0"
-                              className={`w-20 px-2.5 py-1.5 bg-[#070B14] border rounded-xl text-center text-xs text-white font-mono focus:outline-none disabled:opacity-40 ${
-                                caInvalid
-                                  ? "border-rose-500 bg-rose-500/10 focus:border-rose-400"
-                                  : "border-[#1E3A5F] focus:border-[#D2AD36]"
-                              }`}
-                            />
-                          </td>
+                            return (
+                              <td key={comp.id} className="p-3 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <input
+                                    type="number"
+                                    placeholder={`0-${comp.maxScore}`}
+                                    disabled={!isEditable || scoreData.isAbsent}
+                                    value={scoreData.score}
+                                    onChange={(e) => handleScoreChange(row.studentId, comp.id, e.target.value)}
+                                    className="w-20 bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-center text-xs text-white focus:outline-none focus:border-[#D2AD36] disabled:opacity-40"
+                                  />
+                                  <label className="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      disabled={!isEditable}
+                                      checked={scoreData.isAbsent}
+                                      onChange={() => handleAbsentToggle(row.studentId, comp.id)}
+                                      className="rounded bg-slate-950 border-slate-800 text-[#D2AD36]"
+                                    />
+                                    Abs
+                                  </label>
 
-                          {/* CA Absent Checkbox */}
-                          <td className="py-3 px-4 text-center">
-                            <input
-                              type="checkbox"
-                              disabled={isLocked}
-                              checked={row.caIsAbsent}
-                              onChange={() => handleAbsentToggle(row.studentId, "caIsAbsent")}
-                              className="h-4 w-4 rounded accent-[#D2AD36] cursor-pointer disabled:cursor-not-allowed"
-                            />
-                          </td>
+                                  {/* Provenance Badge */}
+                                  {scoreData.provenance === "CBT" && (
+                                    <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[9px] font-bold border border-blue-500/30 flex items-center gap-1" title="CBT Auto-Compiled Score">
+                                      <Cpu className="h-3 w-3" /> CBT
+                                    </span>
+                                  )}
+                                  {scoreData.provenance === "MANUAL" && (
+                                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium" title="Manual Score Entry">
+                                      Manual
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })
+                        ) : (
+                          <td className="p-3 text-center text-slate-500 italic">No component columns</td>
+                        )}
 
-                          {/* Exam Score Input */}
-                          <td className="py-3 px-4 text-center">
-                            <input
-                              type="number"
-                              min={0}
-                              max={row.examMaxScore}
-                              step={0.5}
-                              disabled={isLocked || row.examIsAbsent}
-                              value={row.examScore}
-                              onChange={(e) => handleScoreChange(row.studentId, "examScore", e.target.value)}
-                              placeholder="0"
-                              className={`w-20 px-2.5 py-1.5 bg-[#070B14] border rounded-xl text-center text-xs text-white font-mono focus:outline-none disabled:opacity-40 ${
-                                examInvalid
-                                  ? "border-rose-500 bg-rose-500/10 focus:border-rose-400"
-                                  : "border-[#1E3A5F] focus:border-[#D2AD36]"
-                              }`}
-                            />
-                          </td>
-
-                          {/* Exam Absent Checkbox */}
-                          <td className="py-3 px-4 text-center">
-                            <input
-                              type="checkbox"
-                              disabled={isLocked}
-                              checked={row.examIsAbsent}
-                              onChange={() => handleAbsentToggle(row.studentId, "examIsAbsent")}
-                              className="h-4 w-4 rounded accent-[#D2AD36] cursor-pointer disabled:cursor-not-allowed"
-                            />
-                          </td>
-
-                          {/* Total Score */}
-                          <td className="py-3 px-4 text-center font-extrabold font-mono text-[#D2AD36]">
-                            {row.totalScore !== undefined && row.totalScore !== null
-                              ? row.totalScore
-                              : totalPreview > 0 ? totalPreview : "-"}
-                          </td>
-
-                          {/* Grade Preview */}
-                          <td className="py-3 px-4 text-center font-bold">
-                            {row.grade ? (
-                              <span className="px-2 py-0.5 rounded-md bg-[#1E3A5F] text-slate-200 text-[11px]">
-                                {row.grade}
-                              </span>
-                            ) : (
-                              <span className="text-slate-500 text-[11px]">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        <td className="p-3 text-right font-extrabold text-[#D2AD36] text-sm">
+                          {row.totalScore !== null && row.totalScore !== undefined ? `${row.totalScore} pts` : "—"}
+                        </td>
+                        <td className="p-3 text-center font-bold">
+                          {row.grade ? (
+                            <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              {row.grade}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
