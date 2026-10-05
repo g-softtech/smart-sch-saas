@@ -1,32 +1,43 @@
 import { PrismaClient } from "@saas/core-platform";
 import { TimetableService } from "../modules/academics/services/timetable.service";
 
-const prisma = new PrismaClient();
+const testDbUrl = process.env.DATABASE_URL || 'postgresql://schoolos:schoolos_password@localhost:5432/schoolos_db';
+if (!testDbUrl.includes('localhost') && !testDbUrl.includes('127.0.0.1')) {
+  console.error(`FATAL DATABASE SAFETY VIOLATION: DATABASE_URL must point to local PostgreSQL, got: ${testDbUrl}`);
+  process.exit(1);
+}
+process.env.DATABASE_URL = testDbUrl;
+
+const prisma = new PrismaClient({ datasources: { db: { url: testDbUrl } } });
 const service = new TimetableService();
 
 async function runTests() {
   console.log("=== Starting Timetable Integration Tests ===");
-  
-  // Setup data
-  const tenant = await prisma.tenant.findFirst();
-  if (!tenant) throw new Error("No tenant found. Run seeds.");
-  const school = await prisma.school.findFirst({ where: { tenantId: tenant.id } });
-  if (!school) throw new Error("No school found. Run seeds.");
-  
-  const ay = await prisma.academicYear.findFirst({ where: { schoolId: school.id } });
-  if (!ay) throw new Error("No AY found. Run seeds.");
-  const term = await prisma.term.findFirst({ where: { academicYearId: ay.id } });
-  const cls = await prisma.class.findFirst({ where: { schoolId: school.id } });
-  const arm = await prisma.arm.findFirst({ where: { classId: cls.id } });
-  const subject = await prisma.subject.findFirst({ where: { schoolId: school.id } });
-  const teacher = await prisma.staffProfile.findFirst({ where: { schoolId: school.id } });
+  const ts = Date.now();
+  const tenantId = `t-time-${ts}`;
+  const schoolId = `s-time-${ts}`;
+  const userId = `u-time-${ts}`;
+  const teacherId = `stf-time-${ts}`;
 
-  if (!term || !cls || !arm || !subject || !teacher) {
-    throw new Error("Missing reference data for test. Ensure term, class, arm, subject, teacher exist in school.");
-  }
+  try {
+    // 1. Setup Tenant, School, User, Staff
+    await prisma.tenant.create({ data: { id: tenantId, name: 'Timetable Test Tenant', slug: tenantId } });
+    await prisma.school.create({ data: { id: schoolId, tenantId, name: 'Timetable Test School' } });
+    await prisma.user.create({ data: { id: userId, email: `${userId}@example.com` } });
+    const teacher = await prisma.staffProfile.create({
+      data: {
+        id: teacherId, tenantId, schoolId, userId, staffNumber: `STF-${ts}`,
+        firstName: 'Bob', lastName: 'Teacher', gender: 'MALE',
+        type: 'TEACHING', status: 'ACTIVE', joiningDate: new Date(),
+      }
+    });
 
-  const tenantId = tenant.id;
-  const schoolId = school.id;
+    const ay = await prisma.academicYear.create({ data: { tenantId, schoolId, name: `AY-${ts}`, startDate: new Date('2026-01-01'), endDate: new Date('2026-12-31') }});
+    const term = await prisma.term.create({ data: { tenantId, academicYearId: ay.id, name: `Term 1-${ts}`, startDate: new Date('2026-01-01'), endDate: new Date('2026-04-30') }});
+    const cls = await prisma.class.create({ data: { tenantId, schoolId, name: `Class-${ts}` }});
+    const campus = await prisma.campus.create({ data: { tenantId, schoolId, name: `Campus-${ts}` }});
+    const arm = await prisma.arm.create({ data: { tenantId, classId: cls.id, campusId: campus.id, name: `Arm-${ts}` }});
+    const subject = await prisma.subject.create({ data: { tenantId, schoolId, name: `Subject-${ts}` }});
   
   // 1. Create Period
   console.log("1. Create Period");
@@ -143,7 +154,22 @@ async function runTests() {
   console.log("✅ Success");
 
   console.log("=== All DB Integration Tests Passed ===");
-  process.exit(0);
+  } finally {
+    console.log("Cleaning up test data...");
+    await prisma.timetableEntry.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.timetablePeriod.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.subject.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.arm.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.campus.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.class.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.term.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.academicYear.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.staffProfile.deleteMany({ where: { tenantId } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {});
+    await prisma.school.deleteMany({ where: { id: schoolId } }).catch(() => {});
+    await prisma.tenant.deleteMany({ where: { id: tenantId } }).catch(() => {});
+    await prisma.$disconnect();
+  }
 }
 
 runTests().catch(e => {
