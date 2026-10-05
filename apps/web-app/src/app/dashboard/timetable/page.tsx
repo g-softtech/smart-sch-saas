@@ -134,6 +134,48 @@ export default function TimetablePage() {
     }
   };
 
+  
+  const handleEditPeriod = async (period: Period) => {
+    const newName = prompt("Enter new period name:", period.name);
+    if (newName === null) return;
+    const newStart = prompt("Enter new start time (HH:MM):", period.startTime);
+    if (newStart === null) return;
+    const newEnd = prompt("Enter new end time (HH:MM):", period.endTime);
+    if (newEnd === null) return;
+    const isBreakStr = prompt("Is Break? (yes/no):", period.isBreak ? 'yes' : 'no');
+    if (isBreakStr === null) return;
+    
+    try {
+      setError(null);
+      await apiClient.patch(`/api/v1/academics/timetable/periods/${period.id}`, {
+        name: newName,
+        startTime: newStart,
+        endTime: newEnd,
+        isBreak: isBreakStr.toLowerCase() === 'yes'
+      });
+      setSuccess("Period updated successfully.");
+      fetchTimetable();
+    } catch (e: any) {
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to update period.");
+    }
+  };
+
+  const handleEditEntry = async (entry: TimetableEntry) => {
+    const newDay = prompt("Enter new Day (MONDAY, TUESDAY, etc.):", entry.dayOfWeek);
+    if (newDay === null) return;
+    
+    try {
+      setError(null);
+      await apiClient.patch(`/api/v1/academics/timetable/entries/${entry.id}`, {
+        dayOfWeek: newDay.toUpperCase()
+      });
+      setSuccess("Entry updated successfully.");
+      fetchTimetable();
+    } catch (e: any) {
+      setError((Array.isArray(e.data?.message) ? e.data.message.join(', ') : e.data?.message) || "Failed to update entry.");
+    }
+  };
+
   const handleDeletePeriod = async (id: string) => {
     if (!confirm('Are you sure you want to delete this period?')) return;
     try {
@@ -266,7 +308,8 @@ export default function TimetablePage() {
                     <tr key={period.id}>
                       <td className="border dark:border-gray-700 p-2 font-medium bg-gray-50 dark:bg-gray-900 dark:text-white whitespace-nowrap">
                         {period.name}<br/><span className="text-xs text-gray-500 dark:text-gray-400">{period.startTime} - {period.endTime}</span>
-                        <br /><button onClick={() => handleDeletePeriod(period.id)} className="text-red-500 hover:text-red-700 text-xs mt-1">Delete</button>
+                        <br /><button onClick={() => handleEditPeriod(period)} className="text-blue-500 hover:text-blue-700 text-xs mt-1 mr-2">Edit</button>
+                        <button onClick={() => handleDeletePeriod(period.id)} className="text-red-500 hover:text-red-700 text-xs mt-1">Delete</button>
                       </td>
                       {period.isBreak ? (
                         <td colSpan={5} className="border dark:border-gray-700 p-2 text-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 tracking-widest uppercase">
@@ -279,6 +322,7 @@ export default function TimetablePage() {
                             <td key={day} className="border dark:border-gray-700 p-2 align-top h-24 min-w-[120px]">
                               {entries.map(entry => (
                                 <div key={entry.id} className={`p-2 mb-2 rounded text-xs border relative group ${entry.armId ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800' : 'bg-purple-50 border-purple-200 dark:bg-purple-900/30 dark:border-purple-800'}`}>
+                                  <button onClick={() => handleEditEntry(entry)} className="absolute top-1 right-6 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity">✎</button>
                                   <button onClick={() => handleDeleteEntry(entry.id)} className="absolute top-1 right-1 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                   <div className="font-semibold text-gray-900 dark:text-white pr-4">{entry.subject?.name}</div>
                                   {entry.teacher && <div className="text-gray-600 dark:text-gray-400 truncate">{entry.teacher.firstName}</div>}
