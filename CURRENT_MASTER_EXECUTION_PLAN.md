@@ -189,7 +189,7 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Phase 6B E2E Suite:** `38/38 PASSED` (`packages/core-platform/src/scripts/test-phase6b-library-e2e.ts`) relocated correctly to `src/scripts/` per canonical pattern.
       - **Phase 5 Regression Suites:** Step 3 (`25/25`), Step 4 (`22/22`), Step 5 (`28/28`), Step 6 (`10/10`), Phase 5H (`8/8`), Phase 5I (`10/10`) all PASSED unchanged.
       - **Build Integrity:** Core Platform typecheck (`0 errors`), API Gateway build (`0 errors`), Web App build (`51/51` pages), Prisma migration `20261002050000_add_phase_6b_library_management_models` applied successfully. `git diff --check` PASSED.
-    - **Status:** **COMPLETE**. Commit `d70b0718` pushed. Browser manual acceptance for Phase 5H and Phase 6B remains **PENDING USER VERIFICATION**.
+    - **Status:** **COMPLETE**. Commit 8920ffa4 pushed to origin/main. Working tree clean. Commit `d70b0718` pushed. Browser manual acceptance for Phase 5H and Phase 6B remains **PENDING USER VERIFICATION**.
     - **Next phase:** Phase 6C Ã¯Â¿Â½ CBT & Examinations.
   - **Phase 6C â€” CBT & Examinations:** **COMPLETE & VERIFIED**
     - **Scope Completed:** Full end-to-end integration of the CBT sub-system with Phase 5G Gradebook. Completed via structured gates:
