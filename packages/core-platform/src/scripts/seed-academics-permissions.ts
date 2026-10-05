@@ -53,6 +53,14 @@ export const CANONICAL_ACADEMIC_PERMISSIONS = [
     name: "academics:review_lesson_notes",
     description: "Review, approve, and reject submitted lesson notes for administrative oversight",
   },
+  {
+    name: "academics:read_timetable",
+    description: "Read and list timetable periods and entries",
+  },
+  {
+    name: "academics:manage_timetable",
+    description: "Manage timetable periods and entries (create, update, delete)",
+  },
 ];
 
 export const CANONICAL_LIBRARY_PERMISSIONS = [

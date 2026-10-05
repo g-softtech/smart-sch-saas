@@ -2,6 +2,8 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Delete,
   Body,
   Param,
   Req,
@@ -13,8 +15,9 @@ import {
 import { TimetableService } from "../services/timetable.service";
 import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
 import { WorkspaceContextInterceptor } from "../../identity/interceptors/workspace-context.interceptor";
+import { RequirePermission } from "../../identity/security/require-permission.decorator";
 import { AcademicsPrismaExceptionFilter } from "../filters/prisma-exception.filter";
-import { CreateTimetablePeriodDto, CreateTimetableEntryDto } from "../dto/timetable.dto";
+import { CreateTimetablePeriodDto, CreateTimetableEntryDto, UpdateTimetablePeriodDto, UpdateTimetableEntryDto } from "../dto/timetable.dto";
 
 @Controller("api/v1/academics/timetable")
 @UseGuards(JwtAuthGuard)
@@ -24,6 +27,7 @@ export class TimetableController {
   constructor(private readonly timetableService: TimetableService) {}
 
   @Post("periods")
+  @RequirePermission("academics:manage_timetable")
   async createPeriod(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateTimetablePeriodDto,
@@ -32,6 +36,7 @@ export class TimetableController {
   }
 
   @Get("periods/:academicYearId")
+  @RequirePermission("academics:read_timetable")
   async listPeriods(
     @Req() req: Request & { workspace: any },
     @Param("academicYearId") academicYearId: string,
@@ -42,6 +47,7 @@ export class TimetableController {
   }
 
   @Post("entries")
+  @RequirePermission("academics:manage_timetable")
   async createEntry(
     @Req() req: Request & { workspace: any },
     @Body() dto: CreateTimetableEntryDto,
@@ -50,6 +56,7 @@ export class TimetableController {
   }
 
   @Get("class/:academicYearId/:termId/:classId")
+  @RequirePermission("academics:read_timetable")
   async listClassTimetable(
     @Req() req: Request & { workspace: any },
     @Param("academicYearId") academicYearId: string,
@@ -63,6 +70,7 @@ export class TimetableController {
   }
 
   @Get("teacher/:academicYearId/:termId/:teacherId")
+  @RequirePermission("academics:read_timetable")
   async listTeacherTimetable(
     @Req() req: Request & { workspace: any },
     @Param("academicYearId") academicYearId: string,
@@ -72,5 +80,47 @@ export class TimetableController {
     const { tenantId, schoolId } = req.workspace;
     const items = await this.timetableService.listTeacherTimetable(tenantId, schoolId, academicYearId, termId, teacherId);
     return { success: true, data: items };
+  }
+
+  @Patch("periods/:id")
+  @RequirePermission("academics:manage_timetable")
+  async updatePeriod(
+    @Req() req: Request & { workspace: any },
+    @Param("id") id: string,
+    @Body() dto: UpdateTimetablePeriodDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    return this.timetableService.updatePeriod(tenantId, schoolId, id, dto);
+  }
+
+  @Delete("periods/:id")
+  @RequirePermission("academics:manage_timetable")
+  async deletePeriod(
+    @Req() req: Request & { workspace: any },
+    @Param("id") id: string,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    return this.timetableService.deletePeriod(tenantId, schoolId, id);
+  }
+
+  @Patch("entries/:id")
+  @RequirePermission("academics:manage_timetable")
+  async updateEntry(
+    @Req() req: Request & { workspace: any },
+    @Param("id") id: string,
+    @Body() dto: UpdateTimetableEntryDto,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    return this.timetableService.updateEntry(tenantId, schoolId, id, dto);
+  }
+
+  @Delete("entries/:id")
+  @RequirePermission("academics:manage_timetable")
+  async deleteEntry(
+    @Req() req: Request & { workspace: any },
+    @Param("id") id: string,
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    return this.timetableService.deleteEntry(tenantId, schoolId, id);
   }
 }

@@ -232,6 +232,25 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Next Action:** Manual browser acceptance of Phase 6G UI. After user acceptance, reconcile roadmap and proceed to next approved phase.
   - **Phase 6H Ã¯Â¿Â½ Advanced School AI Engine (Sandboxed & Advisory):** PLANNED
 
+
+  - **Phase 6I - Admin Timetable Management:** **COMPLETE & FULLY VERIFIED**
+    - **Scope Completed:**
+      - Added `academics:read_timetable` and `academics:manage_timetable` permissions.
+      - Applied strict backend authorization guards to `TimetableController` endpoints.
+      - Implemented full backend CRUD support for Timetable Periods and Entries (`TimetableService`).
+      - Prevented orphaned timetable entry cascading logic during period deletion.
+      - Preserved robust conflict validation for class-wide vs arm-specific scoping and teacher double-booking.
+      - Added "Timetable" navigation to Admin UI (`/dashboard/timetable`) after "Academics".
+      - Enhanced Admin Timetable UI to support Period and Entry deletion using new backend capabilities.
+      - Added `test-timetable.ts` to assert strict security boundaries and workflow logic.
+    - **Verification Evidence:**
+      - Core Platform typecheck & Prisma validation: PASSED (`0 errors`).
+      - API Gateway build: PASSED (`0 errors`).
+      - Web App typecheck & production build: PASSED.
+      - All Phase 5 & 6 security regressions: PASSED.
+    - **Status:** **COMPLETE**.
+    - **Next phase:** Pending canonical roadmap directive.
+
 ### Formal Deferred Requirements & Features
 The following features are intentionally deferred unless the canonical roadmap explicitly assigns them to an upcoming phase:
 - **Finance Wallet:** Wallet-related schema/data structures (`fin_wallets`, `fin_wallet_transactions`) exist, but complete wallet functionality is not yet established as a completed module. Exact roadmap phase assignment must be explicitly established from canonical documentation.

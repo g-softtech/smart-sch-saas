@@ -58,3 +58,41 @@ export class CreateTimetableEntryDto {
   @IsNotEmpty()
   dayOfWeek: DayOfWeek;
 }
+
+export class UpdateTimetablePeriodDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "startTime must be in HH:mm format" })
+  startTime?: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "endTime must be in HH:mm format" })
+  endTime?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isBreak?: boolean;
+}
+
+export class UpdateTimetableEntryDto {
+  @IsString()
+  @IsOptional()
+  subjectId?: string;
+
+  @IsString()
+  @IsOptional()
+  teacherId?: string | null;
+
+  @IsString()
+  @IsOptional()
+  periodId?: string;
+
+  @IsEnum(DayOfWeek)
+  @IsOptional()
+  dayOfWeek?: DayOfWeek;
+}
