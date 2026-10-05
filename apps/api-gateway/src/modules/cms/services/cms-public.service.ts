@@ -6,7 +6,7 @@ export class CmsPublicService {
   
   private rawPrisma = new PrismaClient();
 
-  async resolveSchool(slug: string) {
+  async resolveSchool(slug: string, preview?: boolean) {
     const school = await this.rawPrisma.school.findFirst({
       where: { publicSlug: slug },
       include: { tenant: true }
@@ -20,8 +20,28 @@ export class CmsPublicService {
       where: { schoolId: school.id }
     });
 
-    if (!config || config.status !== CmsPublicationStatus.PUBLISHED) {
+    if (!config) {
+      throw new NotFoundException('Site config not found');
+    }
+
+    if (!preview && config.status !== CmsPublicationStatus.PUBLISHED) {
       throw new NotFoundException('Site is not published');
+    }
+
+    let activeConfig = config;
+    if (preview && config.themePayload && (config.themePayload as any).workingDraft) {
+      const draft = (config.themePayload as any).workingDraft;
+      activeConfig = {
+        ...config,
+        primaryColor: draft.primaryColor ?? config.primaryColor,
+        secondaryColor: draft.secondaryColor ?? config.secondaryColor,
+        logoMediaId: draft.logoMediaId ?? config.logoMediaId,
+        faviconMediaId: draft.faviconMediaId ?? config.faviconMediaId,
+        themePayload: draft.themePayload ?? config.themePayload,
+        contactEmail: draft.contactEmail ?? config.contactEmail,
+        contactPhone: draft.contactPhone ?? config.contactPhone,
+        enableAdmissionsCta: draft.enableAdmissionsCta ?? config.enableAdmissionsCta,
+      };
     }
 
     
@@ -31,7 +51,7 @@ export class CmsPublicService {
       orderBy: { createdAt: 'desc' }
     });
     
-    return { school, config, admissionsToken: activeAdmissionForm?.publicToken || null };
+    return { school, config: activeConfig, admissionsToken: activeAdmissionForm?.publicToken || null };
     
   }
 

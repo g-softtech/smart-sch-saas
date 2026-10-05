@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Save, AlertCircle, RefreshCw, Palette, Type, Layout } from "lucide-react";
+import { Save, AlertCircle, RefreshCw, Palette, Type, Layout, Eye, Globe } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 export default function WebsiteSettingsPage() {
@@ -14,8 +14,30 @@ export default function WebsiteSettingsPage() {
     setError(null);
     try {
       const data = await apiClient.get<any>("v1/cms/admin/config");
-      if (!data.themePayload) data.themePayload = {};
-      setConfig(data);
+      
+      // If we have a working draft, use those values for the form UI
+      let uiState = { ...data };
+      if (data.themePayload && data.themePayload.workingDraft) {
+        const draft = data.themePayload.workingDraft;
+        uiState = {
+          ...uiState,
+          primaryColor: draft.primaryColor ?? data.primaryColor,
+          secondaryColor: draft.secondaryColor ?? data.secondaryColor,
+          logoMediaId: draft.logoMediaId ?? data.logoMediaId,
+          faviconMediaId: draft.faviconMediaId ?? data.faviconMediaId,
+          themePayload: draft.themePayload ?? data.themePayload,
+          contactEmail: draft.contactEmail ?? data.contactEmail,
+          contactPhone: draft.contactPhone ?? data.contactPhone,
+          enableAdmissionsCta: draft.enableAdmissionsCta ?? data.enableAdmissionsCta,
+        };
+      } else if (!uiState.themePayload) {
+        uiState.themePayload = {};
+      }
+      
+      // Map publicSlug from school
+      uiState.publicSlug = data.school?.publicSlug || "";
+      
+      setConfig(uiState);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -27,8 +49,7 @@ export default function WebsiteSettingsPage() {
     fetchConfig();
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (action: 'DRAFT' | 'PUBLISH') => {
     if (!config) return;
     setSaving(true);
     setError(null);
@@ -37,6 +58,8 @@ export default function WebsiteSettingsPage() {
       const payload = {
         status: config.status,
         expectedVersion: config.version,
+        publicSlug: config.publicSlug || undefined,
+        publishAction: action,
         primaryColor: config.primaryColor,
         secondaryColor: config.secondaryColor,
         logoMediaId: config.logoMediaId || undefined,
@@ -49,12 +72,12 @@ export default function WebsiteSettingsPage() {
 
       const updated = await apiClient.put<any>("v1/cms/admin/config", payload);
       
-      if (!updated.themePayload) updated.themePayload = {};
-      setConfig(updated);
-      alert("Settings saved successfully!");
+      // Refresh cleanly from server
+      await fetchConfig();
+      alert(action === 'PUBLISH' ? "Website published successfully!" : "Draft saved successfully!");
     } catch (err: any) {
       if (err.status === 409) {
-        setError("Settings were updated by someone else. Please refresh and try again.");
+        setError(err.message || "Settings were updated by someone else or slug is taken.");
       } else {
         setError(err.message || "Failed to update CMS settings");
       }
@@ -67,8 +90,10 @@ export default function WebsiteSettingsPage() {
     return <div className="flex items-center justify-center p-12"><RefreshCw className="w-6 h-6 animate-spin text-slate-500" /></div>;
   }
 
+  const publicUrl = config?.publicSlug ? `${window.location.origin}/${config.publicSlug}` : null;
+
   return (
-    <form onSubmit={handleSave} className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12">
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg flex items-start gap-3">
           <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
@@ -76,20 +101,25 @@ export default function WebsiteSettingsPage() {
         </div>
       )}
 
-      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-xl">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Publication Status</h2>
-          <p className="text-sm text-slate-400">Control if the public website is accessible.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900 border border-slate-800 p-4 rounded-xl gap-4">
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-white">Public Website Slug</h2>
+          <p className="text-sm text-slate-400">Set the URL where your school's website will be accessible.</p>
         </div>
-        <select 
-          value={config?.status || "DRAFT"}
-          onChange={(e) => setConfig({...config, status: e.target.value})}
-          className="bg-slate-950 border border-slate-800 rounded-md px-4 py-2 text-sm font-medium text-white focus:border-indigo-500"
-        >
-          <option value="DRAFT">Draft Mode (Hidden)</option>
-          <option value="PUBLISHED">Published (Live)</option>
-          <option value="ARCHIVED">Archived</option>
-        </select>
+        <div className="flex-1 flex flex-col w-full">
+          <input 
+            type="text"
+            value={config?.publicSlug || ""}
+            onChange={(e) => setConfig({...config, publicSlug: e.target.value})}
+            placeholder="e.g. greenfield-international"
+            className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:border-indigo-500"
+          />
+          {config?.publicSlug && (
+            <p className="text-xs text-emerald-400 mt-2 break-all">
+              URL: {window.location.origin}/{config.publicSlug}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -243,16 +273,52 @@ export default function WebsiteSettingsPage() {
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-md border-t border-slate-800 p-4 flex justify-end px-12 z-10">
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 shadow-lg"
-        >
-          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {saving ? "Saving..." : "Save Theme & Settings"}
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-md border-t border-slate-800 p-4 flex justify-between items-center px-12 z-10">
+        <div className="flex gap-4">
+          {publicUrl && (
+            <>
+              <a 
+                href={`${publicUrl}?preview=true`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-md transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                Preview Draft
+              </a>
+              <a 
+                href={publicUrl}
+                target="_blank" 
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-sm font-medium rounded-md transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                View Public Website
+              </a>
+            </>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleSave('DRAFT')}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+          >
+            {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save Draft
+          </button>
+          
+          <button
+            onClick={() => handleSave('PUBLISH')}
+            disabled={saving || !config?.publicSlug}
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 shadow-lg"
+          >
+            {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+            Publish to Live
+          </button>
+        </div>
       </div>
-    </form>
+    </div>
   );
 }

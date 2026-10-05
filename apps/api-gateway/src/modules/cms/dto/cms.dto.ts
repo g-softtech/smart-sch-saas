@@ -6,6 +6,12 @@ export class UpdateSiteConfigDto {
   @IsEnum(CmsPublicationStatus)
   status: CmsPublicationStatus;
 
+  @IsOptional() @IsString()
+  publicSlug?: string;
+
+  @IsOptional() @IsString()
+  publishAction?: 'DRAFT' | 'PUBLISH';
+
   @IsNumber()
   expectedVersion: number;
 

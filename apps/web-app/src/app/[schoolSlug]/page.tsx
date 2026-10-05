@@ -3,9 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Megaphone, Calendar, ArrowRight } from "lucide-react";
 
-async function getSchoolData(slug: string) {
+async function getSchoolData(slug: string, preview?: string) {
   const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001';
-  const res = await fetch(`${url}/v1/public/cms/${slug}/resolve`, { next: { tags: [`school-slug-${slug}`] } });
+  const fetchUrl = preview === 'true' ? `${url}/v1/public/cms/${slug}/resolve?preview=true` : `${url}/v1/public/cms/${slug}/resolve`;
+  const res = await fetch(fetchUrl, { 
+    next: preview === 'true' ? { revalidate: 0 } : { tags: [`school-slug-${slug}`] } 
+  });
   if (!res.ok) return null;
   const json = await res.json();
   return json.data || json;
@@ -25,9 +28,10 @@ async function getHomepage(slug: string, tenantId: string, schoolId: string) {
   return json.data || json;
 }
 
-export default async function PublicWebsiteHomepage({ params }: { params: Promise<{ schoolSlug: string }> }) {
+export default async function PublicWebsiteHomepage({ params, searchParams }: { params: Promise<{ schoolSlug: string }>, searchParams: Promise<{ preview?: string }> }) {
   const { schoolSlug } = await params;
-  const data = await getSchoolData(schoolSlug);
+  const { preview } = await searchParams;
+  const data = await getSchoolData(schoolSlug, preview);
   if (!data || !data.school || !data.config) notFound();
   const { school, config } = data;
   const announcements = await getAnnouncements(schoolSlug, school.tenantId, school.id);

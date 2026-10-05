@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CmsPublicService } from '../services/cms-public.service';
 
 @Controller('v1/public/cms')
@@ -6,8 +6,8 @@ export class CmsPublicController {
   constructor(private service: CmsPublicService) {}
 
   @Get(':slug/resolve')
-  async resolveSchool(@Param('slug') slug: string) {
-    return this.service.resolveSchool(slug);
+  async resolveSchool(@Param('slug') slug: string, @Query('preview') preview?: string) {
+    return this.service.resolveSchool(slug, preview === 'true');
   }
 
   @Get(':slug/pages/:pageSlug')
