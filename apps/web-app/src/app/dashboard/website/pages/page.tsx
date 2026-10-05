@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, RefreshCw, AlertCircle, FileText, ExternalLink } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
 
 export default function WebsitePagesManagement() {
   const [pages, setPages] = useState<any[]>([]);
@@ -11,20 +12,7 @@ export default function WebsitePagesManagement() {
     setLoading(true);
     setError(null);
     try {
-      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
-      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-
-      const res = await fetch("/api/v1/cms/admin/pages", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-tenant-id": tenantId,
-          "x-school-id": schoolId,
-        },
-      });
-
-      if (!res.ok) throw new Error("Failed to load CMS pages");
-      const data = await res.json();
+      const data = await apiClient.get<any[]>("v1/cms/admin/pages");
       setPages(data);
     } catch (err: any) {
       setError(err.message);
@@ -40,20 +28,7 @@ export default function WebsitePagesManagement() {
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`Are you sure you want to delete the page "${title}"?`)) return;
     try {
-      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
-      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-
-      const res = await fetch(`/api/v1/cms/admin/pages/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-tenant-id": tenantId,
-          "x-school-id": schoolId,
-        },
-      });
-
-      if (!res.ok) throw new Error("Failed to delete page");
+      await apiClient.delete(`v1/cms/admin/pages/${id}`);
       setPages(pages.filter(p => p.id !== id));
     } catch (err: any) {
       alert(err.message);

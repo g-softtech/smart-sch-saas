@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Save, AlertCircle, RefreshCw, GripVertical, Plus, Trash2 } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
 
 export default function WebsiteNavigationManagement() {
   const [items, setItems] = useState<any[]>([]);
@@ -12,23 +13,9 @@ export default function WebsiteNavigationManagement() {
     const fetchConfig = async () => {
       setLoading(true);
       try {
-        const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
-        const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-
-        const res = await fetch("/api/v1/cms/admin/config", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "x-tenant-id": tenantId,
-            "x-school-id": schoolId,
-          },
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          if (data.navigation) setItems(data.navigation);
-          else setItems([{ id: "temp", label: "Home", type: "PAGE", target: "home", order: 0 }]);
-        }
+        const data = await apiClient.get<any>("v1/cms/admin/config");
+        if (data && data.navigation) setItems(data.navigation);
+        else setItems([{ id: "temp", label: "Home", type: "PAGE", target: "home", order: 0 }]);
       } catch (err: any) {
         console.error(err);
       } finally {
@@ -42,22 +29,7 @@ export default function WebsiteNavigationManagement() {
     setSaving(true);
     setError(null);
     try {
-      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
-      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-
-      const res = await fetch("/api/v1/cms/admin/navigation", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "x-tenant-id": tenantId,
-          "x-school-id": schoolId,
-        },
-        body: JSON.stringify({ items: items.map((it, i) => ({ ...it, order: i })) }),
-      });
-
-      if (!res.ok) throw new Error("Failed to save navigation");
+      await apiClient.put("v1/cms/admin/navigation", { items: items.map((it, i) => ({ ...it, order: i })) });
       alert("Navigation saved!");
     } catch (err: any) {
       setError(err.message);

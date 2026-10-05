@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Save, AlertCircle, RefreshCw, Palette, Type, Layout } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
 
 export default function WebsiteSettingsPage() {
   const [config, setConfig] = useState<any>(null);
@@ -12,20 +13,7 @@ export default function WebsiteSettingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
-      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-
-      const res = await fetch("/api/v1/cms/admin/config", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-tenant-id": tenantId,
-          "x-school-id": schoolId,
-        },
-      });
-
-      if (!res.ok) throw new Error("Failed to load CMS settings");
-      const data = await res.json();
+      const data = await apiClient.get<any>("v1/cms/admin/config");
       if (!data.themePayload) data.themePayload = {};
       setConfig(data);
     } catch (err: any) {
@@ -46,10 +34,6 @@ export default function WebsiteSettingsPage() {
     setError(null);
     
     try {
-      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
-      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-
       const payload = {
         status: config.status,
         expectedVersion: config.version,
@@ -62,28 +46,17 @@ export default function WebsiteSettingsPage() {
         enableAdmissionsCta: config.enableAdmissionsCta,
       };
 
-      const res = await fetch("/api/v1/cms/admin/config", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "x-tenant-id": tenantId,
-          "x-school-id": schoolId,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        if (res.status === 409) throw new Error("Settings were updated by someone else. Please refresh and try again.");
-        throw new Error("Failed to update CMS settings");
-      }
+      const updated = await apiClient.put<any>("v1/cms/admin/config", payload);
       
-      const updated = await res.json();
       if (!updated.themePayload) updated.themePayload = {};
       setConfig(updated);
       alert("Settings saved successfully!");
     } catch (err: any) {
-      setError(err.message);
+      if (err.status === 409) {
+        setError("Settings were updated by someone else. Please refresh and try again.");
+      } else {
+        setError(err.message || "Failed to update CMS settings");
+      }
     } finally {
       setSaving(false);
     }
