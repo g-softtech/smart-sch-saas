@@ -100,7 +100,7 @@ export class CmsAdminService {
         ...restThemePayload,
         ...dto.themePayload,
       };
-      updateData.status = dto.status || CmsPublicationStatus.PUBLISHED; // Ensure status moves to published
+      updateData.status = CmsPublicationStatus.PUBLISHED; // Force status to PUBLISHED regardless of UI state
       updateData.primaryColor = dto.primaryColor;
       updateData.secondaryColor = dto.secondaryColor;
       updateData.logoMediaId = dto.logoMediaId;

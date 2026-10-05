@@ -39,27 +39,12 @@ function MediaUploadWidget({ label, currentMediaId, currentPreviewUrl, onUploade
     try {
       const formData = new FormData();
       formData.append("file", file);
-      // Use fetch directly for multipart — apiClient wrapper doesn't handle FormData
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001';
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-      const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") || "" : "";
-      const schoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") || "" : "";
-      const res = await fetch(`${apiUrl}/v1/cms/admin/media/upload`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-tenant-id": tenantId,
-          "x-school-id": schoolId,
-        },
-        body: formData,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Upload failed");
-      }
-      const data = await res.json();
+      
+      // Use the established apiClient to automatically attach access_token, x-tenant-id, etc.
+      const data = await apiClient.postFormData<any>("v1/cms/admin/media/upload", formData);
+      
       setFilename(data.filename);
-      // Build the serve URL pointing through the Next.js API proxy
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://127.0.0.1:3001';
       const serveUrl = `${apiUrl}/v1/cms/admin/media/${data.id}/serve`;
       onUploaded(data.id, data.filename, serveUrl);
     } catch (err: any) {
@@ -217,6 +202,14 @@ export default function WebsiteSettingsPage() {
         enableAdmissionsCta: config.enableAdmissionsCta,
       };
       await apiClient.put<any>("v1/cms/admin/config", payload);
+      if (config.publicSlug) {
+         try {
+             await fetch('/api/revalidate', { 
+                 method: 'POST', 
+                 body: JSON.stringify({ tags: [`school-slug-${config.publicSlug}`, `cms-site-${config.tenantId || ''}-${config.schoolId || ''}`] }) 
+             });
+         } catch(e) {}
+      }
       await fetchConfig();
       alert(action === 'PUBLISH' ? "Website published successfully!" : "Draft saved successfully!");
     } catch (err: any) {
