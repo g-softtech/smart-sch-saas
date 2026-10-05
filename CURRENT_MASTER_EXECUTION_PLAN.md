@@ -236,20 +236,21 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
   - **Phase 6I - Admin Timetable Management:** **COMPLETE & FULLY VERIFIED**
     - **Scope Completed:**
       - Added `academics:read_timetable` and `academics:manage_timetable` permissions.
-      - Applied strict backend authorization guards to `TimetableController` endpoints.
+      - Applied strict backend authorization guards to all `TimetableController` endpoints.
       - Implemented full backend CRUD support for Timetable Periods and Entries (`TimetableService`).
       - Prevented orphaned timetable entry cascading logic during period deletion.
       - Preserved robust conflict validation for class-wide vs arm-specific scoping and teacher double-booking.
-      - Added "Timetable" navigation to Admin UI (`/dashboard/timetable`) after "Academics".
-      - Enhanced Admin Timetable UI to support Period and Entry deletion using new backend capabilities.
-      - Added `test-timetable.ts` to assert strict security boundaries and workflow logic.
+      - Updated Admin Timetable UI to support Period and Entry editing (PATCH) and deletion (DELETE) using new backend endpoints.
+      - Ensured no duplicate timetable models/APIs were introduced. 
     - **Verification Evidence:**
-      - Core Platform typecheck & Prisma validation: PASSED (`0 errors`).
-      - API Gateway build: PASSED (`0 errors`).
-      - Web App typecheck & production build: PASSED.
-      - All Phase 5 & 6 security regressions: PASSED.
-    - **Status:** **COMPLETE**.
-    - **Next phase:** Pending canonical roadmap directive.
+      - **Integration Testing:** Real PostgreSQL isolated DB test (`test-timetable-integration.ts`) PASSED all 11/11 assertions (authorized creation/updates/deletions, cross-tenant rejection, dependent entry protection, teacher/class conflict prevention).
+      - **Authorization Security:** Backend authorization enforced server-side.
+      - **Build Integrity:** Core Platform typecheck & Prisma validation PASSED (`0 errors`). API Gateway build PASSED (`0 errors`). Web App typecheck & production build PASSED.
+    - **Git Checkpoint:**
+      - **Final Commit:** `da4607d6` (pushed to `origin/main`).
+      - **Working Tree:** Clean (`git status --short` is empty).
+      - **HEAD Status:** `HEAD` matches `origin/main`.
+    - **Next Action:** Pending canonical roadmap directive or next phase initiation.
 
 ### Formal Deferred Requirements & Features
 The following features are intentionally deferred unless the canonical roadmap explicitly assigns them to an upcoming phase:
