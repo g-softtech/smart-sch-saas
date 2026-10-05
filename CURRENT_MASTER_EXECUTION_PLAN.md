@@ -204,8 +204,32 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Status:** **COMPLETE**. Commit e98c59d0 pushed.
   - **Phase 6D: Transport & Fleet Management:** COMPLETE & VERIFIED (Implementation: 1fdaa860)
   - **Phase 6E Ã¯Â¿Â½ Hostel & Boarding Management:** PLANNED
-  - **Phase 6F � School Website Builder & Public CMS:** COMPLETE & VERIFIED (Implementation: 776992f5)
-  - **Phase 6G Ã¯Â¿Â½ Marketplace & Subscription Billing Engine:** PLANNED
+  - **Phase 6F � School Website Builder & Public CMS:** COMPLETE & VERIFIED (Implementation: 776992f5)
+  - **Phase 6G - Results & Grading Management:** **IMPLEMENTATION CHECKPOINT COMPLETE / VERIFIED**
+    - **Scope Completed:**
+      - `AcademicGradingConfig` domain model & `20261004182930_phase_6g_grading_engine` migration.
+      - Authoritative Year + Term grading configuration & `GradingScale` / `GradeBoundary` mapping.
+      - Dynamic weighted `AssessmentComponent`s with support for `EXAM`, `CBT`, `MANUAL_CA`, and `ASSIGNMENT`.
+      - Scoped component semantics (Class-wide vs Arm-specific via DB Partial Unique Indexes).
+      - Authoritative `ResultsEngineService` enforcing transactional recalculation, missing config rollback, and published-result protection.
+      - Gradebook -> ResultsEngine integration (`TeacherGradebookService.saveDraftGradebook`).
+      - CBT -> ResultsEngine auto-compilation (`CBTCompilerService.compileToGradebook`) with manual score protection and `CBT` provenance tracking.
+      - Admin Results & Grading Management console UI (`/dashboard/results`).
+      - Dynamic Teacher Gradebook UI (`/portal/teacher/gradebook`) rendering dynamic component headers.
+      - Admin CBT Compile action UI (`/dashboard/cbt`) invoking single canonical endpoint.
+      - Admin Workflow submission detail modal (`/dashboard/academics/workflow`) displaying dynamic components, scores, and provenance badges.
+      - Read-only Student and Parent Results Portals (`/portal/student/results`, `/portal/parent/children/[childId]/results`).
+      - Strict tenant/school isolation and administrative permission enforcement (`academics:manage_assignments`, `academics:read_gradebook`, `academics:enter_scores`, `academics:manage_cbt`).
+    - **Verification Evidence:**
+      - API Gateway build: PASSED (`0 errors`)
+      - Core Platform typecheck & Prisma validation: PASSED (`0 errors`)
+      - Real PostgreSQL Gradebook integration test (`phase6g-gradebook-results-integration.ts`): PASSED (`9/9 assertions`)
+      - Real PostgreSQL CBT integration test (`phase6g-cbt-results-integration.ts`): PASSED (`16/16 assertions`)
+      - Web App typecheck & production build: PASSED (`56/56 pages compiled`)
+      - Migration status & clean-room security audit: PASSED
+    - **Git Checkpoint:** Commit `98a8425822a373461109b15e55af0f998b8611ef` pushed to `origin/main`. Working tree clean.
+    - **Manual Browser Acceptance:** `PENDING USER VERIFICATION`
+    - **Next Action:** Manual browser acceptance of Phase 6G UI. After user acceptance, reconcile roadmap and proceed to next approved phase.
   - **Phase 6H Ã¯Â¿Â½ Advanced School AI Engine (Sandboxed & Advisory):** PLANNED
 
 ### Formal Deferred Requirements & Features
