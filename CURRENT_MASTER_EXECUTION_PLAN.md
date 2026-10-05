@@ -247,7 +247,21 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Integration Testing:** Real PostgreSQL isolated DB test (`test-timetable-integration.ts`) PASSED all 11/11 assertions (authorized creation/updates/deletions, cross-tenant rejection, dependent entry protection, teacher/class conflict prevention).
       - **Authorization Security:** Backend authorization enforced server-side.
       - **Build Integrity:** Core Platform typecheck & Prisma validation PASSED (`0 errors`). API Gateway build PASSED (`0 errors`). Web App typecheck & production build PASSED.
-    - **Git Checkpoint:**
+    - **Git Checkpoint:** Commit pushed to `origin/main`. Working tree clean.
+
+  - **Phase 6J - Assignments Integration & RBAC:** **COMPLETE & FULLY VERIFIED**
+    - **Scope Completed:**
+      - Secured `AssignmentsController` with `PoliciesGuard` and explicit permissions (`assignment:read`, `assignment:manage`, `assignment:grade`).
+      - Seeded new canonical permissions and bound them to Teacher and Admin roles.
+      - Enforced strict `TeacherSubjectAssignment` authority in `AssignmentsService` (preventing assignments for unauthorized subjects/classes/arms).
+      - Resolved orphaned Admin UI by integrating `/dashboard/assignments` into the Admin navigation sidebar under Academics.
+      - Built dedicated Teacher UI (`/portal/teacher/assignments`) dynamically scoping available classes and subjects exclusively to the Teacher's active `TeacherSubjectAssignment`s.
+      - Confirmed Student Portal consumption (`/portal/student/assignments`) and Gradebook (`ResultsService`) integration remain fully intact.
+      - Parent portal explicitly excluded per product requirements.
+    - **Verification Evidence:**
+      - **Authorization Security:** Backend authorization enforced server-side.
+      - **Build Integrity:** Core Platform typecheck & Prisma validation PASSED (`0 errors`). API Gateway build PASSED (`0 errors`). Web App typecheck & production build PASSED.
+    - **Git Checkpoint:** Commit pushed to `origin/main`. Working tree clean.
       - **Final Commit:** `da4607d6` (pushed to `origin/main`).
       - **Working Tree:** Clean (`git status --short` is empty).
       - **HEAD Status:** `HEAD` matches `origin/main`.

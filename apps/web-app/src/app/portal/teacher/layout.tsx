@@ -43,6 +43,11 @@ export default function TeacherPortalLayout({
       icon: LayoutDashboard,
     },
     {
+      name: "Assignments",
+      href: "/portal/teacher/assignments",
+      icon: BookOpen,
+    },
+    {
       name: "Gradebook",
       href: "/portal/teacher/gradebook",
       icon: GraduationCap,

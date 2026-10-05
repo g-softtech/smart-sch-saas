@@ -61,6 +61,18 @@ export const CANONICAL_ACADEMIC_PERMISSIONS = [
     name: "academics:manage_timetable",
     description: "Manage timetable periods and entries (create, update, delete)",
   },
+  {
+    name: "assignment:read",
+    description: "Read and view student homework assignments",
+  },
+  {
+    name: "assignment:manage",
+    description: "Create, publish, and manage student homework assignments",
+  },
+  {
+    name: "assignment:grade",
+    description: "Grade student homework assignments",
+  },
 ];
 
 export const CANONICAL_LIBRARY_PERMISSIONS = [
@@ -129,6 +141,9 @@ export async function seedAcademicRolePermissionsForTenant(tenantId: string) {
     permMap["academics:read_gradebook"],
     permMap["academics:enter_scores"],
     permMap["academics:submit_gradebook"],
+    permMap["assignment:read"],
+    permMap["assignment:manage"],
+    permMap["assignment:grade"],
   ].filter(Boolean);
 
   await tenantContext.run({ tenantId }, async () => {

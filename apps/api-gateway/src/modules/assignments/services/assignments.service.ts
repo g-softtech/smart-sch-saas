@@ -29,6 +29,31 @@ export class AssignmentsService {
       if (!arm || arm.tenantId !== tenantId || arm.classId !== dto.classId) throw new NotFoundException("Invalid Arm");
     }
 
+    // 1.5. Validate Teacher Subject Authority
+    // A teacher must have an explicit assignment for this subject + class (+ arm if specific)
+    const subjectAssignment = await kernel.db.teacherSubjectAssignment.findFirst({
+      where: {
+        tenantId,
+        schoolId,
+        academicYearId: dto.academicYearId,
+        termId: dto.termId,
+        teacherId,
+        subjectId: dto.subjectId,
+        classId: dto.classId,
+        status: "ACTIVE"
+      }
+    });
+
+    if (!subjectAssignment) {
+      throw new ForbiddenException("Teacher is not authorized to create assignments for this subject and class.");
+    }
+
+    if (subjectAssignment.scope === "ARM_SPECIFIC") {
+      if (!dto.armId || dto.armId !== subjectAssignment.armId) {
+         throw new ForbiddenException("Teacher is only authorized for a specific arm of this class.");
+      }
+    }
+
     // 2. Resolve ASSIGNMENT system type
     const assignmentType = await kernel.db.assessmentType.findFirst({
       where: { tenantId, schoolId, code: "ASSIGNMENT", isSystem: true }
