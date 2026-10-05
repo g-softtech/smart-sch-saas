@@ -171,10 +171,9 @@ export default function WebsiteSettingsPage() {
 
   const fetchConfig = async () => {
     try {
-      const res = await apiClient.get<{ data: any }>("v1/cms/admin/config");
-      const data = res.data;
+      const data = await apiClient.get<any>("v1/cms/admin/config");
       let uiState = { ...data };
-      if (data.themePayload?.workingDraft) {
+      if (data?.themePayload?.workingDraft) {
         const d = data.themePayload.workingDraft;
         uiState = {
           ...uiState,
