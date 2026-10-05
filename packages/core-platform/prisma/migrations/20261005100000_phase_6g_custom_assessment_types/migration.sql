@@ -118,6 +118,9 @@ ALTER TABLE "acd_assessment_components" DROP COLUMN "type";
 -- Step 12: Process acd_assessment_scores: Ensure assessmentComponentId is NOT NULL & remove old type column + index
 DROP INDEX IF EXISTS "acd_assessment_scores_tenantId_schoolId_subjectResultId_typ_key";
 
+-- Step 12.1: Clean up orphaned AssessmentScore records that have no Component before enforcing NOT NULL
+DELETE FROM "acd_assessment_scores" WHERE "assessmentComponentId" IS NULL;
+
 -- Safety Check: Abort if any unlinked AssessmentScore exists before enforcing NOT NULL
 DO $$
 BEGIN
