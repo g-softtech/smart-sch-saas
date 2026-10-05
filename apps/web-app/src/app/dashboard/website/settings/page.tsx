@@ -266,6 +266,16 @@ export default function WebsiteSettingsPage() {
     </div>
   );
 
+  if (!config) return (
+    <div className="p-12 text-center">
+      {error ? (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-lg inline-block">{error}</div>
+      ) : (
+        <div className="text-slate-400">Failed to load configuration.</div>
+      )}
+    </div>
+  );
+
   const publicUrl = config?.publicSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${config.publicSlug}` : null;
   const sections = config.themePayload.sections;
   
