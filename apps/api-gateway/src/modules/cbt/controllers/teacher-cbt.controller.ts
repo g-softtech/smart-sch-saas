@@ -87,4 +87,17 @@ export class TeacherCBTController {
     );
     return { success: true, data: attempts };
   }
+
+  @Get("attempts/:attemptId")
+  @RequirePermission("academics:read_gradebook")
+  async getTeacherAttemptDetail(@Req() req: any, @Param("attemptId") attemptId: string) {
+    const userId = req.user.sub;
+    const detail = await this.teacherCbtService.getTeacherAttemptDetail(
+      req.workspace.tenantId,
+      req.workspace.schoolId,
+      userId,
+      attemptId
+    );
+    return { success: true, data: detail };
+  }
 }

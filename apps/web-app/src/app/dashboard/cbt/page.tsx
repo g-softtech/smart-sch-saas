@@ -68,9 +68,11 @@ export default function CBTPage() {
   const [questionModal, setQuestionModal] = useState<{
     examId: string;
     examTitle: string;
+    questionType: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "SUBJECTIVE";
     questionText: string;
     options: string[];
     correctOption: number;
+    correctOptions: number[];
     points: number;
   } | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
@@ -213,6 +215,12 @@ export default function CBTPage() {
   const handleAddQuestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionModal) return;
+
+    if (questionModal.questionType === "MULTIPLE_CHOICE" && questionModal.correctOptions.length === 0) {
+      alert("Please select at least one correct answer for Multiple Choice.");
+      return;
+    }
+
     setSavingQuestion(true);
     try {
       // Fetch existing exam first to get current questions
@@ -228,10 +236,11 @@ export default function CBTPage() {
           correctAnswerPayload: q.correctAnswerPayload
         })),
         {
-          questionType: "SINGLE_CHOICE",
+          questionType: questionModal.questionType,
           questionText: questionModal.questionText,
-          options: questionModal.options,
-          correctOption: Number(questionModal.correctOption),
+          options: questionModal.questionType === "TRUE_FALSE" ? ["True", "False"] : (questionModal.questionType === "SUBJECTIVE" ? [] : questionModal.options),
+          correctOption: (questionModal.questionType === "SINGLE_CHOICE" || questionModal.questionType === "TRUE_FALSE") ? Number(questionModal.correctOption) : null,
+          correctAnswerPayload: questionModal.questionType === "MULTIPLE_CHOICE" ? { correctOptions: questionModal.correctOptions } : null,
           points: Number(questionModal.points)
         }
       ];
@@ -463,9 +472,11 @@ export default function CBTPage() {
                               setQuestionModal({
                                 examId: item.id,
                                 examTitle: item.title,
+                                questionType: "SINGLE_CHOICE",
                                 questionText: "",
                                 options: ["", "", "", ""],
                                 correctOption: 0,
+                                correctOptions: [],
                                 points: 5,
                               })
                             }
@@ -659,6 +670,25 @@ export default function CBTPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                Question Type *
+              </label>
+              <select
+                value={questionModal.questionType}
+                onChange={(e) => {
+                  const t = e.target.value as any;
+                  setQuestionModal({ ...questionModal, questionType: t, correctOptions: [], correctOption: 0 });
+                }}
+                className="w-full border dark:border-gray-700 p-2.5 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+              >
+                <option value="SINGLE_CHOICE">Single Choice</option>
+                <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                <option value="TRUE_FALSE">True / False</option>
+                <option value="SUBJECTIVE">Subjective (Manual Review)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                 Question Text *
               </label>
               <textarea
@@ -673,34 +703,108 @@ export default function CBTPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Options (Select Correct Answer) *
-              </label>
-              {questionModal.options.map((opt, i) => (
-                <div key={i} className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="correctOption"
-                    checked={questionModal.correctOption === i}
-                    onChange={() => setQuestionModal({ ...questionModal, correctOption: i })}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={opt}
-                    onChange={(e) => {
-                      const newOpts = [...questionModal.options];
-                      newOpts[i] = e.target.value;
-                      setQuestionModal({ ...questionModal, options: newOpts });
-                    }}
-                    placeholder={`Option ${String.fromCharCode(65 + i)}`}
-                    className="w-full border dark:border-gray-700 p-2 rounded text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                  />
+            {questionModal.questionType === "SINGLE_CHOICE" && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Options (Select One Correct Answer) *
+                </label>
+                {questionModal.options.map((opt, i) => (
+                  <div key={i} className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      name="correctOption"
+                      required
+                      checked={questionModal.correctOption === i}
+                      onChange={() => setQuestionModal({ ...questionModal, correctOption: i })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <input
+                      type="text"
+                      required
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...questionModal.options];
+                        newOpts[i] = e.target.value;
+                        setQuestionModal({ ...questionModal, options: newOpts });
+                      }}
+                      placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                      className="w-full border dark:border-gray-700 p-2 rounded text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {questionModal.questionType === "MULTIPLE_CHOICE" && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Options (Select All Correct Answers) *
+                </label>
+                {questionModal.options.map((opt, i) => (
+                  <div key={i} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={questionModal.correctOptions.includes(i)}
+                      onChange={(e) => {
+                        const newCorrect = e.target.checked
+                          ? [...questionModal.correctOptions, i]
+                          : questionModal.correctOptions.filter(idx => idx !== i);
+                        setQuestionModal({ ...questionModal, correctOptions: newCorrect });
+                      }}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <input
+                      type="text"
+                      required
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...questionModal.options];
+                        newOpts[i] = e.target.value;
+                        setQuestionModal({ ...questionModal, options: newOpts });
+                      }}
+                      placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                      className="w-full border dark:border-gray-700 p-2 rounded text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {questionModal.questionType === "TRUE_FALSE" && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Select Correct Answer *
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      name="tfCorrect"
+                      checked={questionModal.correctOption === 0}
+                      onChange={() => setQuestionModal({ ...questionModal, correctOption: 0 })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm">True</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      name="tfCorrect"
+                      checked={questionModal.correctOption === 1}
+                      onChange={() => setQuestionModal({ ...questionModal, correctOption: 1 })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm">False</span>
+                  </label>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {questionModal.questionType === "SUBJECTIVE" && (
+              <div className="bg-amber-100 dark:bg-amber-900/40 p-3 rounded text-sm text-amber-800 dark:text-amber-300">
+                Subjective questions require manual grading by the teacher after submission.
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">

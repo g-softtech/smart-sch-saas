@@ -187,4 +187,62 @@ export class TeacherCBTService {
       }));
     });
   }
+
+  async getTeacherAttemptDetail(tenantId: string, schoolId: string, userId: string, attemptId: string) {
+    return tenantContext.run({ tenantId }, async () => {
+      const attempt = await kernel.db.cBTAttempt.findUnique({
+        where: { id: attemptId, tenantId, schoolId },
+        include: {
+          student: true,
+          exam: {
+            include: { assessmentComponent: true }
+          },
+          answers: true
+        }
+      });
+
+      if (!attempt || !attempt.exam || !attempt.exam.assessmentComponent) {
+        throw new NotFoundException("Attempt, exam, or component not found");
+      }
+
+      await this.verifyTeacherAuthorityForComponent(tenantId, schoolId, userId, attempt.exam.assessmentComponent);
+
+      const presentationPayload = attempt.exam.presentationPayload as any;
+      if (!presentationPayload || !Array.isArray(presentationPayload.questions)) {
+        throw new NotFoundException("Presentation payload not available");
+      }
+
+      const questions = presentationPayload.questions.map((q: any) => {
+        const dbAns = attempt.answers.find((a: any) => a.questionId === q.id);
+        return {
+          questionId: q.id,
+          answerId: dbAns ? dbAns.id : null,
+          questionText: q.questionText,
+          questionType: q.questionType,
+          options: q.options || [],
+          points: q.points || 0,
+          answerPayload: dbAns ? dbAns.answerPayload : null,
+          awardedScore: dbAns ? dbAns.awardedScore : null,
+          requiresManualReview: q.questionType === "SUBJECTIVE"
+        };
+      });
+
+      return {
+        id: attempt.id,
+        status: attempt.status,
+        totalScore: attempt.totalScore,
+        student: {
+          id: attempt.student?.id,
+          firstName: attempt.student?.firstName,
+          lastName: attempt.student?.lastName,
+          admissionNumber: attempt.student?.studentNumber
+        },
+        exam: {
+          id: attempt.exam.id,
+          title: attempt.exam.title
+        },
+        questions
+      };
+    });
+  }
 }

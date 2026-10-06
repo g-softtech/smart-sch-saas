@@ -17,7 +17,7 @@ describe("TeacherCBTService - Security Boundary Tests", () => {
       staffProfile: { findFirst: jest.fn() },
       teacherSubjectAssignment: { findMany: jest.fn(), findFirst: jest.fn() },
       cBTExam: { findMany: jest.fn(), findUnique: jest.fn() },
-      cBTAttempt: { findMany: jest.fn() }
+      cBTAttempt: { findMany: jest.fn(), findUnique: jest.fn() }
     };
     (global as any).kernel = { db: mockDb };
     mockTenantContext = {
@@ -118,5 +118,54 @@ describe("TeacherCBTService - Security Boundary Tests", () => {
     const result = await service.getTeacherExamDetails(validTenant, validSchool, validUser, "exam-1");
     expect((result as any).publishedPayload).toBeUndefined();
     expect((result as any).answerKey).toBeUndefined();
+  });
+
+  it("should retrieve attempt details safely without leaking answer keys", async () => {
+    const mockAttempt = {
+      id: "attempt-1",
+      status: "PENDING_REVIEW",
+      totalScore: 5,
+      student: { id: "student-1", firstName: "John", lastName: "Doe" },
+      answers: [
+        { questionId: "q1", answerPayload: { text: "My essay" }, awardedScore: null },
+        { questionId: "q2", answerPayload: { selectedOption: 1 }, awardedScore: 5 }
+      ],
+      exam: {
+        id: "exam-1",
+        title: "Test Exam",
+        publishedPayload: {
+          questions: [
+            { id: "q1", correctAnswerPayload: "secret-key" },
+            { id: "q2", correctOption: 1 }
+          ]
+        },
+        presentationPayload: {
+          questions: [
+            { id: "q1", questionType: "SUBJECTIVE", questionText: "Write", points: 10 },
+            { id: "q2", questionType: "SINGLE_CHOICE", questionText: "Choose", points: 5, options: ["A", "B"] }
+          ]
+        },
+        assessmentComponent: { classId: "c1" }
+      }
+    };
+
+    mockDb.cBTAttempt.findUnique.mockResolvedValueOnce(mockAttempt);
+    mockDb.staffProfile.findFirst.mockResolvedValueOnce({ id: "staff-1" });
+    mockDb.teacherSubjectAssignment.findFirst.mockResolvedValueOnce({ id: "assign-1" });
+
+    const result = await service.getTeacherAttemptDetail(validTenant, validSchool, validUser, "attempt-1");
+
+    expect(result.id).toBe("attempt-1");
+    expect(result.questions.length).toBe(2);
+    expect(result.questions[0].answerPayload.text).toBe("My essay");
+    expect(result.questions[0].requiresManualReview).toBe(true);
+    expect(result.questions[1].requiresManualReview).toBe(false);
+
+    // Assert publishedPayload, correctOption, correctAnswerPayload are completely absent
+    expect((result as any).publishedPayload).toBeUndefined();
+    const strRes = JSON.stringify(result);
+    expect(strRes).not.toContain("secret-key");
+    expect(strRes).not.toContain("correctOption");
+    expect(strRes).not.toContain("correctAnswerPayload");
   });
 });

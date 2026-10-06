@@ -13,6 +13,7 @@ import {
   BookOpen,
   LogOut,
   GraduationCap,
+  MonitorCheck,
 } from "lucide-react";
 
 export default function TeacherPortalLayout({
@@ -56,6 +57,11 @@ export default function TeacherPortalLayout({
       name: "Lesson Notes",
       href: "/portal/teacher/lesson-notes",
       icon: BookOpen,
+    },
+    {
+      name: "CBT Exams",
+      href: "/portal/teacher/cbt",
+      icon: MonitorCheck,
     },
     {
       name: "Assigned Classes",
