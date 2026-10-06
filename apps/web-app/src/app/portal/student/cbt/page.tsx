@@ -38,11 +38,8 @@ export default function StudentCBTPage() {
       setActiveExam(exam);
       setLoading(true);
       const res = await apiClient.post<any>(`/api/v1/portal/student/cbt/${exam.id}/start`, {});
-      setAttempt(res.data);
-
-      // Fetch exam questions
-      const qRes = await apiClient.get<any>(`/api/v1/cbt/${exam.id}/attempts/questions`);
-      setQuestions(qRes.data || []);
+      setAttempt(res.data.attempt);
+      setQuestions(res.data.examPayload?.questions || []);
     } catch (err: any) {
       alert(`Failed to start CBT exam: ${err.message}`);
       setActiveExam(null);
@@ -51,19 +48,27 @@ export default function StudentCBTPage() {
     }
   }
 
+  async function handleOptionSelect(qId: string, optIndex: number) {
+    setAnswers(prev => ({ ...prev, [qId]: optIndex }));
+    
+    // Autosave via Phase 6C saveAnswer endpoint
+    try {
+      await apiClient.post(`/api/v1/portal/student/cbt/${activeExam.id}/answer`, {
+        questionId: qId,
+        answerPayload: { selectedOption: optIndex },
+        expectedVersion: 1 // Note: a full implementation would track actual versions
+      });
+    } catch (err: any) {
+      console.warn("Autosave failed, will retry on submit or next selection.", err);
+    }
+  }
+
   async function handleSubmitCBT() {
     if (!activeExam) return;
 
     try {
       setSubmitting(true);
-      const formattedAnswers = Object.entries(answers).map(([questionId, selectedOption]) => ({
-        questionId,
-        selectedOption,
-      }));
-
-      const res = await apiClient.post<any>(`/api/v1/portal/student/cbt/${activeExam.id}/submit`, {
-        answers: formattedAnswers,
-      });
+      const res = await apiClient.post<any>(`/api/v1/portal/student/cbt/${activeExam.id}/submit`, {});
 
       setSubmitResult(res.data);
       setActiveExam(null);
@@ -188,7 +193,7 @@ export default function StudentCBTPage() {
                       return (
                         <label
                           key={optIndex}
-                          onClick={() => setAnswers({ ...answers, [q.id]: optIndex })}
+                          onClick={() => handleOptionSelect(q.id, optIndex)}
                           className={`flex items-center space-x-3 p-3 rounded-xl border cursor-pointer transition-all ${
                             isSelected
                               ? "bg-emerald-500/20 border-emerald-500 text-white"

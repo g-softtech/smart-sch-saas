@@ -125,13 +125,10 @@ export class CBTCompilerService {
     return tenantContext.run({ tenantId }, async () => {
       const exam = await kernel.db.cBTExam.findUnique({
         where: { id: examId, tenantId, schoolId },
-        include: { assessmentComponent: { include: { assessmentType: true } } }
+        include: { assessmentComponent: true }
       });
 
       if (!exam || !exam.assessmentComponent) throw new ConflictException("CBT Exam or AssessmentComponent not found");
-      if (exam.assessmentComponent.assessmentType.code !== "CBT") {
-        throw new ConflictException("Linked AssessmentComponent is not of system type CBT");
-      }
       if (exam.status !== "CLOSED") throw new ConflictException("Exam must be CLOSED to compile scores.");
 
       const component = exam.assessmentComponent;

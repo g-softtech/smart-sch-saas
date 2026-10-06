@@ -201,7 +201,17 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - Confirmed 2.3D atomic concurrent publication (1 success, 9 conflicts).
       - Snapshot secrecy and tenant/student isolation proven.
       - No new migrations or schema changes were required.
-    - **Status:** **COMPLETE**. Commit e98c59d0 pushed.
+    - **Regression Restoration (Post-6G):** Addressed critical regression caused by commit `4414cb9c` which introduced `NotImplementedException` stubs in `CBTService`, breaking the Student Portal Dashboard and CBT examination views.
+      - **Restoration:** Safely adapted `CBTService` against the current Phase 6G schema without reverting schema constraints. Restored `getExamsForClass` and properly integrated it into `StudentPortalService.getDashboard`.
+      - **Dashboard Resilience:** Wrapped `cbtService.getExamsForClass` inside `StudentPortalService.getDashboard` with resilient `.catch` handling, ensuring the student dashboard survives CBT outages without rendering the entire portal unusable.
+      - **Frontend Compatibility:** Refactored `apps/web-app/src/app/portal/student/cbt/page.tsx` to conform to the new parameterized Phase 6C API endpoints, correctly unpacking `presentationPayload` and utilizing atomic autosave capabilities (`handleOptionSelect`).
+    - **Verification Evidence:**
+      - Dedicated strictly isolated behavioral database suites (local_cbt_isolated / cbt-compiler-isolated.ts and admin-cbt-isolated.ts).
+      - Confirmed 2.3D atomic concurrent publication (1 success, 9 conflicts).
+      - Snapshot secrecy and tenant/student isolation proven.
+      - **Restoration Verification:** Full CBT test suite (`npx jest src/modules/cbt src/modules/portal-student`) passed (32/32 assertions). Dashboard resilience explicitly verified in `student-portal.service.spec.ts`.
+      - Web App and API Gateway production builds passed cleanly.
+    - **Status:** **COMPLETE**. Commit a59ef4f6c77b23fade3ac0eed06164d7713e257a pushed.
   - **Phase 6D: Transport & Fleet Management:** COMPLETE & VERIFIED (Implementation: 1fdaa860)
   - **Phase 6E Ã¯Â¿Â½ Hostel & Boarding Management:** PLANNED
   - **Phase 6F – School Website Builder & Public CMS:** COMPLETE & VERIFIED

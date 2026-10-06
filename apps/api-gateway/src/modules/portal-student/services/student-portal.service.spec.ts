@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from "@nestjs/testing";
+import { Test, TestingModule } from "@nestjs/testing";
 import { StudentPortalService } from "./student-portal.service";
 import { AssignmentsService } from "../../assignments/services/assignments.service";
 import { CBTService } from "../../cbt/services/cbt.service";
@@ -8,6 +8,9 @@ jest.mock("@saas/core-platform", () => ({
     db: {
       student: { findFirst: jest.fn().mockResolvedValue({ id: "student-1", tenantId: "t1", schoolId: "s1", enrollments: [{ classId: "class-1" }] }) },
       cBTAttempt: { findMany: jest.fn().mockResolvedValue([]) },
+      timetableEntry: { findMany: jest.fn().mockResolvedValue([]) },
+      attendanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
+      assignmentSubmission: { findMany: jest.fn().mockResolvedValue([]) },
     }
   },
   tenantContext: {
@@ -20,7 +23,7 @@ describe("StudentPortalService Read-Only BFF & Cleanup Verification", () => {
   let cbtService: jest.Mocked<CBTService>;
 
   beforeEach(async () => {
-    const assignmentsServiceMock = { getAssignmentsForClass: jest.fn() };
+    const assignmentsServiceMock = { getAssignmentsForClass: jest.fn().mockResolvedValue([]) };
     const cbtServiceMock = {
       getExamsForClass: jest.fn().mockResolvedValue([{ id: "exam-1", title: "Mid-Term Exam" }]),
       getAttemptByStudentId: jest.fn().mockResolvedValue(null)
@@ -52,5 +55,15 @@ describe("StudentPortalService Read-Only BFF & Cleanup Verification", () => {
 
   it("should prove legacy submitCBTAttempt mutation wrapper is gone (inaccessible)", () => {
     expect((service as any).submitCBTAttempt).toBeUndefined();
+  });
+
+  it("should return successfully even when CBT retrieval fails (Dashboard Resilience)", async () => {
+    // Override the mock for this specific test
+    cbtService.getExamsForClass.mockRejectedValueOnce(new Error("CBT is down"));
+
+    const dashboard = await service.getDashboard("user-1", "t1", "s1");
+
+    expect(dashboard.cbtExams).toEqual([]);
+    expect(cbtService.getExamsForClass).toHaveBeenCalled();
   });
 });

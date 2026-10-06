@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from "@nestjs/testing";
+import { Test, TestingModule } from "@nestjs/testing";
 
 jest.mock("@nestjs/event-emitter", () => ({
   EventEmitter2: class {},
@@ -59,7 +59,7 @@ describe("TeacherCBTController Security & Boundary", () => {
       const req = { user: { sub: "auth0|teacher-1" }, workspace: { tenantId: "t1", schoolId: "s1" } };
       const dto = { answers: [{ answerId: "a1", awardedScore: 5 }] };
       await controller.reviewAttempt(req, "attempt-1", dto);
-      expect(compilerService.reviewAttempt).toHaveBeenCalledWith("t1", "s1", "auth0|teacher-1", "attempt-1", dto);
+      expect(compilerService.reviewAttempt).toHaveBeenCalledWith("t1", "s1", "attempt-1", "auth0|teacher-1", dto);
     });
   });
 });

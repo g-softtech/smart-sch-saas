@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { Injectable, ForbiddenException, NotFoundException, Logger } from "@nestjs/common";
 import { kernel, tenantContext } from "@saas/core-platform";
 import { AssignmentsService } from "../../assignments/services/assignments.service";
 import { CBTService } from "../../cbt/services/cbt.service";
@@ -6,6 +6,8 @@ import { SubmitStudentAssignmentDto, SubmitStudentCBTDto } from "../dto/student-
 
 @Injectable()
 export class StudentPortalService {
+  private readonly logger = new Logger(StudentPortalService.name);
+
   constructor(
     private readonly assignmentsService: AssignmentsService,
     private readonly cbtService: CBTService,
@@ -115,7 +117,10 @@ export class StudentPortalService {
     // Fetch student assignments, CBT exams, timetable, and attendance
     const [assignments, cbtExams, timetableEntries, attendanceRecords] = await Promise.all([
       this.assignmentsService.getAssignmentsForClass(tenantId, classId, armId),
-      this.cbtService.getExamsForClass(tenantId, classId, armId),
+      this.cbtService.getExamsForClass(tenantId, classId, armId).catch((err) => {
+        this.logger.error(`CBT Dashboard fetch failed for student ${student.id}: ${err.message}`);
+        return [];
+      }),
       kernel.db.timetableEntry.findMany({
         where: {
           tenantId,

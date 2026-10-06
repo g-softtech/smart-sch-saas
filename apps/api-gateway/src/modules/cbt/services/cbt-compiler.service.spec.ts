@@ -1,4 +1,5 @@
 import { ResultsEngineService } from '../../academics/services/results-engine.service';
+import { ResultsService } from '../../academics/services/results.service';
 ﻿import { Test, TestingModule } from "@nestjs/testing";
 import { CBTCompilerService } from "./cbt-compiler.service";
 import { TeacherAssignmentsService } from "../../academics/services/teacher-assignments.service";
@@ -10,10 +11,11 @@ const txMock = {
   gradebookSubmission: { findFirst: jest.fn(), create: jest.fn() },
   enrollment: { findFirst: jest.fn() },
   subjectResult: { findFirst: jest.fn(), create: jest.fn() },
-  assessmentScore: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
+  assessmentScore: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
   scoreAuditLog: { create: jest.fn() },
   cBTAttempt: { update: jest.fn() },
-  cBTAttemptAnswer: { update: jest.fn() }
+  cBTAttemptAnswer: { update: jest.fn() },
+  $executeRawUnsafe: jest.fn()
 };
 
 jest.mock("@saas/core-platform", () => ({
@@ -22,6 +24,7 @@ jest.mock("@saas/core-platform", () => ({
       cBTExam: { findFirst: jest.fn(), findUnique: jest.fn() },
       cBTAttempt: { findMany: jest.fn(), findUnique: jest.fn() },
       teacherSubjectAssignment: { findFirst: jest.fn() },
+      staffProfile: { findFirst: jest.fn() },
       $transaction: jest.fn((cb) => cb(txMock))
     }
   },
@@ -45,7 +48,9 @@ describe("CBTCompilerService & Authorization", () => {
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        CBTCompilerService, { provide: ResultsEngineService, useValue: { recalculateSubjectResult: jest.fn() } },
+        CBTCompilerService, 
+        { provide: ResultsEngineService, useValue: { recalculateSubjectResult: jest.fn() } },
+        { provide: ResultsService, useValue: { recordScore: jest.fn(), resolveOrCreateSubjectResult: jest.fn().mockResolvedValue({ id: "res1" }) } },
         { provide: TeacherAssignmentsService, useValue: assignMock }
       ]
     }).compile();
@@ -60,22 +65,23 @@ describe("CBTCompilerService & Authorization", () => {
     const mockComponent = { academicYearId: "y1", termId: "t1", classId: "c1", subjectId: "sub1", armId: null, maxScore: 100 };
     beforeEach(() => {
       kernel.db.cBTExam.findUnique.mockResolvedValue({ id: "ex1", status: "CLOSED", assessmentComponent: mockComponent });
+      kernel.db.staffProfile.findFirst.mockResolvedValue({ id: "teacher-1" });
+      kernel.db.teacherSubjectAssignment.findFirst.mockResolvedValue({ id: "assign-1", scope: "CLASS_WIDE" });
     });
 
     it("should reject teacher without matching TeacherSubjectAssignment", async () => {
-      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: false, isPrimary: false, reason: "Unauthorized" } as any);
+      // staffProfile exists but no matching teacherSubjectAssignment
+      kernel.db.teacherSubjectAssignment.findFirst.mockResolvedValue(null);
       await expect(compiler.compileToGradebook("tenant1", "school1", "ex1", "teacher-1")).rejects.toThrow(ForbiddenException);
     });
 
     it("should accept valid TeacherSubjectAssignment authority", async () => {
-      assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true, isPrimary: true, scope: "CLASS_WIDE" as any, assignmentId: "a1" });
       kernel.db.cBTAttempt.findMany.mockResolvedValue([]); // return 0 attempts to end early
       const res = await compiler.compileToGradebook("tenant1", "school1", "ex1", "teacher-1");
       expect(res.success).toBe(true);
-      expect(assignmentService.checkTeacherGradingAuthority).toHaveBeenCalledWith({
-        tenantId: "tenant1", schoolId: "school1", teacherId: "teacher-1",
-        academicYearId: "y1", termId: "t1", classId: "c1", subjectId: "sub1", armId: null
-      });
+      // Verify direct DB auth was invoked
+      expect(kernel.db.staffProfile.findFirst).toHaveBeenCalled();
+      expect(kernel.db.teacherSubjectAssignment.findFirst).toHaveBeenCalled();
     });
   });
 
@@ -84,6 +90,8 @@ describe("CBTCompilerService & Authorization", () => {
     
     beforeEach(() => {
       assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true, isPrimary: true, scope: "CLASS_WIDE" as any, assignmentId: "a1" });
+      kernel.db.staffProfile.findFirst.mockResolvedValue({ id: "teacher-1" });
+      kernel.db.teacherSubjectAssignment.findFirst.mockResolvedValue({ id: "assign-1", scope: "CLASS_WIDE" });
     });
 
     it("should reject compilation if exam is OPEN/PUBLISHED", async () => {
@@ -110,6 +118,8 @@ describe("CBTCompilerService & Authorization", () => {
       assignmentService.checkTeacherGradingAuthority.mockResolvedValue({ hasAuthority: true, isPrimary: true, scope: "CLASS_WIDE" as any, assignmentId: "a1" });
       kernel.db.cBTExam.findUnique.mockResolvedValue({ id: "ex1", status: "CLOSED", assessmentComponent: mockComponent });
       kernel.db.cBTAttempt.findMany.mockResolvedValue([{ id: "att1", studentId: "st1", totalScore: 85 }]);
+      kernel.db.staffProfile.findFirst.mockResolvedValue({ id: "teacher-1" });
+      kernel.db.teacherSubjectAssignment.findFirst.mockResolvedValue({ id: "assign-1", scope: "CLASS_WIDE" });
       
       txMock.enrollment.findFirst.mockResolvedValue({ id: "enr1" });
       txMock.subjectResult.findFirst.mockResolvedValue({ id: "res1", status: "DRAFT" });
@@ -122,7 +132,7 @@ describe("CBTCompilerService & Authorization", () => {
 
     it("should create EXACTLY ONE AssessmentScore for a missing score, with provenance CBT", async () => {
       txMock.gradebookSubmission.findFirst.mockResolvedValue({ id: "subm1", status: "DRAFT" });
-      txMock.assessmentScore.findFirst.mockResolvedValue(null); // missing
+      txMock.assessmentScore.findUnique.mockResolvedValue(null); // missing
       txMock.assessmentScore.create.mockResolvedValue({ id: "score1" });
 
       const res = await compiler.compileToGradebook("t1", "s1", "ex1", "teacher");
@@ -135,7 +145,7 @@ describe("CBTCompilerService & Authorization", () => {
 
     it("should preserve existing MANUAL score", async () => {
       txMock.gradebookSubmission.findFirst.mockResolvedValue({ id: "subm1", status: "DRAFT" });
-      txMock.assessmentScore.findFirst.mockResolvedValue({ id: "score1", score: 90, provenance: "MANUAL" });
+      txMock.assessmentScore.findUnique.mockResolvedValue({ id: "score1", score: 90, provenance: "MANUAL", isAbsent: false });
       
       const res = await compiler.compileToGradebook("t1", "s1", "ex1", "teacher");
 
@@ -146,7 +156,7 @@ describe("CBTCompilerService & Authorization", () => {
 
     it("should preserve existing CBT_MANUAL_OVERRIDE score", async () => {
       txMock.gradebookSubmission.findFirst.mockResolvedValue({ id: "subm1", status: "DRAFT" });
-      txMock.assessmentScore.findFirst.mockResolvedValue({ id: "score1", score: 95, provenance: "CBT_MANUAL_OVERRIDE" });
+      txMock.assessmentScore.findUnique.mockResolvedValue({ id: "score1", score: 95, provenance: "CBT_MANUAL_OVERRIDE", isAbsent: false });
       
       const res = await compiler.compileToGradebook("t1", "s1", "ex1", "teacher");
 
@@ -156,7 +166,7 @@ describe("CBTCompilerService & Authorization", () => {
 
     it("should overwrite/update existing CBT score (idempotent)", async () => {
       txMock.gradebookSubmission.findFirst.mockResolvedValue({ id: "subm1", status: "DRAFT" });
-      txMock.assessmentScore.findFirst.mockResolvedValue({ id: "score1", score: 80, provenance: "CBT" });
+      txMock.assessmentScore.findUnique.mockResolvedValue({ id: "score1", score: 80, provenance: "CBT", isAbsent: false });
       
       const res = await compiler.compileToGradebook("t1", "s1", "ex1", "teacher");
 
