@@ -525,6 +525,25 @@ export default function CBTPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                Assessment Component *
+              </label>
+              <select
+                required
+                className="w-full border dark:border-gray-700 p-2.5 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                value={selectedComponentId}
+                onChange={(e) => setSelectedComponentId(e.target.value)}
+              >
+                <option value="" disabled>Select an Assessment Component (from Subject/Class)</option>
+                {components.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title} (Max Score: {c.maxScore})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                 Exam Title *
               </label>
               <input
