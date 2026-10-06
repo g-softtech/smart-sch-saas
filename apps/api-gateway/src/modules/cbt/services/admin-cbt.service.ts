@@ -24,11 +24,29 @@ export class AdminCBTService {
       throw new BadRequestException("availableFrom must be before availableTo");
     }
 
+    // Resolve a valid teacherId (since the frontend may pass "admin")
+    const assignment = await kernel.db.teacherSubjectAssignment.findFirst({
+      where: {
+        tenantId,
+        schoolId,
+        classId: component.classId,
+        subjectId: component.subjectId,
+        status: "ACTIVE"
+      }
+    });
+
+    let resolvedTeacherId = assignment?.teacherId;
+    if (!resolvedTeacherId) {
+      const anyStaff = await kernel.db.staffProfile.findFirst({ where: { tenantId, schoolId } });
+      if (!anyStaff) throw new BadRequestException("No staff profile found in school to attach as author");
+      resolvedTeacherId = anyStaff.id;
+    }
+
     return await kernel.db.cBTExam.create({
       data: {
         tenantId,
         schoolId,
-        teacherId: dto.teacherId,
+        teacherId: resolvedTeacherId,
         assessmentComponentId: dto.assessmentComponentId,
         title: dto.title,
         instructions: dto.instructions,
