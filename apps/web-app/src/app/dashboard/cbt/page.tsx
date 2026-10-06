@@ -484,30 +484,6 @@ export default function CBTPage() {
                         )}
                         {item.status === "PUBLISHED" && (
                           <button
-                            onClick={() => handleStatusChange(item.id, "ACTIVE")}
-                            className="px-2.5 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 font-medium"
-                          >
-                            Activate
-                          </button>
-                        )}
-                        {item.status === "ACTIVE" && (
-                          <>
-                            <button
-                              onClick={() => handleStartAttempt(item)}
-                              className="px-2.5 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 font-medium"
-                            >
-                              Take Exam
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(item.id, "CLOSED")}
-                              className="px-2.5 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 font-medium"
-                            >
-                              Close
-                            </button>
-                          </>
-                        )}
-                        {(item.status === "CLOSED" || item.status === "ACTIVE") && (
-                          <button
                             onClick={() => handleCompileToGradebook(item)}
                             disabled={compilingId === item.id}
                             className="px-2.5 py-1 bg-[#D2AD36] text-[#0A192E] rounded text-xs hover:bg-[#c19c28] font-semibold disabled:opacity-50 transition-colors shadow-sm"
