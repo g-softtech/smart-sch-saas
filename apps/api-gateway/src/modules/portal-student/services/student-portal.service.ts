@@ -117,7 +117,7 @@ export class StudentPortalService {
     // Fetch student assignments, CBT exams, timetable, and attendance
     const [assignments, cbtExams, timetableEntries, attendanceRecords] = await Promise.all([
       this.assignmentsService.getAssignmentsForClass(tenantId, classId, armId),
-      this.cbtService.getExamsForClass(tenantId, classId, armId).catch((err) => {
+      tenantContext.run({ tenantId }, () => this.cbtService.getExamsForClass(tenantId, classId, armId)).catch((err) => {
         this.logger.error(`CBT Dashboard fetch failed for student ${student.id}: ${err.message}`);
         return [];
       }),
@@ -294,11 +294,11 @@ export class StudentPortalService {
     const activeEnrollment = student.enrollments[0];
     if (!activeEnrollment) return [];
 
-    const exams = await this.cbtService.getExamsForClass(
+    const exams = await tenantContext.run({ tenantId }, () => this.cbtService.getExamsForClass(
       tenantId,
       activeEnrollment.classId,
       activeEnrollment.armId || undefined
-    );
+    ));
 
     const attempts = await kernel.db.cBTAttempt.findMany({
       where: {

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   useAcademicYears,
   useTerms,
@@ -27,6 +28,19 @@ export default function CBTPage() {
   const { data: subjects } = useSubjects();
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
 
+  
+  const { logout } = useAuth();
+  const [components, setComponents] = useState<any[]>([]);
+  const [selectedComponentId, setSelectedComponentId] = useState<string>("");
+
+  useEffect(() => {
+    if (selectedYearId && selectedTermId && selectedClassId && selectedSubjectId) {
+      apiClient.get(`api/v1/academics/results/components?academicYearId=${selectedYearId}&termId=${selectedTermId}&classId=${selectedClassId}&subjectId=${selectedSubjectId}`)
+        .then((res: any) => setComponents(res.data || res || []))
+        .catch(console.error);
+    }
+  }, [selectedYearId, selectedTermId, selectedClassId, selectedSubjectId]);
+
   // CBT Exam List State
   const [exams, setExams] = useState<any[]>([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -39,14 +53,12 @@ export default function CBTPage() {
     availableFrom: Date | null;
     availableTo: Date | null;
     durationMinutes: number;
-    maxScore: number;
   }>({
     title: "",
     instructions: "",
     availableFrom: null,
     availableTo: null,
-    durationMinutes: 60,
-    maxScore: 100,
+    durationMinutes: 60
   });
   const [savingForm, setSavingForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -63,16 +75,7 @@ export default function CBTPage() {
   } | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
 
-  // Student Attempt State
-  const [activeAttempt, setActiveAttempt] = useState<{
-    examId: string;
-    attemptId: string;
-    questions: any[];
-    answers: Record<string, number>;
-    durationMinutes: number;
-    startTime: string;
-  } | null>(null);
-  const [submittingAttempt, setSubmittingAttempt] = useState(false);
+  // Student attempt state removed
 
   // Auto-select defaults
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function CBTPage() {
     setLoadingList(true);
     setListError(null);
     try {
-      let url = `api/v1/cbt/class/${selectedClassId}`;
+      let url = `api/v1/academics/cbt/admin/class/${selectedClassId}`;
       if (selectedArmId) url += `?armId=${selectedArmId}`;
       const data = (await apiClient.get(url)) as any[];
       setExams(Array.isArray(data) ? data : []);
@@ -123,7 +126,7 @@ export default function CBTPage() {
       !selectedClassId ||
       !selectedSubjectId ||
       !form.availableFrom ||
-      !form.availableTo
+      !form.availableTo || !selectedComponentId
     ) {
       setFormError("Please fill in all required academic parameters and time windows.");
       return;
@@ -132,18 +135,14 @@ export default function CBTPage() {
     setFormError(null);
     setFormSuccess(null);
     try {
-      await apiClient.post("api/v1/cbt", {
-        academicYearId: selectedYearId,
-        termId: selectedTermId,
-        classId: selectedClassId,
-        armId: selectedArmId || undefined,
-        subjectId: selectedSubjectId,
+      await apiClient.post("api/v1/academics/cbt/admin/exams", {
+        assessmentComponentId: selectedComponentId,
+        teacherId: "admin",
         title: form.title,
         instructions: form.instructions,
         availableFrom: form.availableFrom.toISOString(),
         availableTo: form.availableTo.toISOString(),
-        durationMinutes: Number(form.durationMinutes),
-        maxScore: Number(form.maxScore),
+        durationMinutes: Number(form.durationMinutes)
       });
       setFormSuccess("CBT Exam settings created successfully as DRAFT.");
       setForm({
@@ -151,8 +150,7 @@ export default function CBTPage() {
         instructions: "",
         availableFrom: null,
         availableTo: null,
-        durationMinutes: 60,
-        maxScore: 100,
+        durationMinutes: 60
       });
       fetchExams();
       setTimeout(() => {
@@ -169,13 +167,17 @@ export default function CBTPage() {
   // Status Transitions
   const handleStatusChange = async (
     id: string,
-    status: "DRAFT" | "PUBLISHED" | "ACTIVE" | "CLOSED"
+    status: string
   ) => {
+    if (status !== "PUBLISHED") {
+      alert("Only PUBLISHED transitions are supported here. Modifying active/closed requires exam editing.");
+      return;
+    }
     try {
-      await apiClient.put(`api/v1/cbt/${id}/status`, { status });
+      await apiClient.post(`api/v1/academics/cbt/admin/exams/${id}/publish`, {});
       fetchExams();
     } catch (e: any) {
-      alert(e.message || "Failed to update exam status");
+      alert(e.message || "Failed to publish exam. Ensure questions total the component's max score.");
     }
   };
 
@@ -213,11 +215,29 @@ export default function CBTPage() {
     if (!questionModal) return;
     setSavingQuestion(true);
     try {
-      await apiClient.post(`api/v1/cbt/${questionModal.examId}/questions`, {
-        questionText: questionModal.questionText,
-        options: questionModal.options,
-        correctOption: Number(questionModal.correctOption),
-        points: Number(questionModal.points),
+      // Fetch existing exam first to get current questions
+      const exam = await apiClient.get(`api/v1/academics/cbt/admin/exams/${questionModal.examId}`) as any;
+      const currentQuestions = exam.questions || [];
+      const updatedQuestions = [
+        ...currentQuestions.map((q: any) => ({
+          questionType: q.questionType,
+          questionText: q.questionText,
+          points: q.points,
+          options: q.options,
+          correctOption: q.correctOption,
+          correctAnswerPayload: q.correctAnswerPayload
+        })),
+        {
+          questionType: "SINGLE_CHOICE",
+          questionText: questionModal.questionText,
+          options: questionModal.options,
+          correctOption: Number(questionModal.correctOption),
+          points: Number(questionModal.points)
+        }
+      ];
+
+      await apiClient.put(`api/v1/academics/cbt/admin/exams/${questionModal.examId}/questions`, {
+        questions: updatedQuestions
       });
       alert("Question added successfully!");
       setQuestionModal(null);
@@ -229,53 +249,7 @@ export default function CBTPage() {
     }
   };
 
-  // Start Exam Attempt
-  const handleStartAttempt = async (exam: any) => {
-    try {
-      await apiClient.post(`api/v1/cbt/${exam.id}/attempts/start`, {});
-      const attemptData = (await apiClient.get(
-        `api/v1/cbt/${exam.id}/attempts/questions`
-      )) as any;
-      setActiveAttempt({
-        examId: exam.id,
-        attemptId: attemptData.attemptId,
-        questions: attemptData.questions || [],
-        answers: {},
-        durationMinutes: attemptData.durationMinutes || exam.durationMinutes,
-        startTime: attemptData.startTime,
-      });
-      setActiveTab("attempt");
-    } catch (e: any) {
-      alert(e.message || "Failed to start exam attempt");
-    }
-  };
-
-  // Submit Exam Attempt
-  const handleSubmitAttempt = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeAttempt) return;
-    setSubmittingAttempt(true);
-    try {
-      const answersPayload = Object.entries(activeAttempt.answers).map(
-        ([questionId, selectedOption]) => ({
-          questionId,
-          selectedOption,
-        })
-      );
-      const res = (await apiClient.post(
-        `api/v1/cbt/${activeAttempt.examId}/attempts/submit`,
-        { answers: answersPayload }
-      )) as any;
-      alert(`Exam submitted successfully! Score: ${res.totalScore} pts (Pushed to Results Engine)`);
-      setActiveAttempt(null);
-      setActiveTab("list");
-      fetchExams();
-    } catch (e: any) {
-      alert(e.message || "Failed to submit exam attempt");
-    } finally {
-      setSubmittingAttempt(false);
-    }
-  };
+  // Student attempt handling removed from Admin dashboard.
 
   return (
     <div className="p-6 text-gray-900 dark:text-gray-100 max-w-7xl mx-auto space-y-6">
@@ -651,19 +625,7 @@ export default function CBTPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                  Maximum Possible Score *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={form.maxScore}
-                  onChange={(e) => setForm({ ...form, maxScore: Number(e.target.value) })}
-                  className="w-full border dark:border-gray-700 p-2.5 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                />
-              </div>
+
             </div>
 
             <div className="flex space-x-3 pt-4">
@@ -687,73 +649,7 @@ export default function CBTPage() {
       )}
 
       {/* TAB 3: STUDENT EXAM ATTEMPT SCREEN */}
-      {activeTab === "attempt" && activeAttempt && (
-        <form
-          onSubmit={handleSubmitAttempt}
-          className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 max-w-4xl space-y-6"
-        >
-          <div className="flex justify-between items-center border-b dark:border-gray-700 pb-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Active CBT Exam Attempt
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Duration: {activeAttempt.durationMinutes} mins | Questions: {activeAttempt.questions.length}
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submittingAttempt}
-              className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
-            >
-              {submittingAttempt ? "Submitting..." : "Submit Exam Attempt"}
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            {activeAttempt.questions.map((q, idx) => (
-              <div
-                key={q.id}
-                className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 space-y-3"
-              >
-                <div className="font-semibold text-gray-900 dark:text-white text-base">
-                  Question {idx + 1}. {q.questionText} ({q.points} pts)
-                </div>
-
-                <div className="space-y-2">
-                  {q.options.map((opt: string, optIdx: number) => (
-                    <label
-                      key={optIdx}
-                      className="flex items-center space-x-3 p-2.5 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                    >
-                      <input
-                        type="radio"
-                        name={`question_${q.id}`}
-                        value={optIdx}
-                        checked={activeAttempt.answers[q.id] === optIdx}
-                        onChange={() =>
-                          setActiveAttempt({
-                            ...activeAttempt,
-                            answers: {
-                              ...activeAttempt.answers,
-                              [q.id]: optIdx,
-                            },
-                          })
-                        }
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span className="text-sm text-gray-800 dark:text-gray-200">
-                        {String.fromCharCode(65 + optIdx)}. {opt}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </form>
-      )}
+      {/* Attempt tab removed for admin */}
 
       {/* MODAL: QUESTION AUTHORING */}
       {questionModal && (

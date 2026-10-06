@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Get, Body, Param, Req, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Post, Put, Get, Body, Param, Req, UseGuards, UseInterceptors, Query } from "@nestjs/common";
 import { AdminCBTService } from "../services/admin-cbt.service";
 import { CBTCompilerService } from "../services/cbt-compiler.service";
 import { CreateCBTExamDto, UpdateCBTExamDto, SyncQuestionsDto } from "../dto/admin-cbt.dto";
@@ -58,5 +58,16 @@ export class AdminCBTController {
   async getExam(@Req() req: any, @Param("examId") examId: string) {
     const { tenantId, schoolId } = req.workspace;
     return this.adminCbtService.getExam(tenantId, schoolId, examId);
+  }
+
+  @Get("class/:classId")
+  @RequirePermission("academics:manage_cbt")
+  async getExamsForClass(
+    @Req() req: any,
+    @Param("classId") classId: string,
+    @Query("armId") armId?: string
+  ) {
+    const { tenantId, schoolId } = req.workspace;
+    return this.adminCbtService.getExamsForClass(tenantId, schoolId, classId, armId);
   }
 }

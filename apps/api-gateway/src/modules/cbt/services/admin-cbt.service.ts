@@ -200,4 +200,21 @@ export class AdminCBTService {
     }
     return exam;
   }
+
+  async getExamsForClass(tenantId: string, schoolId: string, classId: string, armId?: string) {
+    return kernel.db.cBTExam.findMany({
+      where: {
+        tenantId,
+        schoolId,
+        assessmentComponent: {
+          classId,
+          ...(armId ? { armId } : {})
+        }
+      },
+      include: {
+        assessmentComponent: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }
