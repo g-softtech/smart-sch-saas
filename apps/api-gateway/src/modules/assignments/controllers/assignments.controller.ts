@@ -15,6 +15,7 @@ import { AssignmentsService } from "../services/assignments.service";
 import {
   CreateAssignmentDto,
   SubmitAssignmentDto,
+  GradeSubmissionDto,
 } from "../dto/assignments.dto";
 import { RequirePermission } from "../../identity/security/require-permission.decorator";
 import { PoliciesGuard } from "../../identity/security/policies.guard";
