@@ -260,6 +260,11 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - Parent portal explicitly excluded per product requirements.
     - **Verification Evidence:**
       - **Authorization Security:** Backend authorization enforced server-side.
+      - **Executable Security Suite:** `10/10 PASSED` (`test-phase6j-assignments-security.ts`). Verified all isolation boundaries: unauthenticated rejection, missing permission rejection, Admin access success, Teacher creation/grading strictly bounded by `TeacherSubjectAssignment`, cross-teacher rejection, cross-school rejection, cross-tenant rejection, and student enrollment visibility isolation.
+      - **Teacher UI Validation:** Verified Teacher Assignment UI correctly uses authenticated context, dynamically derives available Subjects/Classes from active `TeacherSubjectAssignment`s, properly abstracts Admin actions (student submission backdoor removed), and retains Teacher Portal design.
+      - **Student UI Regression:** Confirmed Student Portal consumes existing endpoints without disruption, enforces enrollment checks, and prevents cross-class leakage.
+      - **Gradebook UI/UX Fix:** Resolved "Total Weight = 80" UX confusion. Implemented dynamic 'Provisional Preview' logic and explicit Assessment Configuration indicators ensuring Teachers distinguish between cached official `SubjectResult.totalScore` and active draft states without corrupting `ResultsEngine` integrity.
+      - **Gradebook Integration:** Verified score submission writes through to existing `ResultsService.recordScore` conforming to the Phase 6G assessment pipeline. Executed `test-e2e-gradebook2.ts` proving full end-to-end `recalculateSubjectResult` DB correctness.
       - **Build Integrity:** Core Platform typecheck & Prisma validation PASSED (`0 errors`). API Gateway build PASSED (`0 errors`). Web App typecheck & production build PASSED.
     - **Git Checkpoint:** Commit pushed to `origin/main`. Working tree clean.
       - **Final Commit:** `da4607d6` (pushed to `origin/main`).

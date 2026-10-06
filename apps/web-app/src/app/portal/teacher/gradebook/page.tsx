@@ -594,6 +594,28 @@ export default function TeacherGradebookPage() {
             </div>
           )}
 
+          {/* Assessment Configuration */}
+          {components.length > 0 && (
+            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm mb-4">
+              <h3 className="text-xs font-semibold text-slate-300 uppercase mb-3">Assessment Configuration</h3>
+              <div className="flex flex-wrap items-center gap-4">
+                {components.map(comp => (
+                  <div key={comp.id} className="text-xs flex flex-col bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                    <span className="text-slate-500">{comp.title}</span> 
+                    <strong className="text-white">{comp.weight}%</strong>
+                  </div>
+                ))}
+                <div className="text-xs flex flex-col bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-700 ml-2">
+                  <span className="text-slate-400">TOTAL</span> 
+                  <strong className="text-emerald-400">{components.reduce((acc, c) => acc + (c.weight || 0), 0)}%</strong>
+                </div>
+              </div>
+              <div className="mt-3 text-[10px] text-slate-500">
+                These are configured maximum weights. Do not confuse them with the student's calculated score.
+              </div>
+            </div>
+          )}
+
           {/* Roster & Scores Table */}
           <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
             <div className="flex items-center justify-between gap-4">
@@ -644,7 +666,7 @@ export default function TeacherGradebookPage() {
                         <th className="p-3 text-center text-amber-400">Unconfigured Assessment Component</th>
                       )}
 
-                      <th className="p-3 text-right">Weighted Total</th>
+                      <th className="p-3 text-right">Calculated Score</th>
                       <th className="p-3 text-center">Grade</th>
                     </tr>
                   </thead>
@@ -710,14 +732,44 @@ export default function TeacherGradebookPage() {
                           <td className="p-3 text-center text-slate-500 italic">No component columns</td>
                         )}
 
-                        <td className="p-3 text-right font-extrabold text-[#D2AD36] text-sm">
-                          {row.totalScore !== null && row.totalScore !== undefined ? `${row.totalScore} pts` : "—"}
+                        <td className="p-3 text-right text-sm">
+                          {(() => {
+                            let provisionalTotal = 0;
+                            let hasPreview = false;
+                            components.forEach((comp) => {
+                              const scoreData = row.componentScores[comp.id];
+                              if (scoreData && !scoreData.isAbsent && scoreData.score !== "" && !isNaN(Number(scoreData.score))) {
+                                provisionalTotal += (Number(scoreData.score) / (comp.maxScore || 100)) * (comp.weight || 0);
+                                hasPreview = true;
+                              }
+                            });
+
+                            return (
+                              <div className="flex flex-col items-end gap-1">
+                                {row.totalScore !== null && row.totalScore !== undefined ? (
+                                  <div className="font-extrabold text-[#D2AD36]">
+                                    {row.totalScore} pts <span className="text-[9px] font-normal text-slate-500 ml-1 uppercase">(Official)</span>
+                                  </div>
+                                ) : (
+                                  <div className="text-slate-500">—</div>
+                                )}
+                                {hasPreview && (
+                                  <div className="text-xs text-amber-500 font-medium bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20" title="Preview — final result is calculated on Submit">
+                                    Preview: {provisionalTotal.toFixed(1)} pts
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="p-3 text-center font-bold">
                           {row.grade ? (
-                            <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              {row.grade}
-                            </span>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                {row.grade}
+                              </span>
+                              <span className="text-[9px] text-slate-500 uppercase">(Official)</span>
+                            </div>
                           ) : (
                             <span className="text-slate-500">—</span>
                           )}
