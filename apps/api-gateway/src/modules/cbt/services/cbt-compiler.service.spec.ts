@@ -176,5 +176,19 @@ describe("CBTCompilerService & Authorization", () => {
          data: expect.objectContaining({ score: 85, provenance: "CBT" })
       }));
     });
+
+    it("L. Assessment component maximum: should bound compiled score to AssessmentComponent.maxScore", async () => {
+      txMock.gradebookSubmission.findFirst.mockResolvedValue({ id: "subm1", status: "DRAFT" });
+      txMock.assessmentScore.findUnique.mockResolvedValue(null);
+      // Attempt has score 150, but component max is 100
+      kernel.db.cBTAttempt.findMany.mockResolvedValue([{ id: "att1", studentId: "st1", totalScore: 150 }]);
+      
+      const res = await compiler.compileToGradebook("t1", "s1", "ex1", "teacher");
+
+      expect(res.compiledCount).toBe(1);
+      expect(txMock.assessmentScore.create).toHaveBeenCalledWith(expect.objectContaining({
+         data: expect.objectContaining({ score: 100, provenance: "CBT" }) // maxScore is 100
+      }));
+    });
   });
 });

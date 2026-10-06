@@ -219,11 +219,12 @@ export class CBTCompilerService {
               continue; 
             }
 
-            const oldScore = existingScore.score; if (oldScore === attempt.totalScore) continue;
+            const boundedScore = Math.min(attempt.totalScore || 0, component.maxScore);
+            const oldScore = existingScore.score; if (oldScore === boundedScore) continue;
             await tx.assessmentScore.update({
               where: { id: existingScore.id },
               data: {
-                score: attempt.totalScore, maxScore: component.maxScore,
+                score: boundedScore, maxScore: component.maxScore,
                 provenance: ScoreProvenance.CBT, isAbsent: false, isExempt: false
               }
             });
@@ -232,7 +233,7 @@ export class CBTCompilerService {
               data: {
                 tenantId, schoolId, subjectResultId: subjectResult.id,
                 assessmentScoreId: existingScore.id, studentId: attempt.studentId,
-                previousScore: oldScore, newScore: attempt.totalScore,
+                previousScore: oldScore, newScore: boundedScore,
                 previousIsAbsent: existingScore.isAbsent, newIsAbsent: false,
                 actorUserId: actorUserId, actorRole: "SYSTEM_CBT_COMPILER",
                 reason: "CBT Auto-Compilation"
@@ -241,11 +242,12 @@ export class CBTCompilerService {
             await this.resultsEngine.recalculateSubjectResult(tenantId, schoolId, subjectResult.id, tx);
               compiledCount++;
             } else {
+            const boundedScore = Math.min(attempt.totalScore || 0, component.maxScore);
             const createdScore = await tx.assessmentScore.create({
               data: {
                 tenantId, schoolId, subjectResultId: subjectResult.id,
                 assessmentComponentId: component.id,
-                score: attempt.totalScore, maxScore: component.maxScore,
+                score: boundedScore, maxScore: component.maxScore,
                 provenance: ScoreProvenance.CBT, isAbsent: false, isExempt: false
               }
             });
