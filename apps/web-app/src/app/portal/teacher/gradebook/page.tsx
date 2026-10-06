@@ -251,7 +251,7 @@ export default function TeacherGradebookPage() {
         // For each active component, resolve existing score or fallback
         activeComps.forEach((comp) => {
           const match = s.scores.find(
-            (sc) => sc.assessmentComponentId === comp.id || sc.type === comp.type
+            (sc) => sc.assessmentComponentId === comp.id
           );
           compScores[comp.id] = {
             assessmentComponentId: comp.id,
