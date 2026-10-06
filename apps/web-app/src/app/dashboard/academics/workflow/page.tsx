@@ -561,14 +561,14 @@ export default function GradebookWorkflowPage() {
                       detailData.subjectResults.forEach((res: any) => {
                         if (Array.isArray(res.scores)) {
                           res.scores.forEach((s: any) => {
-                            const idKey = s.componentId || s.type;
+                            const idKey = s.assessmentComponentId;
                             if (idKey && !compMap.has(idKey)) {
                               compMap.set(idKey, {
                                 id: idKey,
-                                title: s.title || s.type,
-                                type: s.type || "COMPONENT",
-                                maxScore: s.maxScore,
-                                weight: s.weight,
+                                title: s.assessmentComponent?.title || "COMPONENT",
+                                type: s.assessmentComponent?.assessmentType?.code || "COMPONENT",
+                                maxScore: s.assessmentComponent?.maxScore,
+                                weight: s.assessmentComponent?.weight,
                               });
                             }
                           });
@@ -584,21 +584,14 @@ export default function GradebookWorkflowPage() {
                               <tr>
                                 <th className="py-2.5 px-3">Student Name</th>
                                 <th className="py-2.5 px-3">Student No.</th>
-                                {components.length > 0 ? (
-                                  components.map((c) => (
-                                    <th key={c.id} className="py-2.5 px-3 text-center min-w-[100px]">
-                                      <div className="font-bold text-slate-200">{c.title}</div>
-                                      <div className="text-[9px] text-slate-400 font-normal lowercase">
-                                        {c.type} {c.maxScore ? `(max ${c.maxScore})` : ""} {c.weight ? `[${c.weight}%]` : ""}
-                                      </div>
-                                    </th>
-                                  ))
-                                ) : (
-                                  <>
-                                    <th className="py-2.5 px-3 text-center">CA Score</th>
-                                    <th className="py-2.5 px-3 text-center">Exam Score</th>
-                                  </>
-                                )}
+                                {components.map((c) => (
+                                  <th key={c.id} className="py-2.5 px-3 text-center min-w-[100px]">
+                                    <div className="font-bold text-slate-200">{c.title}</div>
+                                    <div className="text-[9px] text-slate-400 font-normal lowercase">
+                                      {c.type} {c.maxScore ? `(max ${c.maxScore})` : ""} {c.weight ? `[${c.weight}%]` : ""}
+                                    </div>
+                                  </th>
+                                ))}
                                 <th className="py-2.5 px-3 text-center">Total Score</th>
                                 <th className="py-2.5 px-3 text-center">Grade</th>
                               </tr>
@@ -606,8 +599,6 @@ export default function GradebookWorkflowPage() {
                             <tbody className="divide-y divide-[#1E3A5F]/60 bg-[#070B14]/40">
                               {detailData.enrollments.map((en) => {
                                 const res = detailData.subjectResults.find((r) => r.enrollmentId === en.id);
-                                const caObj = res?.scores?.find((s: any) => s.type === "CA");
-                                const examObj = res?.scores?.find((s: any) => s.type === "EXAM");
 
                                 return (
                                   <tr key={en.id} className="hover:bg-[#1E3A5F]/20">
@@ -617,46 +608,35 @@ export default function GradebookWorkflowPage() {
                                     <td className="py-2.5 px-3 font-mono text-slate-400">
                                       {en.student.studentNumber || "N/A"}
                                     </td>
-                                    {components.length > 0 ? (
-                                      components.map((c) => {
-                                        const sObj = res?.scores?.find(
-                                          (s: any) => s.componentId === c.id || s.type === c.type
-                                        );
-                                        return (
-                                          <td key={c.id} className="py-2.5 px-3 text-center font-mono">
-                                            {sObj ? (
-                                              <div className="flex flex-col items-center justify-center gap-0.5">
-                                                <span className="font-semibold text-slate-100">
-                                                  {sObj.isAbsent ? "ABS" : sObj.score}
+                                    {components.map((c) => {
+                                      const sObj = res?.scores?.find(
+                                        (s: any) => s.assessmentComponentId === c.id
+                                      );
+                                      return (
+                                        <td key={c.id} className="py-2.5 px-3 text-center font-mono">
+                                          {sObj ? (
+                                            <div className="flex flex-col items-center justify-center gap-0.5">
+                                              <span className="font-semibold text-slate-100">
+                                                {sObj.isAbsent ? "ABS" : sObj.score}
+                                              </span>
+                                              {sObj.provenance && (
+                                                <span
+                                                  className={`text-[8px] px-1 py-0.2 rounded font-sans font-extrabold uppercase ${
+                                                    sObj.provenance === "CBT"
+                                                      ? "bg-purple-900/60 text-purple-300 border border-purple-500/40"
+                                                      : "bg-slate-800 text-slate-300"
+                                                  }`}
+                                                >
+                                                  {sObj.provenance}
                                                 </span>
-                                                {sObj.provenance && (
-                                                  <span
-                                                    className={`text-[8px] px-1 py-0.2 rounded font-sans font-extrabold uppercase ${
-                                                      sObj.provenance === "CBT"
-                                                        ? "bg-purple-900/60 text-purple-300 border border-purple-500/40"
-                                                        : "bg-slate-800 text-slate-300"
-                                                    }`}
-                                                  >
-                                                    {sObj.provenance}
-                                                  </span>
-                                                )}
-                                              </div>
-                                            ) : (
-                                              "-"
-                                            )}
-                                          </td>
-                                        );
-                                      })
-                                    ) : (
-                                      <>
-                                        <td className="py-2.5 px-3 text-center font-mono">
-                                          {caObj ? (caObj.isAbsent ? "ABS" : caObj.score) : "-"}
+                                              )}
+                                            </div>
+                                          ) : (
+                                            "-"
+                                          )}
                                         </td>
-                                        <td className="py-2.5 px-3 text-center font-mono">
-                                          {examObj ? (examObj.isAbsent ? "ABS" : examObj.score) : "-"}
-                                        </td>
-                                      </>
-                                    )}
+                                      );
+                                    })}
                                     <td className="py-2.5 px-3 text-center font-bold font-mono text-[#D2AD36]">
                                       {res?.totalScore !== undefined && res?.totalScore !== null ? res.totalScore : "-"}
                                     </td>

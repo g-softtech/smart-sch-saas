@@ -105,7 +105,15 @@ export class GradebookWorkflowService {
           enrollmentId: { in: enrollmentIds },
         },
         include: {
-          scores: true,
+          scores: {
+            include: {
+              assessmentComponent: {
+                include: {
+                  assessmentType: true,
+                },
+              },
+            },
+          },
         },
       });
 

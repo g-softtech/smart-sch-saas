@@ -263,14 +263,12 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Executable Security Suite:** `10/10 PASSED` (`test-phase6j-assignments-security.ts`). Verified all isolation boundaries: unauthenticated rejection, missing permission rejection, Admin access success, Teacher creation/grading strictly bounded by `TeacherSubjectAssignment`, cross-teacher rejection, cross-school rejection, cross-tenant rejection, and student enrollment visibility isolation.
       - **Teacher UI Validation:** Verified Teacher Assignment UI correctly uses authenticated context, dynamically derives available Subjects/Classes from active `TeacherSubjectAssignment`s, properly abstracts Admin actions (student submission backdoor removed), and retains Teacher Portal design.
       - **Student UI Regression:** Confirmed Student Portal consumes existing endpoints without disruption, enforces enrollment checks, and prevents cross-class leakage.
-      - **Gradebook UI/UX Fix:** Resolved "Total Weight = 80" UX confusion. Implemented dynamic 'Provisional Preview' logic and explicit Assessment Configuration indicators ensuring Teachers distinguish between cached official `SubjectResult.totalScore` and active draft states without corrupting `ResultsEngine` integrity.
-      - **Gradebook Integration:** Verified score submission writes through to existing `ResultsService.recordScore` conforming to the Phase 6G assessment pipeline. Executed `test-e2e-gradebook2.ts` proving full end-to-end `recalculateSubjectResult` DB correctness.
+      - **Gradebook UI/UX Fix:** Resolved "Total Weight = 80" UX UX confusion. Implemented dynamic 'Provisional Preview' logic and explicit Assessment Configuration indicators ensuring Teachers distinguish between cached official `SubjectResult.totalScore` and active draft states without corrupting `ResultsEngine` integrity.
+      - **Gradebook Mapping Fix:** Resolved Phase 6J Teacher Gradebook Reload Collision Bug caused by legacy `.type` fallback evaluating to `undefined === undefined`. Implemented strict mapping exclusively via `assessmentComponentId`.
+      - **Admin Workflow Results Disappearing Component Fix:** Resolved Phase 6G regression where Admin Workflow dynamically-built component map yielded `undefined` and fell back to hardcoded `CA`/`EXAM`. Updated backend DTO to include nested `assessmentComponent` data. Rewrote the frontend table parsing to strictly map off Phase 6G `s.assessmentComponentId`. Fully respects all dynamically configured components across all contexts.
+      - **Gradebook Integration:** Verified score submission writes through to existing `ResultsService.recordScore` conforming to the Phase 6G assessment pipeline. Executed `test-e2e-gradebook2.ts` proving full end-to-end `recalculateSubjectResult` DB correctness. Executed `test-admin-results-workflow.ts` to decisively prove dynamic custom component column rendering for Admin Workflow.
       - **Build Integrity:** Core Platform typecheck & Prisma validation PASSED (`0 errors`). API Gateway build PASSED (`0 errors`). Web App typecheck & production build PASSED.
     - **Git Checkpoint:** Commit pushed to `origin/main`. Working tree clean.
-      - **Final Commit:** `da4607d6` (pushed to `origin/main`).
-      - **Working Tree:** Clean (`git status --short` is empty).
-      - **HEAD Status:** `HEAD` matches `origin/main`.
-    - **Next Action:** Pending canonical roadmap directive or next phase initiation.
 
 ### Formal Deferred Requirements & Features
 The following features are intentionally deferred unless the canonical roadmap explicitly assigns them to an upcoming phase:
