@@ -68,19 +68,49 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
 - **Status:** Checkpoint reached. Implemented Identity, Admissions, Students, Academics, Staff, Movement, ID Cards, QR Scanner.
 
 ### Phase 2A — Platform Provisioning Engine
-- **Status:** COMPLETE / VERIFIED
+- **Status:** COMPLETE / VERIFIED / PUSHED
 - **Scope completed:**
-  - Tenant → School → Campus → Administrator transactional provisioning
-  - Tenant lifecycle functionality implemented
-  - Platform authorization boundary
-  - Platform audit integration
-  - Security/isolation behavior
+  - transactional Tenant → School → Campus → Initial Administrator provisioning
+  - tenant lifecycle functionality implemented
+  - platform authorization boundary
+  - PlatformAuditLog integration
+  - tenant/school/campus ownership validation
+  - tenant administrator remains `User.globalRole = USER`
+  - tenant administrator receives tenant-scoped administrative/SUPER_ADMIN membership only
+  - provisioned tenant administrator cannot access platform endpoints
+  - transaction rollback behavior
+  - duplicate tenant slug → `409 Conflict`
+  - failed provisioning leaves no partial records
+  - `core-platform` tenant-scoping build dependency
 - **Verification Evidence:**
-  - Exact E2E verification evidence: 26/26 passed across 3 suites
-  - Clean-build verification
-  - Transaction/rollback verification
-- **Git Checkpoint:** Commit `1954ed61de005531c274ada5cf3a352c46f758de` pushed to `origin/main`. Working tree clean.
-- **Next roadmap position:** Phase 2B — Super Admin Dashboard
+  - 26/26 security/provisioning tests passed across:
+    - platform-auth
+    - authorization
+    - platform-provisioning
+  - exact Git checkpoint: `a0a508de716c730b7b285ca7dc7173862dfd8d1b`
+  - pushed successfully
+  - HEAD and origin/main matched at that checkpoint
+  - working tree was clean
+
+### Phase 2B — Super Admin Dashboard & Platform Onboarding UI
+- **Status:** IMPLEMENTATION COMPLETE / RUNTIME VERIFICATION PENDING
+- **Scope completed:**
+  - `/super-admin` platform UI boundary
+  - Super Admin layout/route guard
+  - platform dashboard
+  - platform metrics
+  - platform tenant listing
+  - platform tenant detail
+  - `/super-admin/onboarding`
+  - onboarding UI consuming the authoritative Phase 2A provisioning API
+  - platform read endpoints under `/api/v1/platform/...`
+  - light/dark responsive UI work
+  - current static/build verification that actually passed
+  - Neon database outage preventing final E2E runtime verification
+  - exact Neon error: `Can't reach database server at ep-tiny-hall-b185omh9-pooler.c-5.eu-central-1.aws.neon.tech:5432`
+  - Phase 1/2A runtime regressions have NOT been re-certified for Phase 2B because the database was unavailable
+  - browser verification remains pending user verification
+- **Next action:** restore/diagnose Neon connectivity, then run the required runtime verification
 
 ### Phase 2: Academic Infrastructure (COMPLETE & INTEGRATED)
 - **Objective:** Establish the scheduling logic and assessment backbone required for students and parents to track academic progress.

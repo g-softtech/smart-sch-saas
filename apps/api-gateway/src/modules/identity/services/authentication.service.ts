@@ -377,8 +377,9 @@ export class AuthenticationService {
     return {
       userId: user.id,
       email: user.email,
-      portalType: "STAFF",
-      redirectUrl: "/workspaces",
+      globalRole: user.globalRole,
+      portalType: user.globalRole === "SUPER_ADMIN" ? "SUPER_ADMIN" : "STAFF",
+      redirectUrl: user.globalRole === "SUPER_ADMIN" ? "/super-admin" : "/workspaces",
     };
   }
 }
