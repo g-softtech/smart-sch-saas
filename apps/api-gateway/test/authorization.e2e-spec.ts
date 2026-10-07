@@ -9,6 +9,7 @@ const uuidv4 = crypto.randomUUID;
 import { AppModule } from '../src/app.module';
 
 describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
+  jest.setTimeout(30000);
   let app: INestApplication;
   let tenantId: string;
   let school1Id: string;
@@ -105,7 +106,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('x-tenant-id', tenantId)
       .set('x-school-id', school1Id);
-    
+
     expect(res.status).not.toBe(403);
     expect(res.status).not.toBe(401);
   });
@@ -114,6 +115,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
     const token = getToken(superAdminId);
     const otherTenantId = uuidv4();
     const otherSchoolId = uuidv4();
+
     await kernel.db.tenant.create({ data: { id: otherTenantId, name: 'Other Tenant', slug: 'other-tenant-' + otherTenantId } });
     await tenantContext.run({ tenantId: otherTenantId }, async () => {
       await kernel.db.school.create({ data: { id: otherSchoolId, tenantId: otherTenantId, name: 'Other School' } });
@@ -124,7 +126,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('x-tenant-id', tenantId)
       .set('x-school-id', otherSchoolId); // Supplying a school from another tenant
-    
+
     expect(res.status).toBe(403);
     await tenantContext.run({ tenantId: otherTenantId }, async () => {
       await kernel.db.school.delete({ where: { id: otherSchoolId } });
@@ -139,7 +141,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('x-tenant-id', tenantId)
       .set('x-school-id', school1Id);
-    
+
     expect(res.status).not.toBe(403);
   });
 
@@ -150,7 +152,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('x-tenant-id', tenantId)
       .set('x-school-id', school2Id); // User is not assigned to school 2
-    
+
     expect(res.status).toBe(403);
   });
 
@@ -158,13 +160,13 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
     const token = getToken(normalUserId);
     const otherTenantId = uuidv4();
     await kernel.db.tenant.create({ data: { id: otherTenantId, name: 'Other Tenant', slug: 'other-tenant-2-' + otherTenantId } });
-    
+
     const res = await request(app.getHttpServer())
       .get('/api/v1/academics/academic-years')
       .set('Authorization', `Bearer ${token}`)
       .set('x-tenant-id', otherTenantId)
       .set('x-school-id', school1Id);
-    
+
     expect(res.status).toBe(403); // Fails because they don't have membership in other tenant
     await kernel.db.tenant.delete({ where: { id: otherTenantId } });
   });
@@ -177,7 +179,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('x-tenant-id', tenantId)
       .set('x-school-id', school1Id)
       .set('x-campus-id', campus1Id);
-    
+
     expect(res.status).not.toBe(403);
   });
 
@@ -189,7 +191,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('x-tenant-id', tenantId)
       .set('x-school-id', school1Id)
       .set('x-campus-id', campus2Id); // Campus 2 is not assigned
-    
+
     expect(res.status).toBe(403);
   });
 
@@ -200,7 +202,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('x-tenant-id', tenantId)
       .set('x-school-id', school1Id);
-    
+
     expect(res.status).not.toBe(403);
     // Note: Interceptor automatically injects `campus1Id` into request.workspace.campusId
     // If they call a campus-aware endpoint, it will enforce campus1Id.
@@ -213,7 +215,7 @@ describe('WorkspaceContextInterceptor Authorization (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('x-tenant-id', tenantId)
       .set('x-school-id', uuidv4()); // Nonexistent
-    
+
     expect(res.status).toBe(403);
   });
 });

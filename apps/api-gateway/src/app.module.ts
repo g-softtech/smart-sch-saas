@@ -26,6 +26,7 @@ import { PortalTeacherModule } from "./modules/portal-teacher/portal-teacher.mod
 import { EntitlementsModule } from "./modules/entitlements/entitlements.module";
 import { LibraryModule } from "./modules/library/library.module";
 import { CmsModule } from "./modules/cms/cms.module";
+import { PlatformModule } from "./modules/platform/platform.module";
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { CmsModule } from "./modules/cms/cms.module";
     PortalTeacherModule,
     EntitlementsModule,
     LibraryModule,
+    PlatformModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

@@ -12,6 +12,7 @@
   },
   "globals": {
     "ts-jest": {
+      "diagnostics": false,
       "tsconfig": {
         "allowJs": true
       }

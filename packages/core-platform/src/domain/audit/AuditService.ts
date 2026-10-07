@@ -52,4 +52,39 @@ export class AuditService {
       throw error;
     }
   }
+
+  /**
+   * Appends an immutable platform-level audit log.
+   */
+  async logPlatformAction(
+    prisma: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>,
+    event: Omit<AuditEvent, 'tenantId'>
+  ): Promise<any> {
+    try {
+      const maskedMetadata = this.maskingService.mask(event.metadata || {});
+      const correlationId = event.correlationId || randomUUID();
+
+      const payload = {
+        entity: event.entity,
+        entityId: event.entityId,
+        ipAddress: event.ipAddress,
+        userAgent: event.userAgent,
+        correlationId,
+        ...maskedMetadata
+      };
+
+      const auditRecord = await prisma.platformAuditLog.create({
+        data: {
+          action: event.action,
+          actorId: event.userId || 'system',
+          metadata: payload,
+        }
+      });
+
+      return auditRecord;
+    } catch (error) {
+      this.logger.error(`Failed to write platform audit log for action: ${event.action}`, error);
+      throw error;
+    }
+  }
 }
