@@ -56,6 +56,8 @@ export default function AcademicsPage() {
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createName, setCreateName] = useState('');
+  const [createStartDate, setCreateStartDate] = useState('');
+  const [createEndDate, setCreateEndDate] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState(false);
@@ -200,6 +202,14 @@ export default function AcademicsPage() {
     e.preventDefault();
     if (!createName.trim()) return;
 
+    if (activeTab === 'academic-years') {
+      if (!createStartDate || !createEndDate) return;
+      if (new Date(createStartDate) >= new Date(createEndDate)) {
+        setCreateError("End date must be strictly after start date");
+        return;
+      }
+    }
+
     setCreateLoading(true);
     setCreateError(null);
     setCreateSuccess(false);
@@ -207,13 +217,22 @@ export default function AcademicsPage() {
     try {
       if (!schoolId) throw new Error("No active school in workspace");
 
-      await apiClient.post('api/v1/academics/academic-years', {
+      const payload: Record<string, string> = {
         schoolId,
         name: createName.trim()
-      });
+      };
+
+      if (activeTab === 'academic-years') {
+        payload.startDate = createStartDate;
+        payload.endDate = createEndDate;
+      }
+
+      await apiClient.post('api/v1/academics/academic-years', payload);
 
       setCreateSuccess(true);
       setCreateName('');
+      setCreateStartDate('');
+      setCreateEndDate('');
       setTimeout(() => {
         setIsCreateModalOpen(false);
         setCreateSuccess(false);
@@ -865,6 +884,42 @@ export default function AcademicsPage() {
                     </div>
                   </div>
 
+                  <div className="mt-4">
+                    <label htmlFor="startDate" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                      Start Date
+                    </label>
+                    <div className="mt-2">
+                      <input
+                        type="date"
+                        name="startDate"
+                        id="startDate"
+                        required
+                        value={createStartDate}
+                        onChange={(e) => setCreateStartDate(e.target.value)}
+                        disabled={createLoading}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark placeholder:text-gray-400 dark:placeholder:text-brand-gray-text focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label htmlFor="endDate" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+                      End Date
+                    </label>
+                    <div className="mt-2">
+                      <input
+                        type="date"
+                        name="endDate"
+                        id="endDate"
+                        required
+                        value={createEndDate}
+                        onChange={(e) => setCreateEndDate(e.target.value)}
+                        disabled={createLoading}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark placeholder:text-gray-400 dark:placeholder:text-brand-gray-text focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                      />
+                    </div>
+                  </div>
+
                   {createError && (
                     <div className="mt-2 text-sm text-red-600 dark:text-red-400">
                       {createError}
@@ -887,7 +942,7 @@ export default function AcademicsPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={createLoading || !createName.trim()}
+                      disabled={createLoading || !createName.trim() || !createStartDate || !createEndDate}
                       className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
                     >
                       {createLoading ? 'Saving...' : 'Save'}
