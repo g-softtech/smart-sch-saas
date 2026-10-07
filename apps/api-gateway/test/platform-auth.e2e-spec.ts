@@ -133,4 +133,48 @@ describe("Platform Authorization (e2e)", () => {
       .set("x-tenant-id", tenantId)
       .expect(403); // Still rejected despite valid tenant-id
   });
+
+  describe("Platform Read APIs (Metrics & Tenants)", () => {
+    it("metrics requires global SUPER_ADMIN", async () => {
+      const token = getAuthToken(globalAdminId);
+      await request(app.getHttpServer())
+        .get("/api/v1/platform/metrics")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const badToken = getAuthToken(tenantAdminId);
+      await request(app.getHttpServer())
+        .get("/api/v1/platform/metrics")
+        .set("Authorization", `Bearer ${badToken}`)
+        .expect(403);
+    });
+
+    it("tenant list requires global SUPER_ADMIN", async () => {
+      const token = getAuthToken(globalAdminId);
+      await request(app.getHttpServer())
+        .get("/api/v1/platform/tenants")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const badToken = getAuthToken(ordinaryUserId);
+      await request(app.getHttpServer())
+        .get("/api/v1/platform/tenants")
+        .set("Authorization", `Bearer ${badToken}`)
+        .expect(403);
+    });
+
+    it("tenant detail requires global SUPER_ADMIN", async () => {
+      const token = getAuthToken(globalAdminId);
+      await request(app.getHttpServer())
+        .get(`/api/v1/platform/tenants/${tenantId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const badToken = getAuthToken(tenantAdminId);
+      await request(app.getHttpServer())
+        .get(`/api/v1/platform/tenants/${tenantId}`)
+        .set("Authorization", `Bearer ${badToken}`)
+        .expect(403);
+    });
+  });
 });

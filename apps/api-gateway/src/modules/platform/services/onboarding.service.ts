@@ -40,6 +40,7 @@ export class OnboardingService {
           // C. Create School
           const school = await tx.school.create({
             data: {
+              tenantId: tenant.id,
               name: dto.schoolName,
             },
           });
@@ -47,6 +48,7 @@ export class OnboardingService {
           // D. Create Default Campus
           const campus = await tx.campus.create({
             data: {
+              tenantId: tenant.id,
               schoolId: school.id,
               name: 'Main Campus',
             },
@@ -60,6 +62,7 @@ export class OnboardingService {
           if (!adminRole) {
             adminRole = await tx.role.create({
               data: {
+                tenantId: tenant.id,
                 name: 'SUPER_ADMIN',
                 isSystem: true,
               },
@@ -95,6 +98,7 @@ export class OnboardingService {
           if (!existingMembership) {
             await tx.userTenantMembership.create({
               data: {
+                tenantId: tenant.id,
                 userId: user.id,
                 roleId: adminRole.id,
                 state: 'PROVISIONED',
@@ -105,6 +109,7 @@ export class OnboardingService {
           // H. Ensure user has full access to the created school
           await tx.userSchoolAccess.create({
             data: {
+              tenantId: tenant.id,
               userId: user.id,
               schoolId: school.id,
             },

@@ -83,6 +83,7 @@ export class TenantLifecycleService {
       return await tenantContext.run({ tenantId }, async () => {
         const school = await tx.school.create({
           data: {
+            tenantId: tenantId,
             name: dto.schoolName,
           },
         });
@@ -90,6 +91,7 @@ export class TenantLifecycleService {
         // E2E transaction requires standard campus setup
         const campus = await tx.campus.create({
           data: {
+            tenantId: tenantId,
             schoolId: school.id,
             name: 'Main Campus',
           },

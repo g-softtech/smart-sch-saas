@@ -16,7 +16,7 @@ export class PlatformProvisioningController {
 
   @Post('tenant')
   async provisionTenant(@Body() dto: ProvisionTenantDto, @Req() req: Request) {
-    const actorId = (req.user as any)?.sub || 'system';
+    const actorId = (req as any).user?.sub || 'system';
     return await this.onboardingService.provisionTenant(dto, actorId);
   }
 
@@ -26,19 +26,19 @@ export class PlatformProvisioningController {
     @Body() dto: CreateSchoolDto,
     @Req() req: Request,
   ) {
-    const actorId = (req.user as any)?.sub || 'system';
+    const actorId = (req as any).user?.sub || 'system';
     return await this.tenantLifecycleService.createSchool(tenantId, dto, actorId);
   }
 
   @Put('tenant/:tenantId/suspend')
   async suspendTenant(@Param('tenantId') tenantId: string, @Req() req: Request) {
-    const actorId = (req.user as any)?.sub || 'system';
+    const actorId = (req as any).user?.sub || 'system';
     return await this.tenantLifecycleService.suspendTenant(tenantId, actorId);
   }
 
   @Put('tenant/:tenantId/reactivate')
   async reactivateTenant(@Param('tenantId') tenantId: string, @Req() req: Request) {
-    const actorId = (req.user as any)?.sub || 'system';
+    const actorId = (req as any).user?.sub || 'system';
     return await this.tenantLifecycleService.reactivateTenant(tenantId, actorId);
   }
 }

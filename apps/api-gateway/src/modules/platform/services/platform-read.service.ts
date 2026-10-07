@@ -21,7 +21,7 @@ export class PlatformReadService {
       kernel.db.campus.count(),
       kernel.db.user.count(),
       kernel.db.tenant.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
-      kernel.db.platformAuditLog.findMany({ orderBy: { timestamp: 'desc' }, take: 10 }),
+      kernel.db.platformAuditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
     ]);
 
     return {
