@@ -107,6 +107,25 @@ describe('Platform Provisioning (e2e)', () => {
           include: { role: true },
         });
         expect(membership.role.name).toBe('SUPER_ADMIN');
+
+        // Check that the ADMIN role was created and seeded with CMS permissions
+        const adminRole = await prisma.role.findFirst({
+          where: { tenantId: res.body.tenantId, name: 'ADMIN' },
+        });
+        expect(adminRole).toBeDefined();
+
+        const perms = await prisma.rolePermission.findMany({
+          where: { roleId: adminRole.id },
+          include: { permission: true },
+        });
+        const permNames = perms.map((rp: any) => rp.permission.name);
+        expect(permNames).toEqual(
+          expect.arrayContaining([
+            'website:manage_config',
+            'website:manage_content',
+            'website:publish',
+          ]),
+        );
       });
 
       // Verify platform audit record

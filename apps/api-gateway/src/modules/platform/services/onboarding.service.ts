@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { ProvisionTenantDto } from '../dto/provision-tenant.dto';
 import { kernel, tenantContext, AuditService } from '@saas/core-platform';
+import { seedCmsRolePermissionsForTenant } from '../../../../../../packages/core-platform/src/scripts/seed-cms-permissions';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 
@@ -64,6 +65,21 @@ export class OnboardingService {
               data: {
                 tenantId: tenant.id,
                 name: 'SUPER_ADMIN',
+                isSystem: true,
+              },
+            });
+          }
+
+          // E.2 Create standard ADMIN role so it can receive seeded permissions
+          let standardAdminRole = await tx.role.findFirst({
+            where: { name: 'ADMIN', isSystem: true },
+          });
+
+          if (!standardAdminRole) {
+            standardAdminRole = await tx.role.create({
+              data: {
+                tenantId: tenant.id,
+                name: 'ADMIN',
                 isSystem: true,
               },
             });
@@ -152,9 +168,14 @@ export class OnboardingService {
         },
       });
 
+      // Seed CMS permissions after the transaction commits, so it sees the newly created roles.
+      // If the transaction fails, this is skipped, preventing orphan records.
+      await seedCmsRolePermissionsForTenant(result.tenantId);
+
       return result;
 
     } catch (error) {
+      console.error('PROVISIONING ERROR:', error);
       this.logger.error(`Provisioning failed for tenant ${dto.tenantSlug}`, error);
       throw error;
     }
