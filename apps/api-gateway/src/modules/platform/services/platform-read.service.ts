@@ -17,8 +17,9 @@ export class PlatformReadService {
       kernel.db.tenant.count(),
       kernel.db.tenant.count({ where: { status: 'ACTIVE' } }),
       kernel.db.tenant.count({ where: { status: 'SUSPENDED' } }),
-      kernel.db.school.count(),
-      kernel.db.campus.count(),
+      // School and Campus are TENANT_SCOPED; use platformReads accessor for global counts (caller is already authorized via PlatformAuthGuard).
+      kernel.platformReads.countTotalSchools(),
+      kernel.platformReads.countTotalCampuses(),
       kernel.db.user.count(),
       kernel.db.tenant.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
       kernel.db.platformAuditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),

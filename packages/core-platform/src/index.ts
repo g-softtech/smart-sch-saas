@@ -84,11 +84,63 @@ function buildScopedExtension(base: PrismaClient) {
   });
 }
 
+/**
+ * Narrow, read-only interface providing platform-level read capabilities for
+ * already-authorized platform administration services.
+ * Note: This interface does not perform authorization checks itself; authorization
+ * is enforced upstream at the platform authentication/authorization boundary (e.g. PlatformAuthGuard).
+ * Exposes ONLY specific aggregated read operations required by platform administration.
+ * Strictly prohibits arbitrary Prisma model access and any mutation operations.
+ */
+export interface PlatformReadOperations {
+  /**
+   * Returns total count of Schools across all tenants.
+   * Intended strictly for already-authorized platform administration services (e.g. Super Admin metrics).
+   */
+  countTotalSchools(): Promise<number>;
+
+  /**
+   * Returns total count of Campuses across all tenants.
+   * Intended strictly for already-authorized platform administration services (e.g. Super Admin metrics).
+   */
+  countTotalCampuses(): Promise<number>;
+}
+
+class PlatformReadOperationsImpl implements PlatformReadOperations {
+  #basePrisma: PrismaClient;
+
+  constructor(basePrisma: PrismaClient) {
+    this.#basePrisma = basePrisma;
+  }
+
+  async countTotalSchools(): Promise<number> {
+    return this.#basePrisma.school.count();
+  }
+
+  async countTotalCampuses(): Promise<number> {
+    return this.#basePrisma.campus.count();
+  }
+}
+
 class PlatformKernel {
-  private basePrisma = new PrismaClient();
+  #basePrisma = new PrismaClient();
 
   // The client exposed to the rest of the application — enforces tenant-scoped Zero-Trust
-  public db = buildScopedExtension(this.basePrisma);
+  public db = buildScopedExtension(this.#basePrisma);
+
+  /**
+   * Narrow platform-level read accessor intended for already-authorized platform administration services.
+   * Note: This accessor does not perform authorization checks itself; authorization is
+   * enforced upstream at the platform authentication/authorization boundary (e.g. PlatformAuthGuard).
+   * Exposes only narrowly scoped global aggregation reads required for platform management
+   * (e.g. Super Admin dashboard metrics).
+   *
+   * SECURITY INVARIANT:
+   * This accessor intentionally does NOT expose raw Prisma models, arbitrary query builders,
+   * or any mutation methods (create, update, delete).
+   * Regular application services MUST use `kernel.db` with active tenant context.
+   */
+  public readonly platformReads: PlatformReadOperations = new PlatformReadOperationsImpl(this.#basePrisma);
 
   /**
    * Tenant-aware interactive transaction.
@@ -114,7 +166,7 @@ class PlatformKernel {
     query: TemplateStringsArray,
     ...values: unknown[]
   ): Promise<T> {
-    return this.basePrisma.$queryRaw<T>(query, ...values);
+    return this.#basePrisma.$queryRaw<T>(query, ...values);
   }
 }
 
