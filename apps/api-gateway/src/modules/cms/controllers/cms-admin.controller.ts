@@ -100,7 +100,7 @@ export class CmsAdminController {
   ) {
     const { tenantId, schoolId } = req.workspace;
     if (!schoolId) throw new BadRequestException('School context required');
-    const media = await this.service.uploadMedia(tenantId, schoolId, req.user.id, file);
+    const media = await this.service.uploadMedia(tenantId, schoolId, req.user.sub, file);
     return { id: media.id, filename: media.filename, mimeType: media.mimeType, serveUrl: `/api/v1/cms/admin/media/${media.id}/serve` };
   }
 
