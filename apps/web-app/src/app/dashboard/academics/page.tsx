@@ -66,6 +66,8 @@ export default function AcademicsPage() {
   const [isCreateTermModalOpen, setIsCreateTermModalOpen] = useState(false);
   const [createTermName, setCreateTermName] = useState('');
   const [createTermAcademicYearId, setCreateTermAcademicYearId] = useState('');
+  const [createTermStartDate, setCreateTermStartDate] = useState('');
+  const [createTermEndDate, setCreateTermEndDate] = useState('');
   const [createTermLoading, setCreateTermLoading] = useState(false);
   const [createTermError, setCreateTermError] = useState<string | null>(null);
   const [createTermSuccess, setCreateTermSuccess] = useState(false);
@@ -255,6 +257,12 @@ export default function AcademicsPage() {
   const handleCreateTermSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createTermName.trim() || !createTermAcademicYearId) return;
+    // Validate dates
+    if (!createTermStartDate || !createTermEndDate) return;
+    if (new Date(createTermStartDate) >= new Date(createTermEndDate)) {
+      setCreateTermError('End date must be strictly after start date');
+      return;
+    }
 
     setCreateTermLoading(true);
     setCreateTermError(null);
@@ -263,14 +271,20 @@ export default function AcademicsPage() {
     try {
       if (!schoolId) throw new Error("No active school in workspace");
 
-      await apiClient.post('api/v1/academics/terms', {
+      const payload: Record<string, string> = {
         academicYearId: createTermAcademicYearId,
-        name: createTermName.trim()
-      });
+        name: createTermName.trim(),
+        startDate: createTermStartDate,
+        endDate: createTermEndDate,
+      };
+
+      await apiClient.post('api/v1/academics/terms', payload);
 
       setCreateTermSuccess(true);
       setCreateTermName('');
       setCreateTermAcademicYearId('');
+      setCreateTermStartDate('');
+      setCreateTermEndDate('');
       setTimeout(() => {
         setIsCreateTermModalOpen(false);
         setCreateTermSuccess(false);
@@ -1011,7 +1025,42 @@ export default function AcademicsPage() {
                         />
                       </div>
                     </div>
-                  </div>
+                  <div className="mt-4">
+  <label htmlFor="termStartDate" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+    Start Date
+  </label>
+  <div className="mt-2">
+    <input
+      type="date"
+      name="termStartDate"
+      id="termStartDate"
+      required
+      value={createTermStartDate}
+      onChange={(e) => setCreateTermStartDate(e.target.value)}
+      disabled={createTermLoading}
+      className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark placeholder:text-gray-400 dark:placeholder:text-brand-gray-text focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+    />
+  </div>
+</div>
+
+<div className="mt-4">
+  <label htmlFor="termEndDate" className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite">
+    End Date
+  </label>
+  <div className="mt-2">
+    <input
+      type="date"
+      name="termEndDate"
+      id="termEndDate"
+      required
+      value={createTermEndDate}
+      onChange={(e) => setCreateTermEndDate(e.target.value)}
+      disabled={createTermLoading}
+      className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark placeholder:text-gray-400 dark:placeholder:text-brand-gray-text focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+    />
+  </div>
+</div>
+</div>
 
                   {createTermError && (
                     <div className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -1035,7 +1084,7 @@ export default function AcademicsPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={createTermLoading || !createTermName.trim() || !createTermAcademicYearId}
+                      disabled={createTermLoading || !createTermName.trim() || !createTermAcademicYearId || !createTermStartDate || !createTermEndDate}
                       className="inline-flex w-full justify-center rounded-md bg-brand-gold px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold sm:col-start-2 disabled:opacity-50 transition-colors"
                     >
                       {createTermLoading ? 'Saving...' : 'Save'}
