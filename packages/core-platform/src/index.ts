@@ -171,4 +171,4 @@ class PlatformKernel {
 }
 
 export const kernel = new PlatformKernel();
-
+export * from './scripts/seed-cms-permissions';

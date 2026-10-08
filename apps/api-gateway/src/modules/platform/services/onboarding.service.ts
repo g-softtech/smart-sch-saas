@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { ProvisionTenantDto } from '../dto/provision-tenant.dto';
 import { kernel, tenantContext, AuditService } from '@saas/core-platform';
-import { seedCmsRolePermissionsForTenant } from '../../../../../../packages/core-platform/src/scripts/seed-cms-permissions';
+import { seedCmsRolePermissionsForTenant } from '@saas/core-platform';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 
