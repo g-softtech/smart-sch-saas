@@ -89,6 +89,7 @@ export class CmsAdminService {
           contactPhone: dto.contactPhone,
           enableAdmissionsCta: dto.enableAdmissionsCta,
           themePayload: dto.themePayload,
+          layoutPayload: dto.layoutPayload,
         }
       };
       // Do not update root fields, keep existing status
@@ -100,6 +101,7 @@ export class CmsAdminService {
         ...restThemePayload,
         ...dto.themePayload,
       };
+      updateData.layoutPayload = dto.layoutPayload !== undefined ? dto.layoutPayload : existing.layoutPayload;
       updateData.status = CmsPublicationStatus.PUBLISHED; // Force status to PUBLISHED regardless of UI state
       updateData.primaryColor = dto.primaryColor;
       updateData.secondaryColor = dto.secondaryColor;

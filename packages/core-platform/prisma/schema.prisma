@@ -105,9 +105,13 @@ model Tenant {
   CmsAnnouncement                CmsAnnouncement[]
   CmsMedia                       CmsMedia[]
   CmsNavigationItem              CmsNavigationItem[]
+  AcademicGradingConfig          AcademicGradingConfig[]
+  CmsEvent                       CmsEvent[]
+  CmsGalleryItem                 CmsGalleryItem[]
+  CmsPublicStaff                 CmsPublicStaff[]
+  CmsBlogPost                    CmsBlogPost[]
 
   @@map("plt_tenants")
-  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model User {
@@ -132,6 +136,7 @@ model User {
   CmsPage             CmsPage[]
   CmsAnnouncement     CmsAnnouncement[]
   CmsMedia            CmsMedia[]
+  CmsBlogPost         CmsBlogPost[]
 
   @@map("idm_users")
 }
@@ -311,9 +316,13 @@ model School {
   CmsAnnouncement           CmsAnnouncement[]
   CmsMedia                  CmsMedia[]
   CmsNavigationItem         CmsNavigationItem[]
+  AcademicGradingConfig     AcademicGradingConfig[]
+  CmsEvent                  CmsEvent[]
+  CmsGalleryItem            CmsGalleryItem[]
+  CmsPublicStaff            CmsPublicStaff[]
+  CmsBlogPost               CmsBlogPost[]
 
   @@unique([tenantId, id])
-  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model TenantEntitlement {
@@ -509,11 +518,11 @@ model AcademicYear {
   lessonNotes               LessonNote[]
   TransportRouteAllocation  TransportRouteAllocation[]
   TransportSubscription     TransportSubscription[]
+  AcademicGradingConfig     AcademicGradingConfig[]
 
   @@unique([tenantId, schoolId, name])
   @@index([tenantId])
   @@map("acd_academic_years")
-  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model Term {
@@ -539,11 +548,11 @@ model Term {
   lessonNotes               LessonNote[]
   TransportRouteAllocation  TransportRouteAllocation[]
   TransportSubscription     TransportSubscription[]
+  AcademicGradingConfig     AcademicGradingConfig[]
 
   @@unique([tenantId, academicYearId, name])
   @@index([tenantId])
   @@map("acd_terms")
-  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model Department {
@@ -1209,19 +1218,19 @@ model TimetableEntry {
 }
 
 model GradingScale {
-  id             String          @id @default(uuid())
-  tenantId       String
-  schoolId       String
-  name           String
-  description    String?
-  boundaries     GradeBoundary[]
-  school         School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  tenant         Tenant          @relation(fields: [tenantId], references: [id])
-  subjectResults SubjectResult[]
+  id                    String                  @id @default(uuid())
+  tenantId              String
+  schoolId              String
+  name                  String
+  description           String?
+  boundaries            GradeBoundary[]
+  school                School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id])
+  subjectResults        SubjectResult[]
+  AcademicGradingConfig AcademicGradingConfig[]
 
   @@unique([tenantId, schoolId, name])
   @@map("acd_grading_scales")
-  AcademicGradingConfig AcademicGradingConfig[]
 }
 
 model GradeBoundary {
@@ -2536,6 +2545,7 @@ model CmsSiteConfig {
   faviconMediaId      String?
   primaryColor        String?
   themePayload        Json?
+  layoutPayload       Json?
   secondaryColor      String?
   contactEmail        String?
   contactPhone        String?
@@ -2605,11 +2615,15 @@ model CmsMedia {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school             School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  author             User            @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  siteConfigsLogo    CmsSiteConfig[] @relation("LogoMedia")
-  siteConfigsFavicon CmsSiteConfig[] @relation("FaviconMedia")
+  school             School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author             User             @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  siteConfigsLogo    CmsSiteConfig[]  @relation("LogoMedia")
+  siteConfigsFavicon CmsSiteConfig[]  @relation("FaviconMedia")
+  events             CmsEvent[]
+  galleryItems       CmsGalleryItem[]
+  publicStaff        CmsPublicStaff[]
+  blogPosts          CmsBlogPost[]
 
   @@index([tenantId, schoolId])
   @@map("cms_media")
@@ -2633,6 +2647,97 @@ model CmsNavigationItem {
   @@map("cms_navigation_items")
 }
 
+model CmsEvent {
+  id              String               @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  title           String
+  description     String               @db.Text
+  eventDate       DateTime
+  startTime       String?
+  endTime         String?
+  location        String?
+  featuredMediaId String?
+  status          CmsPublicationStatus @default(DRAFT)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  featuredMedia CmsMedia? @relation(fields: [featuredMediaId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, schoolId, status])
+  @@index([tenantId, schoolId, eventDate])
+  @@map("cms_events")
+}
+
+model CmsGalleryItem {
+  id         String   @id @default(uuid())
+  tenantId   String
+  schoolId   String
+  mediaId    String
+  caption    String?
+  altText    String?
+  isActive   Boolean  @default(true)
+  orderIndex Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  school School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  media  CmsMedia @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, schoolId, isActive, orderIndex])
+  @@map("cms_gallery_items")
+}
+
+model CmsPublicStaff {
+  id             String   @id @default(uuid())
+  tenantId       String
+  schoolId       String
+  staffProfileId String?
+  name           String
+  role           String
+  bio            String?  @db.Text
+  photoMediaId   String?
+  isActive       Boolean  @default(true)
+  orderIndex     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  photoMedia CmsMedia? @relation(fields: [photoMediaId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, schoolId, isActive, orderIndex])
+  @@map("cms_public_staff")
+}
+
+model CmsBlogPost {
+  id              String               @id @default(uuid())
+  tenantId        String
+  schoolId        String
+  title           String
+  slug            String
+  excerpt         String?
+  content         String               @db.Text
+  featuredMediaId String?
+  authorId        String
+  publishedAt     DateTime?
+  status          CmsPublicationStatus @default(DRAFT)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  featuredMedia CmsMedia? @relation(fields: [featuredMediaId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, schoolId, slug])
+  @@index([tenantId, schoolId, status])
+  @@map("cms_blog_posts")
+}
+
 model AcademicGradingConfig {
   id             String       @id @default(uuid())
   tenantId       String
@@ -2645,6 +2750,7 @@ model AcademicGradingConfig {
   gradingScale   GradingScale @relation(fields: [gradingScaleId], references: [id])
   school         School       @relation(fields: [schoolId], references: [id])
   tenant         Tenant       @relation(fields: [tenantId], references: [id])
+
   @@unique([tenantId, schoolId, academicYearId, termId])
   @@map("acd_academic_grading_configs")
 }

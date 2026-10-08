@@ -2,12 +2,13 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Globe, Settings, FileText, Megaphone, Menu } from "lucide-react";
+import { Globe, Settings, FileText, Megaphone, Menu, PenTool } from "lucide-react";
 
 export default function WebsiteLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
   const tabs = [
+    { name: "Builder", href: "/dashboard/website/builder", icon: PenTool },
     { name: "Settings", href: "/dashboard/website/settings", icon: Settings },
     { name: "Pages", href: "/dashboard/website/pages", icon: FileText },
     { name: "Announcements", href: "/dashboard/website/announcements", icon: Megaphone },

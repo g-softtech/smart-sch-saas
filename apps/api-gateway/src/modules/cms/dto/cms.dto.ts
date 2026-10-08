@@ -1,6 +1,7 @@
 import { IsString, IsOptional, IsBoolean, IsEnum, IsNumber, IsEmail, Min, Max, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CmsPublicationStatus } from '@saas/core-platform';
+import { CmsThemeConfigDto, CmsLayoutConfigDto } from './cms-v2.dto';
 
 export class UpdateSiteConfigDto {
   @IsEnum(CmsPublicationStatus)
@@ -22,7 +23,14 @@ export class UpdateSiteConfigDto {
   faviconMediaId?: string;
 
   @IsOptional()
-  themePayload?: any;
+  @ValidateNested()
+  @Type(() => CmsThemeConfigDto)
+  themePayload?: CmsThemeConfigDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CmsLayoutConfigDto)
+  layoutPayload?: CmsLayoutConfigDto;
 
   @IsOptional() @IsString()
   primaryColor?: string;
