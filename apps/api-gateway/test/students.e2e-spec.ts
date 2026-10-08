@@ -27,7 +27,8 @@ jest.mock('@saas/core-platform', () => {
     userTenantMembership: { findFirst: jest.fn(), findUnique: jest.fn() },
     school: { findUnique: jest.fn(), findFirst: jest.fn() },
     userSchoolAccess: { findFirst: jest.fn() },
-    student: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+    staffProfile: { findFirst: jest.fn() },
+    student: { create: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
     guardian: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
     studentGuardian: { create: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
     enrollment: { create: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
@@ -112,6 +113,8 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
     (kernel.db.userTenantMembership.findUnique as jest.Mock).mockResolvedValue(testMembership);
     (kernel.db.school.findUnique as jest.Mock).mockResolvedValue(mockSchool);
     (kernel.db.school.findFirst as jest.Mock).mockResolvedValue(mockSchool);
+    (kernel.db.student.findFirst as jest.Mock).mockResolvedValue(null);
+    if (kernel.db.staffProfile) (kernel.db.staffProfile.findFirst as jest.Mock).mockResolvedValue(null);
   });
 
   // ─── Authentication enforcement ────────────────────────────────────────────
@@ -395,14 +398,17 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
     });
 
     it('POST /api/v1/students/:id/guardians/link — denies omitted school context for standard user (403)', async () => {
-      (kernel.db.role.findUnique as jest.Mock).mockResolvedValue({ id: 'r1', name: 'USER', tenantId: TENANT_ID });
+      const userMembership = { ...testMembership, role: { name: 'USER' } };
+      (kernel.db.userTenantMembership.findUnique as jest.Mock).mockResolvedValue(userMembership);
+      (kernel.db.student.findFirst as jest.Mock).mockResolvedValue(mockStudent); // Make auto-discovery succeed
 
-      await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
-        .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' })
-        .expect(403);
+        .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' });
+        
+      expect(res.status).toBe(403);
     });
 
     it('POST /api/v1/students/:id/guardians/link — accepts tenant-wide linking if SUPER_ADMIN (201)', async () => {
@@ -414,12 +420,13 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
       (kernel.db.studentGuardian.create as jest.Mock).mockResolvedValue({ id: 'sg-2' });
       (kernel.db.$queryRaw as jest.Mock).mockResolvedValue([{ id: STUDENT_ID }]);
 
-      await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .post(`/api/v1/students/${STUDENT_ID}/guardians/link`)
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
-        .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' })
-        .expect(201);
+        .send({ guardianId: GUARDIAN_ID, relationship: 'FATHER' });
+      
+      expect(res.status).toBe(201);
     });
 
     it('POST /api/v1/students/:id/guardians/link — concurrent requests invoke FOR UPDATE and complete safely', async () => {
@@ -557,6 +564,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
     it('POST .../transfer — performs internal transfer (201)', async () => {
       const activeEnrollment = { ...mockEnrollment, status: 'ACTIVE', schoolId: SCHOOL_ID, studentId: STUDENT_ID, academicYearId: YEAR_ID };
       const newClassId = '20000000-0000-4000-8000-000000000002';
+      const newCampusId = '30000000-0000-4000-8000-000000000003';
       (kernel.db.enrollment.findUnique as jest.Mock).mockResolvedValue(activeEnrollment);
       (kernel.db.class.findFirst as jest.Mock).mockResolvedValue({ id: newClassId, schoolId: SCHOOL_ID });
       (kernel.$transaction as jest.Mock).mockResolvedValue({ id: 'enr-2', status: 'ACTIVE', classId: newClassId });
@@ -566,7 +574,7 @@ describe('StudentsController (HTTP/E2E — mocked kernel)', () => {
         .set('Authorization', `Bearer ${validToken}`)
         .set('x-tenant-id', TENANT_ID)
         .set('x-school-id', SCHOOL_ID)
-        .send({ newClassId })
+        .send({ newClassId, newCampusId })
         .expect(201);
 
       expect(res.body.success).toBe(true);

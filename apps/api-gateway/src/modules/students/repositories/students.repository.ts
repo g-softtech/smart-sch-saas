@@ -410,7 +410,14 @@ export class StudentsRepository {
       }));
     }
     
-    return kernel.db.student.findMany({ where });
+    return kernel.db.student.findMany({ 
+      where,
+      include: {
+        enrollments: {
+          where: { status: EnrollmentStatus.ACTIVE }
+        }
+      }
+    });
   }
 
   async listEnrollments(studentId: string) {

@@ -485,35 +485,39 @@ export default function StudentsPage() {
       },
       {
         header: 'Actions',
-        accessor: (item) => (
-          <div className="flex items-center gap-4">
-            <Link
-              href={`/dashboard/students/${item.id}`}
-              className="text-brand-navy dark:text-brand-gold hover:opacity-80 transition-opacity font-medium"
-            >
-              View Profile
-            </Link>
-            <button
-              onClick={() => {
-                setLinkStudentId(item.id as string);
-                setIsLinkGuardianModalOpen(true);
-              }}
-              className="text-brand-teal hover:text-brand-navy dark:hover:text-brand-gold transition-colors font-medium"
-            >
-              Link Guardian
-            </button>
-            <button
-              onClick={() => {
-                setEnrollStudentId(item.id as string);
-                if (classes.length === 0) loadAcademicsForEnrollment();
-                setIsEnrollModalOpen(true);
-              }}
-              className="text-brand-gold hover:text-brand-navy dark:hover:text-white transition-colors font-medium"
-            >
-              Enroll
-            </button>
-          </div>
-        )
+        accessor: (item) => {
+          const enrollments = (item.enrollments as any[]) || [];
+          const hasActiveEnrollment = enrollments.length > 0;
+          return (
+            <div className="flex items-center gap-4">
+              <Link
+                href={`/dashboard/students/${item.id}`}
+                className="text-brand-navy dark:text-brand-gold hover:opacity-80 transition-opacity font-medium"
+              >
+                {hasActiveEnrollment ? "Manage Enrollment" : "View Profile"}
+              </Link>
+              <button
+                onClick={() => {
+                  setLinkStudentId(item.id as string);
+                  setIsLinkGuardianModalOpen(true);
+                }}
+                className="text-brand-teal hover:text-brand-navy dark:hover:text-brand-gold transition-colors font-medium"
+              >
+                Link Guardian
+              </button>
+              <button
+                onClick={() => {
+                  setEnrollStudentId(item.id as string);
+                  if (classes.length === 0) loadAcademicsForEnrollment();
+                  setIsEnrollModalOpen(true);
+                }}
+                className="text-brand-gold hover:text-brand-navy dark:hover:text-white transition-colors font-medium"
+              >
+                {hasActiveEnrollment ? "Enroll for New Year" : "Enroll"}
+              </button>
+            </div>
+          );
+        }
       }
     ];
   } else if (activeTab === 'guardians') {
