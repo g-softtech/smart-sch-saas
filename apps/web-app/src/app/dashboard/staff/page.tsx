@@ -13,6 +13,8 @@ interface StaffProfile {
   firstName: string;
   lastName: string;
   designation: string | null;
+  email?: string | null;
+  phone?: string | null;
   type: string;
   status: string;
 }
@@ -34,6 +36,8 @@ export default function StaffPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [middleName, setMiddleName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState("MALE"); // default
   const [joiningDate, setJoiningDate] = useState("");
@@ -136,6 +140,8 @@ export default function StaffPage() {
         firstName: string;
         lastName: string;
         middleName?: string;
+        email?: string;
+        phone?: string;
         dateOfBirth?: string;
         gender?: string;
         joiningDate: string;
@@ -152,6 +158,8 @@ export default function StaffPage() {
       };
 
       if (middleName.trim()) payload.middleName = middleName.trim();
+      if (email.trim()) payload.email = email.trim();
+      if (phone.trim()) payload.phone = phone.trim();
       if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
       if (designation.trim()) payload.designation = designation.trim();
 
@@ -163,6 +171,8 @@ export default function StaffPage() {
       setFirstName("");
       setLastName("");
       setMiddleName("");
+      setEmail("");
+      setPhone("");
       setDateOfBirth("");
       setGender("MALE");
       setJoiningDate("");
@@ -207,6 +217,8 @@ export default function StaffPage() {
       },
     },
     { header: "Designation", accessor: (item) => item.designation || "N/A" },
+    { header: "Email", accessor: (item) => item.email || "N/A" },
+    { header: "Phone", accessor: (item) => item.phone || "N/A" },
     {
       header: "Type",
       accessor: (item) => (
@@ -386,6 +398,48 @@ export default function StaffPage() {
                           id="middleName"
                           value={middleName}
                           onChange={(e) => setMiddleName(e.target.value)}
+                          disabled={createLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label
+                        htmlFor="email"
+                        className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite"
+                      >
+                        Email
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="email"
+                          name="email"
+                          id="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={createLoading}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <label
+                        htmlFor="phone"
+                        className="block text-sm font-medium leading-6 text-brand-navy dark:text-brand-offwhite"
+                      >
+                        Phone Number
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="tel"
+                          name="phone"
+                          id="phone"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
                           disabled={createLoading}
                           className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-brand-offwhite bg-white dark:bg-brand-navy shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-brand-border-dark focus:ring-2 focus:ring-inset focus:ring-brand-gold sm:text-sm sm:leading-6 px-3"
                         />
