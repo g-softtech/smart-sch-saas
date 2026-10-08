@@ -25,7 +25,7 @@ export class OnboardingService {
 
     try {
       // Execute the provisioning as a single atomic operation
-      const result = await kernel.$transaction(async (tx) => {
+      const result = await kernel.db.$transaction(async (tx) => {
         // A. Create the Tenant (this is not tenant-scoped)
         const tenant = await tx.tenant.create({
           data: {
@@ -145,6 +145,9 @@ export class OnboardingService {
             },
           });
 
+          // J. Seed CMS permissions transactionally so they rollback if provisioning fails
+          await seedCmsRolePermissionsForTenant(tenant.id, tx);
+
           return {
             tenantId: tenant.id,
             schoolId: school.id,
@@ -152,7 +155,7 @@ export class OnboardingService {
             adminId: user.id,
           };
         });
-      });
+      }, { maxWait: 10000, timeout: 20000 });
 
       // Log the platform action outside the transaction to preserve it even if there's a subsequent error,
       // but since we want to be atomic, doing it after success is fine.
@@ -167,10 +170,6 @@ export class OnboardingService {
           schoolId: result.schoolId,
         },
       });
-
-      // Seed CMS permissions after the transaction commits, so it sees the newly created roles.
-      // If the transaction fails, this is skipped, preventing orphan records.
-      await seedCmsRolePermissionsForTenant(result.tenantId);
 
       return result;
 

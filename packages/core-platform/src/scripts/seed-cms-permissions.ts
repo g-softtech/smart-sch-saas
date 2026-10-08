@@ -18,11 +18,12 @@ export const CANONICAL_CMS_PERMISSIONS = [
 /**
  * Ensures canonical CMS permissions exist in global Permission catalog.
  */
-export async function seedCanonicalCmsPermissions() {
+export async function seedCanonicalCmsPermissions(txClient?: any) {
   const seededPermissions: Record<string, string> = {};
+  const db = txClient || kernel.db;
 
   for (const perm of CANONICAL_CMS_PERMISSIONS) {
-    const record = await kernel.db.permission.upsert({
+    const record = await db.permission.upsert({
       where: { name: perm.name },
       update: { description: perm.description },
       create: {
@@ -45,27 +46,30 @@ export async function seedCanonicalCmsPermissions() {
  *
  * (Note: SUPER_ADMIN bypasses explicit permission links in PoliciesGuard via role name override).
  */
-export async function seedCmsRolePermissionsForTenant(tenantId: string) {
-  const permMap = await seedCanonicalCmsPermissions();
+export async function seedCmsRolePermissionsForTenant(tenantId: string, txClient?: any) {
+  const permMap = await seedCanonicalCmsPermissions(txClient);
   const allPermIds = Object.values(permMap);
+  const db = txClient || kernel.db;
 
   await tenantContext.run({ tenantId }, async () => {
     // Fetch administrative roles in tenant
-    const roles = await kernel.db.role.findMany({
+    const roles = await db.role.findMany({
       where: {
         tenantId,
         name: { in: ["SCHOOL_ADMIN", "ADMIN"] },
       },
     });
 
+    console.log('Seeding CMS roles for tenant:', tenantId, 'Roles found:', roles.length, roles.map((r: any) => r.name));
+
     for (const role of roles) {
       // Administrative roles get all CMS permissions
       for (const permId of allPermIds) {
-        const existing = await kernel.db.rolePermission.findFirst({
+        const existing = await db.rolePermission.findFirst({
           where: { roleId: role.id, permissionId: permId },
         });
         if (!existing) {
-          await kernel.db.rolePermission.create({
+          await db.rolePermission.create({
             data: { roleId: role.id, permissionId: permId },
           });
         }

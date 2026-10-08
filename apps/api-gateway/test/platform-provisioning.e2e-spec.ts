@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -94,7 +94,7 @@ describe('Platform Provisioning (e2e)', () => {
       await tenantContext.run({ tenantId: res.body.tenantId }, async () => {
         const school = await prisma.school.findUnique({ where: { id: res.body.schoolId } });
         expect(school).toBeDefined();
-        
+
         const campus = await prisma.campus.findUnique({ where: { id: res.body.campusId } });
         expect(campus).toBeDefined();
         expect(campus.schoolId).toBe(school.id);
@@ -147,7 +147,7 @@ describe('Platform Provisioning (e2e)', () => {
       const adminUser = await prisma.user.findUnique({
         where: { email: payload.adminEmail },
       });
-      
+
       expect(adminUser).toBeDefined();
       expect(adminUser.globalRole).toBe('USER');
 
@@ -198,7 +198,7 @@ describe('Platform Provisioning (e2e)', () => {
       // Actually, since this is just an e2e test, we can simulate an unexpected DB error by passing a payload that
       // breaks a DB constraint not caught by validator. For example, `schoolName` longer than DB limit, if any.
       // Alternatively, let's just assert that creating a duplicate slug fails with 500 (or 400).
-      
+
       const duplicateSlug = payload.tenantSlug; // already created in the first test!
 
       await request(app.getHttpServer())
@@ -230,7 +230,7 @@ describe('Platform Provisioning (e2e)', () => {
           adminPassword: 'securePassword123',
         })
         .expect(201);
-      
+
       lifecycleTenantId = res.body.tenantId;
     });
 
@@ -278,7 +278,7 @@ describe('Platform Provisioning (e2e)', () => {
 
       expect(res.body.id).toBeDefined();
       expect(res.body.tenantId).toBe(lifecycleTenantId);
-      
+
       // Ensure campus was created
       await tenantContext.run({ tenantId: lifecycleTenantId }, async () => {
         const campus = await prisma.campus.findFirst({ where: { schoolId: res.body.id } });
@@ -293,6 +293,54 @@ describe('Platform Provisioning (e2e)', () => {
         .set('Authorization', `Bearer ${getAuthToken(globalAdminId)}`)
         .send({ schoolName: 'Impossible School' })
         .expect(404);
+    });
+
+    it('CMS role-permission assignments are strictly isolated between tenants', async () => {
+      // Find the two tenants created in previous tests
+      const tenantA = await prisma.tenant.findUnique({ where: { slug: 'auth-test-' + testSuffix } });
+      const tenantB = await prisma.tenant.findUnique({ where: { slug: 'lifecycle-' + testSuffix } });
+
+      expect(tenantA).toBeDefined();
+      expect(tenantB).toBeDefined();
+
+      let roleATenant, roleBTenant;
+
+      await tenantContext.run({ tenantId: tenantA.id }, async () => {
+        const adminRoleA = await prisma.role.findFirst({
+          where: { tenantId: tenantA.id, name: 'ADMIN' },
+          include: { permissions: { include: { permission: true } } }
+        });
+        expect(adminRoleA).toBeDefined();
+        roleATenant = adminRoleA;
+      });
+
+      await tenantContext.run({ tenantId: tenantB.id }, async () => {
+        const adminRoleB = await prisma.role.findFirst({
+          where: { tenantId: tenantB.id, name: 'ADMIN' },
+          include: { permissions: { include: { permission: true } } }
+        });
+        expect(adminRoleB).toBeDefined();
+        roleBTenant = adminRoleB;
+      });
+
+      // Verify each tenant received their own distinct RolePermission mappings
+      expect(roleATenant.permissions.length).toBeGreaterThan(0);
+      expect(roleBTenant.permissions.length).toBeGreaterThan(0);
+
+      // Verify no overlap in RolePermission IDs
+      const aMappingIds = roleATenant.permissions.map(p => p.id);
+      const bMappingIds = roleBTenant.permissions.map(p => p.id);
+
+      const intersection = aMappingIds.filter(id => bMappingIds.includes(id));
+      expect(intersection).toHaveLength(0);
+
+      // Confirm tenant scope manually: RolePermission.roleId MUST strictly map to the tenant's Role.
+      const allARoleIds = [...new Set(roleATenant.permissions.map(p => p.roleId))];
+      const allBRoleIds = [...new Set(roleBTenant.permissions.map(p => p.roleId))];
+
+      expect(allARoleIds).toEqual([roleATenant.id]);
+      expect(allBRoleIds).toEqual([roleBTenant.id]);
+      expect(roleATenant.id).not.toEqual(roleBTenant.id);
     });
   });
 });
