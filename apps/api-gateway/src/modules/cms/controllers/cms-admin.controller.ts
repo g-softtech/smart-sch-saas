@@ -18,13 +18,13 @@ export class CmsAdminController {
   @Get('config')
   @RequirePermission('website:manage_config')
   async getConfig(@Req() req: any) {
-    return this.service.getSiteConfig(req.workspace.tenantId, req.workspace.schoolId, req.user.id);
+    return this.service.getSiteConfig(req.workspace.tenantId, req.workspace.schoolId, req.user.sub);
   }
 
   @Put('config')
   @RequirePermission('website:manage_config')
   async updateConfig(@Req() req: any, @Body() dto: UpdateSiteConfigDto) {
-    return this.service.updateSiteConfig(req.workspace.tenantId, req.workspace.schoolId, req.user.id, dto);
+    return this.service.updateSiteConfig(req.workspace.tenantId, req.workspace.schoolId, req.user.sub, dto);
   }
 
   @Get('pages')
@@ -36,25 +36,25 @@ export class CmsAdminController {
   @Post('pages')
   @RequirePermission('website:manage_content')
   async createPage(@Req() req: any, @Body() dto: CreateCmsPageDto) {
-    return this.service.createPage(req.workspace.tenantId, req.workspace.schoolId, req.user.id, dto);
+    return this.service.createPage(req.workspace.tenantId, req.workspace.schoolId, req.user.sub, dto);
   }
 
   @Put('pages/:id')
   @RequirePermission('website:manage_content')
   async updatePage(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateCmsPageDto) {
-    return this.service.updatePage(req.workspace.tenantId, req.workspace.schoolId, id, req.user.id, dto);
+    return this.service.updatePage(req.workspace.tenantId, req.workspace.schoolId, id, req.user.sub, dto);
   }
 
   @Delete('pages/:id')
   @RequirePermission('website:manage_content')
   async deletePage(@Req() req: any, @Param('id') id: string) {
-    return this.service.deletePage(req.workspace.tenantId, req.workspace.schoolId, id, req.user.id);
+    return this.service.deletePage(req.workspace.tenantId, req.workspace.schoolId, id, req.user.sub);
   }
 
   @Put('navigation')
   @RequirePermission('website:manage_content')
   async syncNavigation(@Req() req: any, @Body() dto: SyncNavigationDto) {
-    return this.service.syncNavigation(req.workspace.tenantId, req.workspace.schoolId, req.user.id, dto);
+    return this.service.syncNavigation(req.workspace.tenantId, req.workspace.schoolId, req.user.sub, dto);
   }
 
   @Get('announcements')
@@ -66,19 +66,19 @@ export class CmsAdminController {
   @Post('announcements')
   @RequirePermission('website:manage_content')
   async createAnnouncement(@Req() req: any, @Body() dto: CreateCmsAnnouncementDto) {
-    return this.service.createAnnouncement(req.workspace.tenantId, req.workspace.schoolId, req.user.id, dto);
+    return this.service.createAnnouncement(req.workspace.tenantId, req.workspace.schoolId, req.user.sub, dto);
   }
 
   @Put('announcements/:id')
   @RequirePermission('website:manage_content')
   async updateAnnouncement(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateCmsAnnouncementDto) {
-    return this.service.updateAnnouncement(req.workspace.tenantId, req.workspace.schoolId, id, req.user.id, dto);
+    return this.service.updateAnnouncement(req.workspace.tenantId, req.workspace.schoolId, id, req.user.sub, dto);
   }
 
   @Delete('announcements/:id')
   @RequirePermission('website:manage_content')
   async deleteAnnouncement(@Req() req: any, @Param('id') id: string) {
-    return this.service.deleteAnnouncement(req.workspace.tenantId, req.workspace.schoolId, id, req.user.id);
+    return this.service.deleteAnnouncement(req.workspace.tenantId, req.workspace.schoolId, id, req.user.sub);
   }
 
   // ─── CMS Media Upload Endpoints ──────────────────────────────────────────────
@@ -116,7 +116,7 @@ export class CmsAdminController {
   @Delete('media/:id')
   @RequirePermission('website:manage_config')
   async deleteMedia(@Req() req: any, @Param('id') id: string) {
-    await this.service.deleteMedia(req.workspace.tenantId, req.workspace.schoolId, id, req.user.id);
+    await this.service.deleteMedia(req.workspace.tenantId, req.workspace.schoolId, id, req.user.sub);
     return { success: true };
   }
 }

@@ -35,11 +35,23 @@ export default function WebsiteAnnouncementsManagement() {
     }
   };
 
+  const handleCreate = async () => {
+    const title = window.prompt("Enter announcement title:");
+    if (!title) return;
+    try {
+      await apiClient.post("v1/cms/admin/announcements", { title, content: "Details here..." });
+      fetchItems();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Announcements</h2>
         <button
+          onClick={handleCreate}
           className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors"
         >
           <Plus className="w-4 h-4" />

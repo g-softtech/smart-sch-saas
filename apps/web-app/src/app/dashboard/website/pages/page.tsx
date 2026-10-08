@@ -35,11 +35,24 @@ export default function WebsitePagesManagement() {
     }
   };
 
+  const handleCreate = async () => {
+    const title = window.prompt("Enter new page title:");
+    if (!title) return;
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    try {
+      await apiClient.post("v1/cms/admin/pages", { title, slug, content: "# " + title });
+      fetchPages();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Manage Pages</h2>
         <button
+          onClick={handleCreate}
           className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors"
         >
           <Plus className="w-4 h-4" />

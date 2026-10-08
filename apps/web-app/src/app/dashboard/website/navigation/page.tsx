@@ -14,8 +14,13 @@ export default function WebsiteNavigationManagement() {
       setLoading(true);
       try {
         const data = await apiClient.get<any>("v1/cms/admin/config");
-        if (data && data.navigation) setItems(data.navigation);
-        else setItems([{ id: "temp", label: "Home", type: "PAGE", target: "home", order: 0 }]);
+        if (data && data.themePayload && data.themePayload.navigation) {
+          setItems(data.themePayload.navigation);
+        } else if (data && data.navigation) {
+          setItems(data.navigation);
+        } else {
+          setItems([{ id: crypto.randomUUID(), label: "Home", type: "PAGE", targetUrl: "/home", orderIndex: 0, isActive: true }]);
+        }
       } catch (err: any) {
         console.error(err);
       } finally {
@@ -29,7 +34,14 @@ export default function WebsiteNavigationManagement() {
     setSaving(true);
     setError(null);
     try {
-      await apiClient.put("v1/cms/admin/navigation", { items: items.map((it, i) => ({ ...it, order: i })) });
+      const payloadItems = items.map((it, i) => ({
+        id: it.id,
+        label: it.label || "",
+        targetUrl: it.targetUrl || it.target || "",
+        orderIndex: i,
+        isActive: it.isActive !== undefined ? Boolean(it.isActive) : true
+      }));
+      await apiClient.put("v1/cms/admin/navigation", { items: payloadItems });
       alert("Navigation saved!");
     } catch (err: any) {
       setError(err.message);
@@ -71,12 +83,12 @@ export default function WebsiteNavigationManagement() {
           <div key={item.id || index} className="flex items-center gap-4 bg-slate-950 border border-slate-800 p-3 rounded-lg">
             <GripVertical className="w-5 h-5 text-slate-600 cursor-grab" />
             
-            <div className="flex-1 grid grid-cols-3 gap-4">
+            <div className="flex-1 grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Label</label>
                 <input 
                   type="text"
-                  value={item.label}
+                  value={item.label || ""}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[index].label = e.target.value;
@@ -88,7 +100,7 @@ export default function WebsiteNavigationManagement() {
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Type</label>
                 <select 
-                  value={item.type}
+                  value={item.type || (item.targetUrl?.startsWith('http') ? "EXTERNAL" : "PAGE")}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[index].type = e.target.value;
@@ -101,17 +113,33 @@ export default function WebsiteNavigationManagement() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Target / Slug</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Target URL / Slug</label>
                 <input 
                   type="text"
-                  value={item.target}
+                  value={item.targetUrl || item.target || ""}
                   onChange={(e) => {
                     const newItems = [...items];
+                    newItems[index].targetUrl = e.target.value;
                     newItems[index].target = e.target.value;
                     setItems(newItems);
                   }}
                   className="w-full bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 text-sm text-white focus:border-indigo-500"
                 />
+              </div>
+              <div className="flex items-center pt-5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={item.isActive !== false}
+                    onChange={(e) => {
+                      const newItems = [...items];
+                      newItems[index].isActive = e.target.checked;
+                      setItems(newItems);
+                    }}
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm text-slate-300">Active</span>
+                </label>
               </div>
             </div>
 
@@ -125,7 +153,7 @@ export default function WebsiteNavigationManagement() {
         ))}
         
         <button 
-          onClick={() => setItems([...items, { id: crypto.randomUUID(), label: "New Item", type: "PAGE", target: "", order: items.length }])}
+          onClick={() => setItems([...items, { id: crypto.randomUUID(), label: "New Item", type: "PAGE", targetUrl: "", orderIndex: items.length, isActive: true }])}
           className="w-full py-3 border-2 border-dashed border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-300 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" />
