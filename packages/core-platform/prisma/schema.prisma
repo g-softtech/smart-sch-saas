@@ -1,4 +1,4 @@
-generator client {
+﻿generator client {
   provider = "prisma-client-js"
 }
 
@@ -871,6 +871,7 @@ model AdmissionApplication {
   student         Student?               @relation(fields: [studentId], references: [id], onDelete: Restrict)
   tenant          Tenant                 @relation(fields: [tenantId], references: [id])
   exam            AdmissionExam?
+  // TODO: Phase 6 - Target campus tracking (campusId)
   payments        PaymentTransaction[]
   reviews         AdmissionReview[]
 
@@ -1346,8 +1347,6 @@ model AssessmentComponent {
   Assignment       Assignment?
   CBTExam          CBTExam?
 
-  @@unique([tenantId, schoolId, academicYearId, termId, classId, subjectId, assessmentTypeId], map: "acd_assessment_components_class_wide_key")
-  @@unique([tenantId, schoolId, academicYearId, termId, classId, armId, subjectId, assessmentTypeId], map: "acd_assessment_components_arm_specific_key")
   @@index([tenantId, schoolId, subjectId])
   @@index([assessmentTypeId])
   @@map("acd_assessment_components")

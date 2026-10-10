@@ -223,6 +223,25 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
       - **Build Integrity:** Core Platform typecheck PASSED (`0 errors`), API Gateway build PASSED (`0 errors`), Web App build PASSED (`49/49 static/dynamic pages prerendered`), Prisma migration status PASSED (`29 migrations up to date`), `git diff --check` PASSED.
     - **Current Status:** **Phase 5 (All Sub-phases 5A-5I) COMPLETE & FULLY VERIFIED.**
 
+  - **Phase 5 (Recovery) — Canonical Prisma Baseline Remediation:** **CHECKPOINT PREPARED**
+    - **Objective:** Safely generate, verify, and reconcile a canonical, UTF-8 encoded Prisma baseline migration without corrupting historical artifacts or Git state.
+    - **Scope Completed:**
+      - Reconciled schema modifications to strictly include only the removal of the two ordinary AssessmentComponent nullable-rmId unique declarations and the addition of the Admissions target-campus TODO.
+      - Established PostgreSQL native Partial Unique Indexes directly in the baseline SQL.
+      - Generated and reconciled the UTF-16LE Prisma CLI output into a valid UTF-8  _baseline/migration.sql without BOM or NUL bytes.
+      - Preserved the original UTF-16LE baseline artifact and all legacy historical migrations.
+      - Conducted an isolated deployment explicitly targeting the schoolos_recovery database to ensure safety.
+    - **Verification Evidence:**
+      - Successfully applied exactly one baseline migration on the isolated recovery database.
+      - Verified successful creation of both expected partial unique indexes via PostgreSQL Catalog queries.
+      - Prisma migrate diff confirms an empty schema-to-database diff against the isolated database.
+      - Canonical UTF-8 baseline SHA-256 remains: D30CB71F84D8A7200215BFF78CF8C5DA43446DAD6CE1CB255D67B60F7610FAC6.
+      - Git State Context: Current HEAD is 7423613a703e8af30a1bdf602428bc1e5548dc6c.
+      - Expected checkpoint includes exactly 3 files: CURRENT_MASTER_EXECUTION_PLAN.md, schema.prisma, and  _baseline/migration.sql.
+      - Untracked diagnostic artifacts (schema.diff, schema_copy.prisma, migration.utf8.candidate.sql, migration.sql.utf16.bak) are safely retained without staging.
+    - **Status:** Baseline deployed and verified on the isolated recovery database; Git checkpoint pending; not production-ready.
+    - **Push Status:** Pending.
+    - **Next Planned Recovery Task (PENDING AUTHORIZATION):** Phase 5.4 Production Assessment Procedure Design. A safe, technically valid comparison procedure must first be defined to execute 'prisma migrate diff' safely between the new baseline and a disposable production shadow snapshot, without connecting to, writing to, or altering the live production database. Active database recovery must complete before Phase 6G resumes.
 ### Phase 6: Future SaaS Expansion
 - **Objective:** Value-add features beyond core operations.
 - **Sub-Phases Execution & Status:**
