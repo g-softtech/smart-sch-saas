@@ -1,182 +1,102 @@
-import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
-import { ProvisionTenantDto } from '../dto/provision-tenant.dto';
-import { kernel, tenantContext, AuditService } from '@saas/core-platform';
-import { seedCmsRolePermissionsForTenant } from '@saas/core-platform';
-import * as argon2 from 'argon2';
-import * as crypto from 'crypto';
+import { Injectable, ConflictException } from "@nestjs/common";
+import { kernel, GlobalRole, TenantStatus, SchoolStatus, CampusStatus, MembershipStatus } from "@saas/core-platform";
+import { ProvisionTenantDto } from "../dto/provision-tenant.dto";
+import * as argon2 from "argon2";
 
 @Injectable()
 export class OnboardingService {
-  private readonly logger = new Logger(OnboardingService.name);
-
-  constructor(private readonly auditService: AuditService) {}
-
   async provisionTenant(dto: ProvisionTenantDto, actorId: string) {
-    // 1. Validate tenant uniqueness by slug
-    const existingTenant = await kernel.db.tenant.findUnique({
+    // 1. Verify slug uniqueness
+    const existing = await kernel.rawDb.tenant.findUnique({
       where: { slug: dto.tenantSlug },
     });
-    
-    if (existingTenant) {
-      throw new ConflictException(`Tenant with slug '${dto.tenantSlug}' already exists.`);
+    if (existing) {
+      throw new ConflictException("A tenant with this slug already exists");
     }
 
-    const tenantId = crypto.randomUUID();
+    // 2. Hash admin password
+    const passwordHash = await argon2.hash(dto.adminPassword);
 
-    try {
-      // Execute the provisioning as a single atomic operation
-      const result = await kernel.db.$transaction(async (tx) => {
-        // A. Create the Tenant (this is not tenant-scoped)
-        const tenant = await tx.tenant.create({
-          data: {
-            id: tenantId,
-            name: dto.tenantName,
-            slug: dto.tenantSlug,
-            status: 'ACTIVE',
-          },
-        });
-
-        // B. Activate Tenant Context for scoped models
-        return await tenantContext.run({ tenantId }, async () => {
-          // C. Create School
-          const school = await tx.school.create({
-            data: {
-              tenantId: tenant.id,
-              name: dto.schoolName,
-            },
-          });
-
-          // D. Create Default Campus
-          const campus = await tx.campus.create({
-            data: {
-              tenantId: tenant.id,
-              schoolId: school.id,
-              name: 'Main Campus',
-            },
-          });
-
-          // E. Create authoritative SUPER_ADMIN role
-          let adminRole = await tx.role.findFirst({
-            where: { name: 'SUPER_ADMIN', isSystem: true },
-          });
-
-          if (!adminRole) {
-            adminRole = await tx.role.create({
-              data: {
-                tenantId: tenant.id,
-                name: 'SUPER_ADMIN',
-                isSystem: true,
-              },
-            });
-          }
-
-          // E.2 Create standard ADMIN role so it can receive seeded permissions
-          let standardAdminRole = await tx.role.findFirst({
-            where: { name: 'ADMIN', isSystem: true },
-          });
-
-          if (!standardAdminRole) {
-            standardAdminRole = await tx.role.create({
-              data: {
-                tenantId: tenant.id,
-                name: 'ADMIN',
-                isSystem: true,
-              },
-            });
-          }
-
-          // F. Find or Create User
-          let user = await tx.user.findUnique({
-            where: { email: dto.adminEmail },
-          });
-
-          if (!user) {
-            const passwordHash = await argon2.hash(dto.adminPassword);
-            user = await tx.user.create({
-              data: {
-                email: dto.adminEmail,
-                passwordHash,
-                // Note: globalRole defaults to USER, which is correct.
-              },
-            });
-          }
-
-          // G. Assign UserTenantMembership
-          const existingMembership = await tx.userTenantMembership.findUnique({
-            where: {
-              userId_tenantId: {
-                userId: user.id,
-                tenantId: tenant.id,
-              },
-            },
-          });
-
-          if (!existingMembership) {
-            await tx.userTenantMembership.create({
-              data: {
-                tenantId: tenant.id,
-                userId: user.id,
-                roleId: adminRole.id,
-                state: 'PROVISIONED',
-              },
-            });
-          }
-
-          // H. Ensure user has full access to the created school
-          await tx.userSchoolAccess.create({
-            data: {
-              tenantId: tenant.id,
-              userId: user.id,
-              schoolId: school.id,
-            },
-          });
-
-          // I. Audit log (tenant-scoped)
-          await this.auditService.logAction(tx as any, {
-            action: 'TENANT_PROVISIONED',
-            entity: 'Tenant',
-            entityId: tenant.id,
-            tenantId: tenant.id,
-            userId: user.id,
-            severity: 'HIGH',
-            metadata: {
-              schoolId: school.id,
-              campusId: campus.id,
-            },
-          });
-
-          // J. Seed CMS permissions transactionally so they rollback if provisioning fails
-          await seedCmsRolePermissionsForTenant(tenant.id, tx);
-
-          return {
-            tenantId: tenant.id,
-            schoolId: school.id,
-            campusId: campus.id,
-            adminId: user.id,
-          };
-        });
-      }, { maxWait: 10000, timeout: 20000 });
-
-      // Log the platform action outside the transaction to preserve it even if there's a subsequent error,
-      // but since we want to be atomic, doing it after success is fine.
-      await this.auditService.logPlatformAction(kernel.db as any, {
-        action: 'PROVISION_TENANT',
-        entity: 'Tenant',
-        entityId: result.tenantId,
-        userId: actorId,
-        severity: 'CRITICAL',
-        metadata: {
+    // 3. Atomically provision Tenant -> School -> Campus -> Administrator
+    return await kernel.rawDb.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          name: dto.tenantName,
           slug: dto.tenantSlug,
-          schoolId: result.schoolId,
+          status: TenantStatus.ACTIVE,
         },
       });
 
-      return result;
+      const school = await tx.school.create({
+        data: {
+          tenantId: tenant.id,
+          name: dto.schoolName,
+          code: "SCH-01",
+          status: SchoolStatus.ACTIVE,
+        },
+      });
 
-    } catch (error) {
-      console.error('PROVISIONING ERROR:', error);
-      this.logger.error(`Provisioning failed for tenant ${dto.tenantSlug}`, error);
-      throw error;
-    }
+      const campus = await tx.campus.create({
+        data: {
+          tenantId: tenant.id,
+          schoolId: school.id,
+          name: "Main Campus",
+          code: "MAIN",
+          status: CampusStatus.ACTIVE,
+        },
+      });
+
+      // Find or create admin user
+      let adminUser = await tx.user.findUnique({
+        where: { email: dto.adminEmail.toLowerCase().trim() },
+      });
+
+      if (!adminUser) {
+        adminUser = await tx.user.create({
+          data: {
+            email: dto.adminEmail.toLowerCase().trim(),
+            passwordHash,
+            firstName: dto.adminFirstName,
+            lastName: dto.adminLastName,
+            globalRole: GlobalRole.USER, // Scoped to tenant, NOT global platform super admin
+            isActive: true,
+          },
+        });
+      }
+
+      // Create membership
+      const membership = await tx.tenantMembership.create({
+        data: {
+          tenantId: tenant.id,
+          schoolId: school.id,
+          userId: adminUser.id,
+          status: MembershipStatus.ACTIVE,
+        },
+      });
+
+      await tx.platformAuditLog.create({
+        data: {
+          tenantId: tenant.id,
+          userId: actorId,
+          action: "TENANT_PROVISIONED",
+          details: {
+            tenantName: dto.tenantName,
+            schoolName: dto.schoolName,
+            adminEmail: dto.adminEmail,
+          },
+        },
+      });
+
+      return {
+        tenant,
+        school,
+        campus,
+        adminUser: {
+          id: adminUser.id,
+          email: adminUser.email,
+        },
+        membership,
+      };
+    });
   }
 }

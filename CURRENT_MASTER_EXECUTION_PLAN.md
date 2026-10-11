@@ -242,6 +242,121 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Status:** Baseline deployed and verified on the isolated recovery database; Git checkpoint pending; not production-ready.
     - **Push Status:** Pending.
     - **Next Planned Recovery Task (PENDING AUTHORIZATION):** Phase 5.4 Production Assessment Procedure Design. A safe, technically valid comparison procedure must first be defined to execute 'prisma migrate diff' safely between the new baseline and a disposable production shadow snapshot, without connecting to, writing to, or altering the live production database. Active database recovery must complete before Phase 6G resumes.
+### Phase C1: Identity, Authentication & Business Login (LOCKED — Date: 2026-10-11)
+
+**1. Scope Completed & Implementation Highlights**
+- **Business Login & Platform Admin:** Fully implemented and integrated dual-tier authentication boundary:
+  - Platform Super Admin (`GlobalRole.SUPER_ADMIN`) routes to `/super-admin` with complete platform oversight.
+  - Tenant Administrators and School Staff (`GlobalRole.USER`) are strictly scoped to their respective tenant/school hierarchy and route to `/workspaces`.
+- **Server-Side Enforcement & Suspension Rules:**
+  - Account-level suspension check (`isSuspended: true` / `isActive: false`) rejects authentication at the server.
+  - Tenant lifecycle state enforcement (`TenantStatus.SUSPENDED`) immediately throws `ForbiddenException` for tenant users and excludes suspended tenants from workspace discovery.
+  - Tenant reactivation lifecycle restores access cleanly.
+- **Integration Contracts Maintained:**
+  - Matches frontend `/api/v1/auth/login` (returns `{ accessToken }` with `{ sub: user.id }`).
+  - Matches `/api/v1/auth/me` identity context discovery (returns authoritative `globalRole`, `portalType`, `redirectUrl`, `tenantId`, `schoolId`).
+  - Matches `/api/v1/identity/me/workspaces` (returns `TenantWorkspace[]` with full school and campus arrays).
+  - Matches `/api/v1/platform/metrics`, `/api/v1/platform/tenants`, and `/api/v1/platform/provisioning/tenant`.
+
+**2. Verification Evidence (11/11 PASSED)**
+- **Automated Suite Executed:** `scratch/run_c1_tsx.js` -> `scratch/test_phase_c1_auth.js` against isolated `schoolos_greenfield_dev`.
+  1. Test Data Isolation & DB Setup: Cleaned and initialized greenfield tables.
+  2. Platform Super Admin Login: Successfully authenticated and verified signed JWT payload.
+  3. Super Admin Identity Context: Verified `portalType: "SUPER_ADMIN"`, `redirectUrl: "/super-admin"`.
+  4. Atomic Tenant Provisioning: Provisioned tenant, school, campus, and administrator with audit logging.
+  5. Tenant Admin Security Boundary: Verified tenant administrator is strictly bounded to `globalRole = USER`.
+  6. Tenant Admin Context: Verified `portalType: "STAFF"`, `redirectUrl: "/workspaces"`.
+  7. Workspace Discovery Contract: Discovered schools and campuses matching frontend interface.
+  8. Platform Metrics & Listing: Verified platform oversight metrics.
+  9. Tenant Suspension Enforcement: Suspended tenant rejected with `ForbiddenException`; excluded from workspace list.
+  10. Tenant Reactivation: Verified access restoration.
+  11. Account Suspension & Invalid Credentials: Confirmed immediate rejection of suspended users and invalid credentials.
+- **Status:** **PHASE C1 LOCKED**.
+
+**3. Next Module Recommendation: Phase C2 — Academic Structure & Campus Management**
+- Implement backend domain services for Academic Years, Terms, Campuses, Classes, Arms, and Subjects.
+- Connect `/api/v1/academics/academic-years`, `/api/v1/academics/terms`, `/api/v1/academics/classes`, `/api/v1/academics/arms`, and `/api/v1/academics/subjects` to the greenfield backend.
+
+### Phase B: Greenfield Backend Foundation & Database Baseline (Date: 2026-10-11)
+
+**1. Strategic Mandate Transition & Scope Completed**
+- **Decision Executed:** Transitioned from legacy migration recovery to greenfield backend foundation supporting the existing frontend without inheriting legacy schema defects.
+- **Branch Established:** `feat/backend-replacement-foundation` branched from verified checkpoint `ada7efd4371789222b08af2cbb344e3dc494cc60`.
+- **Business Login Architecture:** Integrated platform-level tenancy and business administration into the foundation:
+  - Enforced dual-tier identity: `GlobalRole.SUPER_ADMIN` (Platform / Business Partner owners) vs `GlobalRole.USER` (School / Tenant scoped users).
+  - Enforced tenant suspension and reactivation lifecycle (`ACTIVE`, `SUSPENDED`, `DEACTIVATED`) matching `/super-admin` frontend control planes.
+  - Guarded zero-trust cross-tenant boundary: Platform Admin can provision and oversee tenants, while tenant administrators remain scoped exclusively to their respective tenant/school hierarchy.
+- **Greenfield Prisma Schema Authored:** Created clean, normalized schema at `packages/core-platform/prisma/greenfield.prisma` (35 models, 22 enums) covering:
+  - Tenancy, Schools, Campuses (`plt_tenants`, `plt_schools`, `plt_campuses`)
+  - Identity, Memberships & Permissions (`idm_users`, `idm_tenant_memberships`, `idm_roles`, `idm_permissions`, `idm_role_permissions`, `idm_member_roles`)
+  - Academic Structure (`acd_academic_years`, `acd_terms`, `acd_classes`, `acd_arms`, `acd_subjects`, `acd_class_subjects`)
+  - Teaching Staff & Assignments (`stf_staff_profiles`, `stf_campus_assignments`, `acd_teacher_subject_assignments`, `acd_class_teacher_assignments`)
+  - Students, Guardians & Enrollments (`stud_students`, `stud_guardians`, `stud_student_guardians`, `stud_enrollments`)
+  - Attendance & Physical Movement (`att_records`, `mvt_records`, `mvt_pickup_authorizations` with QR token hash verification)
+  - Assessments & Grading (`acd_assessment_components`, `acd_assessment_scores`, `acd_gradebook_submissions`)
+  - Financial Ledgers & Wallets (`fin_invoices`, `fin_invoice_line_items`, `fin_payments`, `fin_wallets`, `fin_wallet_transactions` with optimistic locking and idempotency keys)
+  - Platform Security Auditing (`plt_audit_logs`)
+- **Disposable Database Provisioning:** Created new, clean database `schoolos_greenfield_dev` on the isolated development server without modifying or referencing production databases. Verified connection via `.env.development` (gitignored).
+- **Verification Evidence:**
+  - Schema Validation: Pinned local Prisma `5.22.0` CLI validated `greenfield.prisma` cleanly (`The schema at prisma\greenfield.prisma is valid`).
+  - Client Generation: `prisma generate` succeeded cleanly with `@prisma/client` `5.22.0`.
+  - Migration Baseline: Generated initial baseline migration SQL (32,260 bytes, 35 tables, 22 enums, 51 foreign keys).
+  - Database Execution: Applied initial migration cleanly against empty `schoolos_greenfield_dev`. 35 tables and 22 enums created with 0 errors.
+  - Schema Drift Check: `prisma migrate diff --exit-code` verified **ZERO DRIFT** between declared schema and database catalog.
+
+**2. Working-Tree & Git Status**
+- **Active Branch:** `feat/backend-replacement-foundation`
+- **Checkpoint HEAD:** `ada7efd4371789222b08af2cbb344e3dc494cc60`
+- **Modified Tracked Files:** `.gitignore`, `CURRENT_MASTER_EXECUTION_PLAN.md`
+- **New Greenfield Artifacts:** `packages/core-platform/prisma/greenfield.prisma`, `packages/core-platform/prisma/greenfield_migrations/0_init/migration.sql`
+- **Production Safety:** Production untouched; zero production database connections; zero exposed credentials.
+
+**3. Next Milestone: Phase C — Core Domain Services & API Gateway Integration**
+- Implement authentication, business login, and tenant/school contextual session resolution in `apps/api-gateway`.
+- Connect `/api/v1/auth/login`, `/api/v1/auth/me`, and `/api/v1/platform/*` endpoints with greenfield repositories and verify against frontend login and `/super-admin` dashboards.
+
+### Phase 5.4 Recovery Handover (Date: 2026-10-10)
+
+**1. Verified & Reported State**
+- **Recovery workspace:** `C:\Users\gbemi\OneDrive\Desktop\schoolOS-recovery-c` (Verified)
+- **Recovery branch:** `recovery/prisma-baseline-checkpoint` (Verified)
+- **Reported checkpoint commit:** `ada7efd4371789222b08af2cbb344e3dc494cc60` (Verified - HEAD matches)
+- **Reported push:** `origin/recovery/prisma-baseline-checkpoint` (Verified - branch is up to date)
+- **Original workspace:** `C:\Users\gbemi\OneDrive\Desktop\schoolOS` (Untouched, preserved)
+- **Replacement baseline path:** `packages/core-platform/prisma/migrations/0_baseline/migration.sql` (Verified)
+- **Baseline SQL SHA-256:** `D30CB71F84D8A7200215BFF78CF8C5DA43446DAD6CE1CB255D67B60F7610FAC6` (Verified in current session)
+- **Git HEAD schema blob SHA-256:** `AD002D3E9A0D012D3DCE155A57893679D9C18DED5544D387F5B50A7C761BA1AB` (Verified via `git cat-file`)
+- **Windows working-tree schema SHA-256:** `86231B72A35E0E305F695566C1BA95BDF7F4A0FCD9BA83A1CBF4DCC0C0A193B4` (Verified in current session)
+- **Schema Hash Discrepancy Note:** The working-tree hash differs from the Git blob hash because their byte representations differ (Windows checkout materialized with UTF-8 BOM + CRLF; Git blob stored as UTF-8 LF without BOM). `git diff` confirms 0 differences in tracked content. The earlier reported schema hash `EBEC41516181174B7819BE990E4F5056B28315AF0965EEEB84AD39E65FF5D2DC` is an unreconciled historical value from a pre-checkpoint candidate.
+- **Neon assessment branch:** `phase-5-4-assessment` (Verified)
+- **Assessment database:** `cbt_isolated_test_1234` (Verified)
+- **Connection Identity Check:** Target database `cbt_isolated_test_1234`, role `neondb_owner`, PostgreSQL 18.6; TCP connectivity passed. (Verified in Stage 1 diagnostics)
+- **Baseline hash verification:** Passed (Verified match against recorded baseline hash).
+- **Schema tracking status:** Verified clean (`git diff -- packages/core-platform/prisma/schema.prisma` is empty).
+
+**2. Exact Next Task**
+With read-only verification completed and schema hash discrepancy resolved as byte-level checkout formatting (with historical `EBEC4151...` noted as unreconciled), proceed to authorized Stage 2 of Phase 5.4:
+1. Conduct read-only schema/catalog assessment on the isolated `phase-5-4-assessment` branch (`cbt_isolated_test_1234`).
+2. Verify tables, sequences, foreign keys, and existing migration history table (`_prisma_migrations`) without modifying database state.
+3. Compare assessment catalog with baseline `migration.sql` and `schema.prisma`.
+4. Do not run any DDL/DML, migrations, resets, or connections to production.
+
+**3. Safety Boundaries Preserved**
+- Production database and its historical migration records remain untouched.
+- No production migration, baseline reconciliation, migrate resolve, reset, truncation, schema change, or deployment has been authorized or executed.
+- The Neon assessment branch is strictly isolated for read-only assessment; its data provenance is tracked.
+- Phase 6G remains paused until recovery assessment and required approvals are complete.
+- `.env.recovery` contains sensitive credentials and is never printed, logged, committed, or exposed.
+
+**4. Handover Completeness**
+- **Current phase and status:** Phase 5.4 - Stage 1 identity checks completed; read-only schema verification & documentation repair completed.
+- **Work completed:** Stage 1 read-only identity verification, TCP connectivity test, git tracking verification, byte-level hash clarification for Git blob vs working tree, and restoration of canonical documentation without encoding distortion.
+- **Current blocker:** None remaining for Phase 5.4 Stage 2 assessment initiation.
+- **Exact next category:** Read-only schema & catalog audit of assessment branch.
+- **Files changed by this documentation update:** `CURRENT_MASTER_EXECUTION_PLAN.md` (repaired cleanly in UTF-8 without BOM).
+- **Git working-tree status and exact HEAD:** `ada7efd4371789222b08af2cbb344e3dc494cc60` with `.gitignore` and `CURRENT_MASTER_EXECUTION_PLAN.md` modified.
+- **Documentation commit status:** This documentation update has NOT been committed or pushed.
+
 ### Phase 6: Future SaaS Expansion
 - **Objective:** Value-add features beyond core operations.
 - **Sub-Phases Execution & Status:**

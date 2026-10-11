@@ -1,29 +1,34 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { kernel } from '@saas/core-platform';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { kernel, TenantStatus } from "@saas/core-platform";
 
 @Injectable()
 export class PlatformReadService {
   async getDashboardMetrics() {
-    const [
-      totalTenants,
-      activeTenants,
-      suspendedTenants,
-      totalSchools,
-      totalCampuses,
-      totalUsers,
-      recentTenants,
-      recentAuditLogs
-    ] = await Promise.all([
-      kernel.db.tenant.count(),
-      kernel.db.tenant.count({ where: { status: 'ACTIVE' } }),
-      kernel.db.tenant.count({ where: { status: 'SUSPENDED' } }),
-      // School and Campus are TENANT_SCOPED; use platformReads accessor for global counts (caller is already authorized via PlatformAuthGuard).
-      kernel.platformReads.countTotalSchools(),
-      kernel.platformReads.countTotalCampuses(),
-      kernel.db.user.count(),
-      kernel.db.tenant.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
-      kernel.db.platformAuditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
-    ]);
+    const totalTenants = await kernel.rawDb.tenant.count();
+    const activeTenants = await kernel.rawDb.tenant.count({
+      where: { status: TenantStatus.ACTIVE },
+    });
+    const suspendedTenants = await kernel.rawDb.tenant.count({
+      where: { status: TenantStatus.SUSPENDED },
+    });
+    const totalSchools = await kernel.rawDb.school.count();
+    const totalCampuses = await kernel.rawDb.campus.count();
+    const totalUsers = await kernel.rawDb.user.count();
+
+    const recentTenants = await kernel.rawDb.tenant.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: { schools: true, memberships: true },
+        },
+      },
+    });
+
+    const recentAuditLogs = await kernel.rawDb.platformAuditLog.findMany({
+      take: 10,
+      orderBy: { createdAt: "desc" },
+    });
 
     return {
       totalTenants,
@@ -37,39 +42,63 @@ export class PlatformReadService {
     };
   }
 
-  async getTenants(skip: number = 0, take: number = 20, search?: string) {
-    const where = search ? { name: { contains: search, mode: 'insensitive' as any } } : {};
-    const [data, total] = await Promise.all([
-      kernel.db.tenant.findMany({
+  async getTenants(skip = 0, take = 20, search?: string) {
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { slug: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [total, data] = await Promise.all([
+      kernel.rawDb.tenant.count({ where }),
+      kernel.rawDb.tenant.findMany({
         where,
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: {
           _count: {
-            select: { schools: true }
-          }
-        }
+            select: { schools: true, memberships: true },
+          },
+        },
       }),
-      kernel.db.tenant.count({ where })
     ]);
-    return { data, total, skip, take };
+
+    return { total, data };
   }
 
   async getTenantDetails(tenantId: string) {
-    const tenant = await kernel.db.tenant.findUnique({
+    const tenant = await kernel.rawDb.tenant.findUnique({
       where: { id: tenantId },
       include: {
         schools: {
           include: {
-            campuses: true
-          }
-        }
-      }
+            campuses: true,
+          },
+        },
+        memberships: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                isActive: true,
+                isSuspended: true,
+              },
+            },
+          },
+        },
+      },
     });
+
     if (!tenant) {
-      throw new NotFoundException(`Tenant with ID ${tenantId} not found`);
+      throw new NotFoundException("Tenant not found");
     }
+
     return tenant;
   }
 }

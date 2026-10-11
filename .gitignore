@@ -11,3 +11,5 @@ packages/core-platform/prisma/generated/
 
 AGENTS.md
 CLAUDE.md
+.env.recovery
+.env.development
