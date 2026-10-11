@@ -242,6 +242,44 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Status:** Baseline deployed and verified on the isolated recovery database; Git checkpoint pending; not production-ready.
     - **Push Status:** Pending.
     - **Next Planned Recovery Task (PENDING AUTHORIZATION):** Phase 5.4 Production Assessment Procedure Design. A safe, technically valid comparison procedure must first be defined to execute 'prisma migrate diff' safely between the new baseline and a disposable production shadow snapshot, without connecting to, writing to, or altering the live production database. Active database recovery must complete before Phase 6G resumes.
+### Phase C3: Student & Guardian Management, Enrollments & Staff Profiles (LOCKED — Date: 2026-10-11)
+
+**1. Scope Completed & Implementation Highlights**
+- **Complete Vertical Slice Delivered:** Greenfield backend domain repositories, services, controllers, and integration contracts for Students, Guardians, Enrollments, and Staff Profiles:
+  - **Student Profiles & Lifecycle:** Atomic admission number minting (`STU-00001` format) via transactional lock; comprehensive lifecycle state tracking (`ACTIVE`, `INACTIVE`, `GRADUATED`, `TRANSFERRED`, `SUSPENDED`).
+  - **Guardian Management & Dual-Tier Identity:** Provisioned guardian records with linked `User` accounts for portal access; implemented `StudentGuardian` junction relationships with strict primary guardian mutex (`isPrimary: true` automatically unsets previous primary guardian for that student) and authorized pick-up controls (`canPickup: true`).
+  - **Zero-Trust Guardian Boundary Enforcement:** Verified that guardians cannot access records of students to whom they are not authorized, rejecting arbitrary student ID traversal.
+  - **Enrollments & Lifecycle State Machine:** Enforced class, arm, campus, and academic year parentage server-side; validated multi-campus consistency; prevented duplicate active enrollments within the same academic session (`@@unique([studentId, academicYearId])`); supported intra-session transfers and clean lifecycle withdrawal transitions.
+  - **Staff Profiles & Multi-Campus Assignments:** Atomic staff number generation (`STF-00001`); multi-campus scoping via `StaffCampusAssignment`; role and status state machine with terminal protections (`TERMINATED` / `RESIGNED`).
+- **Domain Ownership & Authorization:**
+  - Zero-Trust fail-closed tenant boundary enforced on all queries and mutations. Cross-tenant reads and mutations rejected server-side.
+  - Prevented students or staff from being assigned to classes, arms, or campuses belonging to other schools or tenants.
+- **Frontend Integration:**
+  - Connected existing student and staff screens; updated `CreateStudentPayload` and student management views to support explicit `campusId`.
+  - Preserved existing light/dark UI themes, branding, and contracts.
+
+**2. Verification Evidence (10/10 TEST SUITES PASSED)**
+- **Automated Suite Executed:** `scratch/run_c3_tests.js` -> `scratch/test_phase_c3_students_staff.js` against isolated `schoolos_greenfield_dev`:
+  1. Isolated Test Tenancies: Provisioned two test tenants (`Tenant 1` and `Tenant 2`) with independent schools and campuses.
+  2. Student Creation & Atomic Admission Number: Verified student profile creation with minted admission number `STU-00001`.
+  3. Cross-Tenant Student Boundary & Parentage Check: Verified fail-closed rejection when attempting cross-tenant school/campus binding.
+  4. Guardian Creation with User Account Provisioning: Verified dual-tier account creation with secure credentials.
+  5. Guardian-Student Linking & Primary Flag Mutex: Verified junction linking and atomic mutex unsetting former primary guardian.
+  6. Guardian Unauthorized Student Access Protection: Verified guardian access queries reject unrelated student IDs fail-closed.
+  7. Enrollment Lifecycle & Campus Validation: Verified initial session enrollment and rejection of duplicate enrollments in the same academic year.
+  8. Enrollment Transfer & Student Withdrawal: Verified intra-session class/arm transfer and withdrawal transitioning student and enrollment statuses cleanly.
+  9. Staff Creation, Multi-Campus Assignment & Status State Machine: Verified atomic staff numbering, multi-campus assignments, and protected status transitions.
+  10. Zero-Trust Read Isolation Across All Domain Entities: Verified 100% read isolation across all student, guardian, enrollment, and staff tables.
+- **Build & Type Integrity:**
+  - Web App: `apps/web-app` type-check PASSED (`Web-app type check PASSED!`).
+  - Core Platform: `@saas/core-platform` build PASSED (`tsc && prisma generate`).
+  - API Gateway: Greenfield modules compiled cleanly (`0 errors`).
+- **Status:** **PHASE C3 LOCKED**.
+
+**3. Next Module Recommendation: Phase C4 — Attendance & Physical Movement Architecture (QR / Kiosk / ID Verification)**
+- Design and integrate attendance recording models and endpoints (student attendance, staff attendance, movement tracking).
+- Architectural compatibility for QR attendance codes and physical access verification.
+
 ### Phase C2: Academic Structure & Campus Configuration (LOCKED — Date: 2026-10-11)
 
 **1. Scope Completed & Implementation Highlights**

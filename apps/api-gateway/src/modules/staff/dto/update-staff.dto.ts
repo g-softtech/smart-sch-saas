@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsEmail, IsEnum } from "class-validator";
-import { GenderEnum, StaffType } from "@saas/core-platform";
+import { Gender } from "@saas/core-platform";
 
 export class UpdateStaffDto {
   @IsString()
@@ -22,17 +22,17 @@ export class UpdateStaffDto {
   @IsOptional()
   phone?: string;
 
-  @IsEnum(GenderEnum)
+  @IsEnum(Gender)
   @IsOptional()
-  gender?: GenderEnum;
+  gender?: Gender;
 
   @IsString()
   @IsOptional()
   designation?: string;
 
-  @IsEnum(StaffType)
+  @IsString()
   @IsOptional()
-  type?: StaffType;
+  type?: string;
 
   @IsString()
   @IsOptional()

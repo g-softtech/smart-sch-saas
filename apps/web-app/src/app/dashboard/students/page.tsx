@@ -238,6 +238,7 @@ export default function StudentsPage() {
         middleName?: string;
         dateOfBirth?: string;
         nationality?: string;
+        campusId?: string;
       }
 
       const payload: CreateStudentPayload = {
@@ -250,6 +251,8 @@ export default function StudentsPage() {
       if (middleName.trim()) payload.middleName = middleName.trim();
       if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
       if (nationality.trim()) payload.nationality = nationality.trim();
+      const effectiveCampusId = campusId || createEnrollCampusId;
+      if (effectiveCampusId) payload.campusId = effectiveCampusId;
 
       // schoolId is intentionally omitted; backend infers from workspace
       const studentRes = await apiClient.post('api/v1/students', payload) as any;

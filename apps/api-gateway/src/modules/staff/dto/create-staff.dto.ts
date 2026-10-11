@@ -10,7 +10,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from "class-validator";
-import { GenderEnum, StaffType } from "@saas/core-platform";
+import { Gender } from "@saas/core-platform";
 
 /** Ensures DOB is at least `minAgeYears` before the joiningDate on the same object */
 @ValidatorConstraint({ name: "minAgeOnJoiningDate", async: false })
@@ -74,9 +74,9 @@ export class CreateStaffDto {
   })
   dateOfBirth?: string;
 
-  @IsEnum(GenderEnum)
+  @IsEnum(Gender)
   @IsOptional()
-  gender?: GenderEnum;
+  gender?: Gender;
 
   @IsDateString()
   @IsNotEmpty()
@@ -86,9 +86,9 @@ export class CreateStaffDto {
   @IsOptional()
   designation?: string;
 
-  @IsEnum(StaffType)
-  @IsNotEmpty()
-  type: StaffType;
+  @IsString()
+  @IsOptional()
+  type?: string;
 
   @IsString()
   @IsOptional()

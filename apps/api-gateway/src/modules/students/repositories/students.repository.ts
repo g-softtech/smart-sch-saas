@@ -1,16 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { kernel, tenantContext, EnrollmentStatus } from "@saas/core-platform";
+import { kernel, tenantContext, EnrollmentStatus, StudentStatus, StaffStatus } from "@saas/core-platform";
 import { Prisma } from "@saas/core-platform";
 
 export type CreateStudentInput = {
   schoolId: string;
+  campusId: string;
+  admissionNumber?: string;
   firstName: string;
   lastName: string;
   middleName?: string;
-  dateOfBirth?: Date;
+  dob?: Date;
   gender: "MALE" | "FEMALE" | "OTHER";
-  nationality?: string;
-  admissionDate: Date;
+  enrolledAt?: Date;
   email?: string;
 };
 
@@ -18,19 +19,10 @@ export type UpdateStudentInput = {
   firstName?: string;
   lastName?: string;
   middleName?: string;
-  dateOfBirth?: Date;
+  dob?: Date;
   gender?: "MALE" | "FEMALE" | "OTHER";
-  nationality?: string;
   email?: string;
-};
-
-export type UpdateGuardianInput = {
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  occupation?: string;
+  status?: StudentStatus;
 };
 
 export type CreateGuardianInput = {
@@ -38,6 +30,17 @@ export type CreateGuardianInput = {
   lastName: string;
   phone?: string;
   email?: string;
+  relationship: string;
+  address?: string;
+  occupation?: string;
+};
+
+export type UpdateGuardianInput = {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  relationship?: string;
   address?: string;
   occupation?: string;
 };
@@ -45,331 +48,347 @@ export type CreateGuardianInput = {
 export type LinkGuardianInput = {
   studentId: string;
   guardianId: string;
-  relationship: "FATHER" | "MOTHER" | "GUARDIAN" | "OTHER";
+  relationship?: string;
   isPrimary?: boolean;
-  isEmergencyContact?: boolean;
-  schoolId?: string;
-  roleId?: string;
+  canPickup?: boolean;
 };
 
 export type CreateEnrollmentInput = {
   studentId: string;
   academicYearId: string;
   classId: string;
-  campusId: string | null;
-  armId?: string;
+  armId: string;
 };
 
 export type TransferEnrollmentInput = {
   enrollmentId: string;
+  studentId: string;
+  academicYearId: string;
   newClassId: string;
-  newCampusId: string | null;
-  newArmId?: string;
+  newArmId: string;
   notes?: string;
 };
 
 export type WithdrawStudentInput = {
-  enrollmentId: string;
   studentId: string;
+  enrollmentId: string;
   notes?: string;
 };
 
 @Injectable()
 export class StudentsRepository {
-  // ─── School lookup (not TENANT_SCOPED in kernel, but query scoped by tenantId field) ───
-  async findSchool(schoolId: string, tx?: typeof kernel.db) {
-    // School IS in tenantScopedModels — kernel appends tenantId automatically.
-    const db = tx ?? kernel.db;
-    return db.school.findUnique({ where: { id: schoolId } });
+  // ─── Lookups ─────────────────────────────────────────────────────────────
+
+  async findSchool(schoolId: string) {
+    return kernel.db.school.findUnique({ where: { id: schoolId } });
   }
 
-  async findAcademicYear(academicYearId: string, tx?: typeof kernel.db) {
-    // AcademicYear is NOT in tenantScopedModels; tenantId filter applied explicitly.
-    const db = tx ?? kernel.db;
-    const tenantId = tenantContext.getStore()?.tenantId;
-    return db.academicYear.findFirst({
-      where: { id: academicYearId, tenantId },
+  async findCampus(campusId: string) {
+    return kernel.db.campus.findUnique({ where: { id: campusId } });
+  }
+
+  async findAcademicYear(academicYearId: string) {
+    return kernel.db.academicYear.findUnique({ where: { id: academicYearId } });
+  }
+
+  async findClass(classId: string) {
+    return kernel.db.class.findUnique({ where: { id: classId } });
+  }
+
+  async findArm(armId: string) {
+    return kernel.db.arm.findUnique({ where: { id: armId } });
+  }
+
+  async findStudent(studentId: string) {
+    const student = await kernel.db.student.findUnique({
+      where: { id: studentId },
+      include: {
+        school: true,
+        campus: true,
+        user: true,
+        enrollments: {
+          include: {
+            academicYear: true,
+            class: true,
+            arm: true,
+          },
+          orderBy: { enrolledAt: "desc" },
+        },
+        guardians: {
+          include: {
+            guardian: {
+              include: { user: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!student) return null;
+
+    // Attach studentNumber alias for frontend backwards compatibility
+    return {
+      ...student,
+      studentNumber: student.admissionNumber,
+      dateOfBirth: student.dob,
+      admissionDate: student.enrolledAt,
+    };
+  }
+
+  async findGuardian(guardianId: string) {
+    const guardian = await kernel.db.guardian.findUnique({
+      where: { id: guardianId },
+      include: {
+        user: true,
+        students: {
+          include: {
+            student: true,
+          },
+        },
+      },
+    });
+
+    if (!guardian) return null;
+
+    return {
+      ...guardian,
+      firstName: guardian.user?.firstName || "",
+      lastName: guardian.user?.lastName || "",
+      email: guardian.user?.email || null,
+      phone: guardian.user?.phone || null,
+    };
+  }
+
+  async findActiveEnrollment(studentId: string, academicYearId: string) {
+    return kernel.db.enrollment.findFirst({
+      where: {
+        studentId,
+        academicYearId,
+        status: EnrollmentStatus.ENROLLED,
+      },
     });
   }
 
-  async findClass(classId: string, tx?: typeof kernel.db) {
-    // Class is NOT in tenantScopedModels; tenantId filter applied explicitly.
-    const db = tx ?? kernel.db;
-    const tenantId = tenantContext.getStore()?.tenantId;
-    return db.class.findFirst({ where: { id: classId, tenantId } });
-  }
-
-  async findArm(armId: string, tx?: typeof kernel.db) {
-    // Arm is NOT in tenantScopedModels; tenantId filter applied explicitly.
-    const db = tx ?? kernel.db;
-    const tenantId = tenantContext.getStore()?.tenantId;
-    return db.arm.findFirst({ where: { id: armId, tenantId } });
-  }
-
-  async findStudent(studentId: string, tx?: typeof kernel.db) {
-    // Student IS in tenantScopedModels — kernel appends tenantId automatically.
-    const db = tx ?? kernel.db;
-    return db.student.findUnique({ where: { id: studentId } });
-  }
-
-  async findGuardian(guardianId: string, tx?: typeof kernel.db) {
-    // Guardian IS in tenantScopedModels — kernel appends tenantId automatically.
-    const db = tx ?? kernel.db;
-    return db.guardian.findUnique({ where: { id: guardianId } });
-  }
-
-  async findActiveEnrollment(
-    studentId: string,
-    academicYearId: string,
-    tx?: typeof kernel.db,
-  ) {
-    const db = tx ?? kernel.db;
-    return db.enrollment.findFirst({
-      where: { studentId, academicYearId, status: EnrollmentStatus.ACTIVE },
+  async findEnrollment(enrollmentId: string) {
+    return kernel.db.enrollment.findUnique({
+      where: { id: enrollmentId },
+      include: {
+        student: true,
+        academicYear: true,
+        class: true,
+        arm: true,
+      },
     });
   }
 
-  async findEnrollment(enrollmentId: string, tx?: typeof kernel.db) {
-    const db = tx ?? kernel.db;
-    return db.enrollment.findUnique({ where: { id: enrollmentId } });
-  }
-
-  async findStudentGuardianLink(
-    studentId: string,
-    guardianId: string,
-    tx?: typeof kernel.db,
-  ) {
-    // Also tenantScopedModels
-    const db = tx ?? kernel.db;
-    return db.studentGuardian.findUnique({
+  async findStudentGuardianLink(studentId: string, guardianId: string) {
+    return kernel.db.studentGuardian.findUnique({
       where: {
         studentId_guardianId: { studentId, guardianId },
       },
     });
   }
 
-  async findPrimaryGuardian(studentId: string, tx?: typeof kernel.db) {
-    const db = tx ?? kernel.db;
-    return db.studentGuardian.findFirst({
+  async findPrimaryGuardian(studentId: string) {
+    return kernel.db.studentGuardian.findFirst({
       where: { studentId, isPrimary: true },
     });
   }
 
-  /**
-   * Atomically allocates the next student number for a school.
-   * Uses INSERT ... ON CONFLICT ... DO UPDATE to ensure concurrency safety.
-   * Two simultaneous first-time requests cannot both insert lastNumber=1;
-   * the UPSERT serialises them on the unique constraint.
-   */
-  async mintStudentNumber(
-    tenantId: string,
-    schoolId: string,
-    tx?: typeof kernel.db,
-  ): Promise<string> {
-    const db = tx ?? kernel.db;
-    const result = await db.$queryRaw<Array<{ lastNumber: number }>>`
-      INSERT INTO stud_student_number_sequences ("tenantId", "schoolId", "lastNumber")
-      VALUES (${tenantId}, ${schoolId}, 1)
-      ON CONFLICT ("tenantId", "schoolId")
-      DO UPDATE SET "lastNumber" = stud_student_number_sequences."lastNumber" + 1
-      RETURNING "lastNumber"
-    `;
-    const seq = result[0].lastNumber;
-    return `STU-${seq.toString().padStart(4, "0")}`;
+  // ─── Mutations ───────────────────────────────────────────────────────────
+
+  async mintStudentNumber(schoolId: string): Promise<string> {
+    const count = await kernel.db.student.count({
+      where: { schoolId },
+    });
+    const nextSeq = count + 1;
+    return `STU-${String(nextSeq).padStart(5, "0")}`;
   }
 
-  async createStudent(
-    data: CreateStudentInput & { studentNumber: string; tenantId: string },
-    tx?: typeof kernel.db,
-  ) {
-    // tenantId injected by kernel from context; also passed explicitly to student-number sequence.
-    // The kernel will overwrite any tenantId in data.data with the context value, which is correct.
-    const db = tx ?? kernel.db;
-    return db.student.create({
+  async createStudent(data: CreateStudentInput & { admissionNumber: string }) {
+    const student: any = await (kernel.db.student.create as any)({
       data: {
-        tenantId: data.tenantId, // will be overridden by kernel — included for TypeScript type safety
         schoolId: data.schoolId,
-        studentNumber: data.studentNumber,
+        campusId: data.campusId,
+        admissionNumber: data.admissionNumber,
         firstName: data.firstName,
         lastName: data.lastName,
-        middleName: data.middleName,
-        dateOfBirth: data.dateOfBirth,
+        middleName: data.middleName || null,
         gender: data.gender,
-        nationality: data.nationality,
-        admissionDate: data.admissionDate,
-        email: data.email,
+        dob: data.dob || new Date("2010-01-01"),
+        enrolledAt: data.enrolledAt || new Date(),
+        status: StudentStatus.ACTIVE,
+      },
+      include: {
+        campus: true,
+        school: true,
       },
     });
+
+    return {
+      ...student,
+      studentNumber: student.admissionNumber,
+      dateOfBirth: student.dob,
+      admissionDate: student.enrolledAt,
+    };
   }
 
-  async updateStudent(studentId: string, data: UpdateStudentInput, tx?: typeof kernel.db) {
-    const db = tx ?? kernel.db;
-    const student = await db.student.findUnique({ where: { id: studentId } });
-    if (!student) return null;
-
-    if (data.email && student.userId) {
-      await db.user.update({
-        where: { id: student.userId },
-        data: { email: data.email.toLowerCase() },
-      });
-    }
-
-    return db.student.update({
+  async updateStudent(studentId: string, data: UpdateStudentInput) {
+    const updated = await kernel.db.student.update({
       where: { id: studentId },
       data: {
         ...(data.firstName && { firstName: data.firstName }),
         ...(data.lastName && { lastName: data.lastName }),
         ...(data.middleName !== undefined && { middleName: data.middleName }),
-        ...(data.dateOfBirth !== undefined && { dateOfBirth: data.dateOfBirth }),
+        ...(data.dob !== undefined && { dob: data.dob }),
         ...(data.gender && { gender: data.gender }),
-        ...(data.nationality !== undefined && { nationality: data.nationality }),
-        ...(data.email !== undefined && { email: data.email ? data.email.toLowerCase() : null }),
+        ...(data.status && { status: data.status }),
+      },
+      include: {
+        school: true,
+        campus: true,
       },
     });
+
+    return {
+      ...updated,
+      studentNumber: updated.admissionNumber,
+      dateOfBirth: updated.dob,
+      admissionDate: updated.enrolledAt,
+    };
   }
 
-  async updateGuardian(guardianId: string, data: UpdateGuardianInput, tx?: typeof kernel.db) {
-    const db = tx ?? kernel.db;
-    const guardian = await db.guardian.findUnique({ where: { id: guardianId } });
+  async createGuardian(data: CreateGuardianInput & { userId: string }) {
+    const guardian: any = await (kernel.db.guardian.create as any)({
+      data: {
+        userId: data.userId,
+        relationship: data.relationship || "Guardian",
+        occupation: data.occupation || null,
+        address: data.address || null,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    return {
+      ...guardian,
+      firstName: guardian.user.firstName,
+      lastName: guardian.user.lastName,
+      email: guardian.user.email,
+      phone: guardian.user.phone,
+    };
+  }
+
+  async updateGuardian(guardianId: string, data: UpdateGuardianInput) {
+    const guardian = await kernel.db.guardian.findUnique({
+      where: { id: guardianId },
+      include: { user: true },
+    });
+
     if (!guardian) return null;
 
-    if (data.email && guardian.userId) {
-      await db.user.update({
+    if (data.firstName || data.lastName || data.phone || data.email) {
+      await kernel.db.user.update({
         where: { id: guardian.userId },
-        data: { email: data.email.toLowerCase() },
+        data: {
+          ...(data.firstName && { firstName: data.firstName }),
+          ...(data.lastName && { lastName: data.lastName }),
+          ...(data.phone !== undefined && { phone: data.phone }),
+          ...(data.email && { email: data.email.toLowerCase().trim() }),
+        },
       });
     }
 
-    return db.guardian.update({
+    const updatedGuardian = await kernel.db.guardian.update({
       where: { id: guardianId },
       data: {
-        ...(data.firstName && { firstName: data.firstName }),
-        ...(data.lastName && { lastName: data.lastName }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.email !== undefined && { email: data.email ? data.email.toLowerCase() : null }),
+        ...(data.relationship && { relationship: data.relationship }),
         ...(data.address !== undefined && { address: data.address }),
         ...(data.occupation !== undefined && { occupation: data.occupation }),
       },
+      include: { user: true },
     });
+
+    return {
+      ...updatedGuardian,
+      firstName: updatedGuardian.user.firstName,
+      lastName: updatedGuardian.user.lastName,
+      email: updatedGuardian.user.email,
+      phone: updatedGuardian.user.phone,
+    };
   }
 
-  async createGuardian(data: CreateGuardianInput & { tenantId: string }) {
-    return kernel.db.guardian.create({
+  async createStudentGuardianLink(data: LinkGuardianInput) {
+    return kernel.db.studentGuardian.create({
       data: {
-        tenantId: data.tenantId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        email: data.email ? data.email.toLowerCase() : null,
-        address: data.address,
-        occupation: data.occupation,
-      },
-    });
-  }
-
-  async createStudentGuardianLink(
-    data: LinkGuardianInput & { tenantId: string },
-    tx?: typeof kernel.db,
-  ) {
-    const db = tx ?? kernel.db;
-    return db.studentGuardian.create({
-      data: {
-        tenantId: data.tenantId,
         studentId: data.studentId,
         guardianId: data.guardianId,
-        relationship: data.relationship,
         isPrimary: data.isPrimary ?? false,
-        isEmergencyContact: data.isEmergencyContact ?? false,
+        canPickup: data.canPickup ?? true,
+      },
+      include: {
+        guardian: {
+          include: { user: true },
+        },
       },
     });
   }
 
-  async clearPrimaryGuardian(studentId: string, tx?: typeof kernel.db) {
-    // Clear any existing primary flag before setting a new one.
-    const db = tx ?? kernel.db;
-    return db.studentGuardian.updateMany({
+  async clearPrimaryGuardian(studentId: string) {
+    return kernel.db.studentGuardian.updateMany({
       where: { studentId, isPrimary: true },
       data: { isPrimary: false },
     });
   }
 
-  async createEnrollment(
-    data: {
-      tenantId: string;
-      studentId: string;
-      schoolId: string;
-      academicYearId: string;
-      classId: string;
-      campusId: string;
-      armId?: string;
-    },
-    tx?: typeof kernel.db,
-  ) {
-    const db = tx ?? kernel.db;
-    return db.enrollment.create({
+  async createEnrollment(data: CreateEnrollmentInput) {
+    return (kernel.db.enrollment.create as any)({
       data: {
-        tenantId: data.tenantId,
         studentId: data.studentId,
-        schoolId: data.schoolId,
         academicYearId: data.academicYearId,
         classId: data.classId,
-        campusId: data.campusId,
         armId: data.armId,
-        status: EnrollmentStatus.ACTIVE,
+        status: EnrollmentStatus.ENROLLED,
+      },
+      include: {
+        academicYear: true,
+        class: true,
+        arm: true,
       },
     });
   }
 
-  /**
-   * Atomically closes the current enrollment and opens a new one.
-   * Uses kernel.$transaction so both operations succeed or both fail.
-   * The scoped transaction client enforces tenantId on all model operations inside.
-   */
   async transferEnrollment(
     enrollmentId: string,
-    newClassId: string,
-    newCampusId: string,
-    tenantId: string,
-    schoolId: string,
     studentId: string,
     academicYearId: string,
-    newArmId?: string,
-    notes?: string,
+    newClassId: string,
+    newArmId: string,
   ) {
-    return kernel.$transaction(async (tx) => {
-      // Close current enrollment
-      await tx.enrollment.update({
-        where: { id: enrollmentId },
-        data: { status: EnrollmentStatus.TRANSFERRED, notes: notes ?? null },
-      });
-
-      // Open new enrollment
-      return tx.enrollment.create({
-        data: {
-          tenantId,
-          studentId,
-          schoolId,
-          academicYearId,
-          classId: newClassId,
-          campusId: newCampusId,
-          armId: newArmId,
-          status: EnrollmentStatus.ACTIVE,
-        },
-      });
-    });
-  }
-
-  async withdrawEnrollment(enrollmentId: string, notes?: string) {
     return kernel.db.enrollment.update({
       where: { id: enrollmentId },
-      data: { status: EnrollmentStatus.WITHDRAWN, notes: notes ?? null },
+      data: {
+        classId: newClassId,
+        armId: newArmId,
+        status: EnrollmentStatus.ENROLLED,
+      },
+      include: {
+        academicYear: true,
+        class: true,
+        arm: true,
+      },
     });
   }
 
-  async setStudentStatus(
-    studentId: string,
-    status: "ACTIVE" | "SUSPENDED" | "GRADUATED" | "WITHDRAWN" | "TRANSFERRED",
-  ) {
+  async withdrawEnrollment(enrollmentId: string) {
+    return kernel.db.enrollment.update({
+      where: { id: enrollmentId },
+      data: { status: EnrollmentStatus.WITHDRAWN },
+    });
+  }
+
+  async setStudentStatus(studentId: string, status: StudentStatus) {
     return kernel.db.student.update({
       where: { id: studentId },
       data: { status },
@@ -382,42 +401,55 @@ export class StudentsRepository {
     search?: string,
     academicYearId?: string,
     classId?: string,
-    armId?: string
+    armId?: string,
   ) {
-    const where: any = schoolId ? { schoolId } : {};
-    
-    // We construct the enrollment filter incrementally if any enrollment-related parameter is present.
-    if (campusId || academicYearId || classId || armId) {
+    const where: any = {};
+    if (schoolId) where.schoolId = schoolId;
+    if (campusId) where.campusId = campusId;
+
+    if (academicYearId || classId || armId) {
       where.enrollments = {
         some: {
-          status: EnrollmentStatus.ACTIVE,
-          ...(campusId && { campusId }),
+          status: EnrollmentStatus.ENROLLED,
           ...(academicYearId && { academicYearId }),
           ...(classId && { classId }),
           ...(armId && { armId }),
-        }
+        },
       };
     }
 
     if (search) {
-      const searchTerms = search.trim().split(/\s+/);
-      where.AND = searchTerms.map(term => ({
-        OR: [
-          { firstName: { contains: term, mode: "insensitive" } },
-          { lastName: { contains: term, mode: "insensitive" } },
-          { studentNumber: { contains: term, mode: "insensitive" } }
-        ]
-      }));
+      const term = search.trim();
+      where.OR = [
+        { firstName: { contains: term, mode: "insensitive" } },
+        { lastName: { contains: term, mode: "insensitive" } },
+        { admissionNumber: { contains: term, mode: "insensitive" } },
+      ];
     }
-    
-    return kernel.db.student.findMany({ 
+
+    const students = await kernel.db.student.findMany({
       where,
       include: {
+        school: true,
+        campus: true,
         enrollments: {
-          where: { status: EnrollmentStatus.ACTIVE }
-        }
-      }
+          where: { status: EnrollmentStatus.ENROLLED },
+          include: {
+            academicYear: true,
+            class: true,
+            arm: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
+
+    return students.map((s) => ({
+      ...s,
+      studentNumber: s.admissionNumber,
+      dateOfBirth: s.dob,
+      admissionDate: s.enrolledAt,
+    }));
   }
 
   async listEnrollments(studentId: string) {
@@ -433,33 +465,61 @@ export class StudentsRepository {
   }
 
   async listStudentGuardians(studentId: string) {
-    return kernel.db.studentGuardian.findMany({
+    const links = await kernel.db.studentGuardian.findMany({
       where: { studentId },
-      include: { guardian: true },
+      include: {
+        guardian: {
+          include: { user: true },
+        },
+      },
     });
+
+    return links.map((link) => ({
+      ...link,
+      guardian: {
+        ...link.guardian,
+        firstName: link.guardian.user?.firstName || "",
+        lastName: link.guardian.user?.lastName || "",
+        email: link.guardian.user?.email || null,
+        phone: link.guardian.user?.phone || null,
+      },
+    }));
   }
 
   async listGuardians(schoolId?: string, search?: string) {
     const where: any = {};
-    // Temporarily disabling schoolId filter so newly created unlinked guardians are visible tenant-wide.
-    // if (schoolId) {
-    //   where.students = {
-    //     some: { student: { schoolId } }
-    //   };
-    // }
 
     if (search) {
-      const searchTerms = search.trim().split(/\s+/);
-      where.AND = searchTerms.map(term => ({
+      const term = search.trim();
+      where.user = {
         OR: [
           { firstName: { contains: term, mode: "insensitive" } },
           { lastName: { contains: term, mode: "insensitive" } },
-          { phone: { contains: term, mode: "insensitive" } },
           { email: { contains: term, mode: "insensitive" } },
-        ]
-      }));
+          { phone: { contains: term, mode: "insensitive" } },
+        ],
+      };
     }
 
-    return kernel.db.guardian.findMany({ where });
+    const guardians = await kernel.db.guardian.findMany({
+      where,
+      include: {
+        user: true,
+        students: {
+          include: {
+            student: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return guardians.map((g) => ({
+      ...g,
+      firstName: g.user?.firstName || "",
+      lastName: g.user?.lastName || "",
+      email: g.user?.email || null,
+      phone: g.user?.phone || null,
+    }));
   }
 }

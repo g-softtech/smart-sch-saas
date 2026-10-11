@@ -103,6 +103,8 @@ export class CreateStudentDto {
   @ApiProperty({ example: "2026-09-01" })
   @IsISO8601()
   admissionDate!: string;
+
+  campusId?: string;
 }
 
 export class UpdateStudentDto {

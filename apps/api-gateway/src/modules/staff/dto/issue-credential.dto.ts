@@ -1,8 +1,7 @@
-import { IsEnum, IsNotEmpty } from "class-validator";
-import { CredentialType } from "@saas/core-platform";
+import { IsString, IsNotEmpty } from "class-validator";
 
 export class IssueCredentialDto {
-  @IsEnum(CredentialType)
+  @IsString()
   @IsNotEmpty()
-  type: CredentialType;
+  type: string;
 }

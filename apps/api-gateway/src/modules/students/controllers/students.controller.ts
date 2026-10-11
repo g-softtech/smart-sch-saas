@@ -3,7 +3,6 @@ import {
   Post,
   Get,
   Patch,
-  Delete,
   Body,
   Param,
   Query,
@@ -11,16 +10,9 @@ import {
   UseInterceptors,
   HttpCode,
   Req,
-  Res,
   BadRequestException,
   NotFoundException,
-  UploadedFile,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
 } from "@nestjs/common";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { Response } from "express";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { StudentsService } from "../services/students.service";
 import { JwtAuthGuard } from "../../identity/security/jwt-auth.guard";
@@ -38,21 +30,6 @@ import {
   PaginationQueryDto,
 } from "../dto/students.dto";
 
-// ─── AUTHORIZATION NOTE ─────────────────────────────────────────────────────
-// The permission catalog for this project has not yet defined domain-specific
-// permission strings (e.g. "students:write", "students:read").
-// The existing Academics controller (the direct precedent) uses only JwtAuthGuard
-// and the WorkspaceContextInterceptor — no PoliciesGuard / @RequirePermission.
-//
-// Students follows the SAME pattern. Routes are protected by:
-//   1. JwtAuthGuard   — rejects unauthenticated requests (401)
-//   2. WorkspaceContextInterceptor — validates x-tenant-id membership (400/403)
-//                                   and populates tenantContext for PlatformKernel
-//
-// When a Students permission catalog is introduced, @RequirePermission decorators
-// must be added here without changing the underlying service logic.
-// ─────────────────────────────────────────────────────────────────────────────
-
 @ApiTags("Students")
 @Controller("api/v1/students")
 @UseGuards(JwtAuthGuard)
@@ -69,20 +46,23 @@ export class StudentsController {
     @Req() req: any,
     @Body() dto: CreateStudentDto,
   ): Promise<ApiResponseDto<any>> {
-    const { schoolId } = req.workspace;
+    const { schoolId, campusId } = req.workspace;
     if (!schoolId) {
       throw new BadRequestException("School context is required");
     }
 
+    const resolvedCampusId = dto.campusId || campusId;
+
     const student = await this.studentsService.createStudent({
       schoolId,
+      campusId: resolvedCampusId,
       firstName: dto.firstName,
       lastName: dto.lastName,
       middleName: dto.middleName,
-      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+      dob: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
       gender: dto.gender,
-      nationality: dto.nationality,
-      admissionDate: new Date(dto.admissionDate),
+      enrolledAt: new Date(dto.admissionDate),
+      email: dto.email,
     });
     return { success: true, data: student };
   }
@@ -104,11 +84,9 @@ export class StudentsController {
       query.search,
       query.academicYearId,
       query.classId,
-      query.armId
+      query.armId,
     );
 
-    // Simple offset pagination on the returned result set.
-    // TODO: push pagination to the repository layer when data volumes require it.
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const start = (page - 1) * limit;
@@ -131,74 +109,16 @@ export class StudentsController {
   }
 
   @Patch(":studentId")
-  @ApiOperation({ summary: "Update student details (including email)" })
+  @ApiOperation({ summary: "Update student details" })
   async updateStudent(
     @Param("studentId") studentId: string,
     @Body() dto: UpdateStudentDto,
   ): Promise<ApiResponseDto<any>> {
-    const updated = await this.studentsService.updateStudent(studentId, dto);
-    return { success: true, data: updated };
-  }
-
-  // ─── Student Photo ─────────────────────────────────────────────────────────
-
-  @Post(":studentId/photo")
-  @ApiOperation({ summary: "Upload/replace official student profile photo" })
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadStudentPhoto(
-    @Req() req: any,
-    @Param("studentId") studentId: string,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB limit
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
-        ],
-      }),
-    ) file: Express.Multer.File,
-  ): Promise<ApiResponseDto<any>> {
-    const { schoolId } = req.workspace;
-    if (!schoolId) {
-      throw new BadRequestException("School context is required");
-    }
-
-    const photoInfo = await this.studentsService.uploadStudentPhoto(studentId, file, schoolId);
-    return { success: true, data: photoInfo };
-  }
-
-  @Get(":studentId/photo")
-  @ApiOperation({ summary: "Get official student profile photo" })
-  async getStudentPhoto(
-    @Param("studentId") studentId: string,
-    @Res() res: Response
-  ) {
-    const photo = await this.studentsService.getStudentPhoto(studentId);
-    if (!photo) {
-      throw new NotFoundException("Student photo not found");
-    }
-
-    res.set({
-      'Content-Type': photo.mimeType,
-      'Content-Disposition': 'inline',
-      'Cache-Control': 'private, max-age=3600',
+    const updated = await this.studentsService.updateStudent(studentId, {
+      ...dto,
+      dob: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
     });
-
-    res.send(photo.data);
-  }
-
-  @Delete(":studentId/photo")
-  @ApiOperation({ summary: "Remove official student profile photo" })
-  async deleteStudentPhoto(
-    @Req() req: any,
-    @Param("studentId") studentId: string,
-  ): Promise<ApiResponseDto<any>> {
-    const { schoolId } = req.workspace;
-    if (!schoolId) {
-      throw new BadRequestException("School context is required");
-    }
-
-    await this.studentsService.deleteStudentPhoto(studentId, schoolId);
-    return { success: true, data: { removed: true } };
+    return { success: true, data: updated };
   }
 
   // ─── Guardians ─────────────────────────────────────────────────────────────
@@ -208,12 +128,20 @@ export class StudentsController {
   async createGuardian(
     @Body() dto: CreateGuardianDto,
   ): Promise<ApiResponseDto<any>> {
-    const guardian = await this.studentsService.createGuardian(dto);
+    const guardian = await this.studentsService.createGuardian({
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      email: dto.email,
+      relationship: "Guardian",
+      address: dto.address,
+      occupation: dto.occupation,
+    });
     return { success: true, data: guardian };
   }
 
   @Patch("guardians/:guardianId")
-  @ApiOperation({ summary: "Update guardian details (including email)" })
+  @ApiOperation({ summary: "Update guardian details" })
   async updateGuardian(
     @Param("guardianId") guardianId: string,
     @Body() dto: UpdateGuardianDto,
@@ -260,7 +188,7 @@ export class StudentsController {
       guardianId: dto.guardianId,
       relationship: dto.relationship,
       isPrimary: dto.isPrimary,
-      isEmergencyContact: dto.isEmergencyContact,
+      canPickup: dto.isEmergencyContact ?? true,
       schoolId,
       roleId,
     });
@@ -291,13 +219,15 @@ export class StudentsController {
     const { campusId, isMultiCampus } = req.workspace;
     const resolvedCampusId = campusId || dto.campusId;
     if (isMultiCampus && !resolvedCampusId) {
-      throw new BadRequestException("Campus is required for enrollment in a multi-campus school");
+      throw new BadRequestException(
+        "Campus is required for enrollment in a multi-campus school",
+      );
     }
     const enrollment = await this.studentsService.createEnrollment({
       studentId,
       academicYearId: dto.academicYearId,
       classId: dto.classId,
-      armId: dto.armId,
+      armId: dto.armId || "",
       campusId: resolvedCampusId,
     });
     return { success: true, data: enrollment };
@@ -327,7 +257,9 @@ export class StudentsController {
   ): Promise<ApiResponseDto<any>> {
     const { campusId, isMultiCampus } = req.workspace;
     if (isMultiCampus && !campusId) {
-      throw new BadRequestException("Campus is required for enrollment transfer in a multi-campus school");
+      throw new BadRequestException(
+        "Campus is required for enrollment transfer in a multi-campus school",
+      );
     }
     const newEnrollment = await this.studentsService.transferEnrollment({
       enrollmentId,

@@ -3,112 +3,178 @@ import {
   Prisma,
   StaffProfile,
   StaffStatus,
-  StaffCredential,
+  kernel,
 } from "@saas/core-platform";
-import { kernel } from "@saas/core-platform";
 
 @Injectable()
 export class StaffRepository {
-  /**
-   * Allocates a new atomic staff number and inserts the StaffProfile in the SAME transaction.
-   * Proves transactional consistency: if staff creation fails, the sequence increment rolls back.
-   */
-  async createStaffWithAtomicNumber(
+  async mintStaffNumber(schoolId: string): Promise<string> {
+    const count = await kernel.db.staffProfile.count({
+      where: { schoolId },
+    });
+    const nextSeq = count + 1;
+    return `STF-${String(nextSeq).padStart(6, "0")}`;
+  }
+
+  async createStaff(
     tenantId: string,
     schoolId: string,
-    data: Omit<
-      Prisma.StaffProfileUncheckedCreateInput,
-      "tenantId" | "schoolId" | "staffNumber"
-    >,
+    data: {
+      userId: string;
+      staffNumber: string;
+      designation?: string;
+      joinedAt?: Date;
+      campusIds?: string[];
+    },
   ): Promise<StaffProfile> {
-    return kernel.db.$transaction(async (tx) => {
-      // 1. Ensure the sequence row exists (upsert)
-      await tx.$executeRaw`
-        INSERT INTO "stf_staff_number_sequences" ("tenantId", "schoolId", "lastNumber")
-        VALUES (${tenantId}, ${schoolId}, 0)
-        ON CONFLICT ("tenantId", "schoolId") DO NOTHING;
-      `;
-
-      // 2. Atomically increment and lock the sequence row, returning the new number
-      const sequenceResult = await tx.$queryRaw<{ lastNumber: number }[]>`
-        UPDATE "stf_staff_number_sequences"
-        SET "lastNumber" = "lastNumber" + 1
-        WHERE "tenantId" = ${tenantId} AND "schoolId" = ${schoolId}
-        RETURNING "lastNumber";
-      `;
-
-      if (!sequenceResult || sequenceResult.length === 0) {
-        throw new Error("Failed to allocate staff number");
-      }
-
-      const nextNumber = sequenceResult[0].lastNumber;
-
-      // 3. Format the staff number (e.g., STF-000001)
-      const formattedStaffNumber = `STF-${String(nextNumber).padStart(6, "0")}`;
-
-      // Extract campusIds to avoid type error and to use for campusAssignments
-      const { campusIds, ...restData } = data as any;
-
-      // 4. Create the Staff Profile in the exact same transaction
-      return tx.staffProfile.create({
-        data: {
-          ...restData,
-          staffNumber: formattedStaffNumber,
-          tenantId,
-          schoolId,
-          campusAssignments: campusIds && campusIds.length > 0 ? {
-            create: campusIds.map((campusId: string) => ({
-              tenantId,
-              campusId,
-            }))
-          } : undefined,
+    return (kernel.db.staffProfile.create as any)({
+      data: {
+        schoolId,
+        userId: data.userId,
+        staffNumber: data.staffNumber,
+        designation: data.designation || null,
+        joinedAt: data.joinedAt || new Date(),
+        status: StaffStatus.ACTIVE,
+        campusAssignments:
+          data.campusIds && data.campusIds.length > 0
+            ? {
+                create: data.campusIds.map((campusId) => ({
+                  campusId,
+                })),
+              }
+            : undefined,
+      },
+      include: {
+        user: true,
+        campusAssignments: {
+          include: {
+            campus: true,
+          },
         },
-        include: {
-          photo: { select: { id: true } },
-        },
-      });
+      },
     });
   }
 
-  async findStaffById(staffId: string): Promise<StaffProfile | null> {
-    return kernel.db.staffProfile.findUnique({
+  async findStaffById(staffId: string) {
+    const staff = await kernel.db.staffProfile.findUnique({
       where: { id: staffId },
       include: {
-        photo: { select: { id: true } },
+        user: true,
+        school: true,
+        campusAssignments: {
+          include: {
+            campus: true,
+          },
+        },
+        subjectAssignments: {
+          include: {
+            subject: true,
+            arm: true,
+          },
+        },
+        classTeacherAssignments: {
+          include: {
+            arm: true,
+          },
+        },
       },
     });
+
+    if (!staff) return null;
+
+    return {
+      ...staff,
+      firstName: staff.user.firstName,
+      lastName: staff.user.lastName,
+      email: staff.user.email,
+      phone: staff.user.phone,
+      type: "TEACHING",
+    };
   }
 
   async findStaffInWorkspace(
     tenantId: string,
     schoolId: string,
     staffId: string,
-  ): Promise<StaffProfile | null> {
-    return kernel.db.staffProfile.findFirst({
+  ) {
+    const staff = await kernel.db.staffProfile.findFirst({
       where: {
         id: staffId,
-        tenantId,
         schoolId,
       },
       include: {
-        photo: { select: { id: true } },
+        user: true,
+        school: true,
+        campusAssignments: {
+          include: {
+            campus: true,
+          },
+        },
+        subjectAssignments: {
+          include: {
+            subject: true,
+            arm: true,
+          },
+        },
+        classTeacherAssignments: {
+          include: {
+            arm: true,
+          },
+        },
       },
     });
+
+    if (!staff) return null;
+
+    return {
+      ...staff,
+      firstName: staff.user.firstName,
+      lastName: staff.user.lastName,
+      email: staff.user.email,
+      phone: staff.user.phone,
+      type: "TEACHING",
+    };
   }
 
   async updateStaff(
     tenantId: string,
     schoolId: string,
     staffId: string,
-    data: Prisma.StaffProfileUpdateInput,
-  ): Promise<StaffProfile> {
-    return kernel.db.staffProfile.update({
+    data: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      email?: string;
+      designation?: string;
+    },
+  ) {
+    const staff = await kernel.db.staffProfile.findUnique({
       where: { id: staffId },
-      data,
-      include: {
-        photo: { select: { id: true } },
-      },
+      include: { user: true },
     });
+
+    if (!staff) return null;
+
+    if (data.firstName || data.lastName || data.phone || data.email) {
+      await kernel.db.user.update({
+        where: { id: staff.userId },
+        data: {
+          ...(data.firstName && { firstName: data.firstName }),
+          ...(data.lastName && { lastName: data.lastName }),
+          ...(data.phone !== undefined && { phone: data.phone }),
+          ...(data.email && { email: data.email.toLowerCase().trim() }),
+        },
+      });
+    }
+
+    if (data.designation !== undefined) {
+      await kernel.db.staffProfile.update({
+        where: { id: staffId },
+        data: { designation: data.designation },
+      });
+    }
+
+    return this.findStaffInWorkspace(tenantId, schoolId, staffId);
   }
 
   async updateStaffStatus(
@@ -116,14 +182,13 @@ export class StaffRepository {
     schoolId: string,
     staffId: string,
     status: StaffStatus,
-  ): Promise<StaffProfile> {
-    return kernel.db.staffProfile.update({
+  ) {
+    await kernel.db.staffProfile.update({
       where: { id: staffId },
       data: { status },
-      include: {
-        photo: { select: { id: true } },
-      },
     });
+
+    return this.findStaffInWorkspace(tenantId, schoolId, staffId);
   }
 
   async getStaffList(
@@ -133,52 +198,53 @@ export class StaffRepository {
     skip: number,
     take: number,
     search?: string,
-  ): Promise<StaffProfile[]> {
-    const where: any = { tenantId, schoolId };
+  ) {
+    const where: any = { schoolId };
+
     if (campusId) {
       where.campusAssignments = {
-        some: { campusId }
+        some: { campusId },
       };
     }
 
     if (search) {
-      const searchTerms = search.trim().split(/\s+/);
-      where.AND = searchTerms.map(term => ({
-        OR: [
-          { firstName: { contains: term, mode: "insensitive" } },
-          { lastName: { contains: term, mode: "insensitive" } },
-          { staffNumber: { contains: term, mode: "insensitive" } }
-        ]
-      }));
+      const term = search.trim();
+      where.OR = [
+        { staffNumber: { contains: term, mode: "insensitive" } },
+        {
+          user: {
+            OR: [
+              { firstName: { contains: term, mode: "insensitive" } },
+              { lastName: { contains: term, mode: "insensitive" } },
+              { email: { contains: term, mode: "insensitive" } },
+            ],
+          },
+        },
+      ];
     }
-    return kernel.db.staffProfile.findMany({
+
+    const list = await kernel.db.staffProfile.findMany({
       where,
       skip,
       take,
       orderBy: { createdAt: "desc" },
       include: {
-        photo: { select: { id: true } },
+        user: true,
+        campusAssignments: {
+          include: {
+            campus: true,
+          },
+        },
       },
     });
-  }
 
-  async saveCredential(
-    tx: any,
-    data: Prisma.StaffCredentialUncheckedCreateInput,
-  ): Promise<StaffCredential> {
-    return tx.staffCredential.create({
-      data,
-    });
-  }
-
-  async revokeActiveCredentials(
-    tx: any,
-    staffId: string,
-    tenantId: string,
-  ): Promise<void> {
-    await tx.staffCredential.updateMany({
-      where: { staffId, tenantId, isActive: true },
-      data: { isActive: false, revokedAt: new Date() },
-    });
+    return list.map((staff) => ({
+      ...staff,
+      firstName: staff.user.firstName,
+      lastName: staff.user.lastName,
+      email: staff.user.email,
+      phone: staff.user.phone,
+      type: "TEACHING",
+    }));
   }
 }

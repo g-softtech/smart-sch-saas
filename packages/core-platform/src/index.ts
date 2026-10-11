@@ -2,7 +2,9 @@ import { PrismaClient, Prisma } from '@prisma/client';
 export * from '@prisma/client';
 import { AsyncLocalStorage } from 'async_hooks';
 
-export const tenantContext = new AsyncLocalStorage<{ tenantId: string }>();
+const globalForTenant = globalThis as unknown as { __schoolos_tenantContext?: AsyncLocalStorage<{ tenantId: string }> };
+export const tenantContext = globalForTenant.__schoolos_tenantContext ?? new AsyncLocalStorage<{ tenantId: string }>();
+globalForTenant.__schoolos_tenantContext = tenantContext;
 
 // Models strictly bounded to a tenant
 const TENANT_SCOPED_MODELS = new Set([
@@ -21,7 +23,6 @@ const TENANT_SCOPED_MODELS = new Set([
   'ClassTeacherAssignment',
   'Student',
   'Guardian',
-  'StudentGuardian',
   'Enrollment',
   'AttendanceRecord',
   'MovementRecord',
@@ -116,6 +117,10 @@ class PlatformKernel {
 
   get $executeRaw() {
     return this.basePrisma.$executeRaw.bind(this.basePrisma);
+  }
+
+  get $transaction() {
+    return this.basePrisma.$transaction.bind(this.basePrisma);
   }
 
   // Explicit, intentional escape hatch for platform-wide queries ONLY (e.g. system audits, super admin onboarding)
