@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { kernel } from "@saas/core-platform";
+import { kernel, TermStatus } from "@saas/core-platform";
 
 @Injectable()
 export class AcademicsRepository {
@@ -19,8 +19,16 @@ export class AcademicsRepository {
     return kernel.db.campus.findUnique({ where: { id } });
   }
 
-  async findSubjectGroup(id: string) {
-    return kernel.db.subjectGroup.findUnique({ where: { id } });
+  async findArm(id: string) {
+    return kernel.db.arm.findUnique({ where: { id } });
+  }
+
+  async findTerm(id: string) {
+    return kernel.db.term.findUnique({ where: { id } });
+  }
+
+  async findSubject(id: string) {
+    return kernel.db.subject.findUnique({ where: { id } });
   }
 
   async findOverlappingAcademicYears(tenantId: string, schoolId: string, startDate: Date, endDate: Date, excludeId?: string) {
@@ -47,195 +55,134 @@ export class AcademicsRepository {
     });
   }
 
-  async findActiveAcademicYear(tenantId: string, schoolId: string, date: Date) {
-    return kernel.db.academicYear.findFirst({
-      where: {
-        tenantId,
-        schoolId,
-        startDate: { lte: date },
-        endDate: { gt: date }
-      }
-    });
-  }
-
-  async findActiveTerm(tenantId: string, academicYearId: string, date: Date) {
-    return kernel.db.term.findFirst({
-      where: {
-        tenantId,
-        academicYearId,
-        startDate: { lte: date },
-        endDate: { gt: date }
-      }
-    });
-  }
-
-  async findActiveEnrollment(tenantId: string, studentId: string, academicYearId: string) {
-    return kernel.db.enrollment.findFirst({
-      where: {
-        tenantId,
-        studentId,
-        academicYearId,
-        status: 'ACTIVE'
-      }
-    });
-  }
-
-  async createCampus(data: any) {
-    return kernel.db.campus.create({ data });
-  }
-
-  async createAcademicYear(data: any) {
-    return kernel.db.academicYear.create({ data });
-  }
-
-  async createTerm(data: any) {
-    return kernel.db.term.create({ data });
-  }
-
-  async createDepartment(data: any) {
-    return kernel.db.department.create({ data });
-  }
-
-  async createClass(data: any) {
-    return kernel.db.class.create({ data });
-  }
-
-  async createArm(data: any) {
-    return kernel.db.arm.create({ data });
-  }
-
-  async createSubjectGroup(data: any) {
-    return kernel.db.subjectGroup.create({ data });
-  }
-
-  async createSubject(data: any) {
-    return kernel.db.subject.create({ data });
-  }
-
-  async listAcademicYears(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
-    return kernel.db.academicYear.findMany({
-      where: { tenantId, schoolId },
-      skip,
-      take,
-      orderBy: [{ name: "asc" }, { id: "asc" }],
-    });
-  }
-
-  async listTerms(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
-    return kernel.db.term.findMany({
-      where: {
-        tenantId,
-        academicYear: { schoolId },
+  async createCampus(data: { tenantId: string; schoolId: string; name: string; code?: string }) {
+    const code = data.code || 'CMP-' + Math.floor(1000 + Math.random() * 9000);
+    return kernel.db.campus.create({
+      data: {
+        tenantId: data.tenantId,
+        schoolId: data.schoolId,
+        name: data.name,
+        code,
       },
-      skip,
-      take,
-      orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listClasses(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async createAcademicYear(data: { tenantId: string; schoolId: string; name: string; startDate: Date; endDate: Date }) {
+    return kernel.db.academicYear.create({
+      data,
+    });
+  }
+
+  async createTerm(data: { tenantId: string; academicYearId: string; name: string; startDate: Date; endDate: Date }) {
+    return kernel.db.term.create({
+      data,
+    });
+  }
+
+  async createClass(data: { tenantId: string; schoolId: string; name: string; campusId?: string }) {
+    return kernel.db.class.create({
+      data,
+    });
+  }
+
+  async createArm(data: { tenantId: string; classId: string; name: string }) {
+    return kernel.db.arm.create({
+      data,
+    });
+  }
+
+  async createSubject(data: { tenantId: string; schoolId: string; name: string; code?: string }) {
+    const code = data.code || data.name.substring(0, 4).toUpperCase();
+    return kernel.db.subject.create({
+      data: {
+        tenantId: data.tenantId,
+        schoolId: data.schoolId,
+        name: data.name,
+        code,
+      },
+    });
+  }
+
+  async listAcademicYears(tenantId: string, schoolId?: string, skip = 0, take = 50) {
+    return kernel.db.academicYear.findMany({
+      where: schoolId ? { tenantId, schoolId } : { tenantId },
+      skip,
+      take,
+      orderBy: [{ startDate: "desc" }, { name: "asc" }],
+      include: {
+        terms: {
+          orderBy: { startDate: "asc" },
+        },
+      },
+    });
+  }
+
+  async listTerms(tenantId: string, schoolId?: string, skip = 0, take = 50) {
+    return kernel.db.term.findMany({
+      where: schoolId ? { tenantId, academicYear: { schoolId } } : { tenantId },
+      skip,
+      take,
+      orderBy: [{ startDate: "desc" }, { name: "asc" }],
+      include: {
+        academicYear: {
+          select: { id: true, name: true, schoolId: true },
+        },
+      },
+    });
+  }
+
+  async listClasses(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return kernel.db.class.findMany({
-      where: { tenantId, schoolId },
+      where: schoolId ? { tenantId, schoolId } : { tenantId },
       skip,
       take,
       orderBy: [{ name: "asc" }, { id: "asc" }],
+      include: {
+        arms: true,
+        campus: true,
+      },
     });
   }
 
-  async listArms(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-    campusId?: string,
-  ) {
-    const where: any = {
-      tenantId,
-      class: { schoolId },
-    };
-    if (campusId) {
-      where.campusId = campusId;
+  async listArms(tenantId: string, schoolId?: string, skip = 0, take = 50, campusId?: string) {
+    const where: any = { tenantId };
+    if (schoolId) {
+      where.class = { schoolId };
     }
+    if (campusId) {
+      where.class = { ...where.class, campusId };
+    }
+
     return kernel.db.arm.findMany({
       where,
       skip,
       take,
       orderBy: [{ name: "asc" }, { id: "asc" }],
+      include: {
+        class: true,
+      },
     });
   }
 
-  async listSubjects(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async listSubjects(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return kernel.db.subject.findMany({
-      where: { tenantId, schoolId },
+      where: schoolId ? { tenantId, schoolId } : { tenantId },
       skip,
       take,
       orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listCampuses(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async listCampuses(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return kernel.db.campus.findMany({
-      where: { tenantId, schoolId },
+      where: schoolId ? { tenantId, schoolId } : { tenantId },
       skip,
       take,
       orderBy: [{ name: "asc" }, { id: "asc" }],
     });
   }
 
-  async listDepartments(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
-    return kernel.db.department.findMany({
-      where: { tenantId, schoolId },
-      skip,
-      take,
-      orderBy: [{ name: "asc" }, { id: "asc" }],
-    });
-  }
-
-  async listSubjectGroups(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
-    return kernel.db.subjectGroup.findMany({
-      where: { tenantId, schoolId },
-      skip,
-      take,
-      orderBy: [{ name: "asc" }, { id: "asc" }],
-    });
-  }
-
-  async updateAcademicYear(id: string, data: { name: string }) {
+  async updateAcademicYear(id: string, data: { name?: string; isCurrent?: boolean }) {
     return kernel.db.academicYear.update({ where: { id }, data });
   }
 
@@ -247,7 +194,7 @@ export class AcademicsRepository {
     return kernel.db.arm.count({ where: { classId } });
   }
 
-  async updateClass(id: string, data: { name: string }) {
+  async updateClass(id: string, data: { name?: string; campusId?: string }) {
     return kernel.db.class.update({ where: { id }, data });
   }
 
@@ -255,7 +202,7 @@ export class AcademicsRepository {
     return kernel.db.class.delete({ where: { id } });
   }
 
-  async updateArm(id: string, data: { name: string }) {
+  async updateArm(id: string, data: { name?: string }) {
     return kernel.db.arm.update({ where: { id }, data });
   }
 
@@ -263,15 +210,15 @@ export class AcademicsRepository {
     return kernel.db.arm.delete({ where: { id } });
   }
 
-  async findArm(id: string) {
-    return kernel.db.arm.findUnique({ where: { id } });
-  }
-
   async countArmsByCampus(campusId: string) {
-    return kernel.db.arm.count({ where: { campusId } });
+    return kernel.db.arm.count({
+      where: {
+        class: { campusId },
+      },
+    });
   }
 
-  async updateTerm(tenantId: string, id: string, data: { name: string }) {
+  async updateTerm(tenantId: string, id: string, data: { name?: string; status?: TermStatus; isCurrent?: boolean }) {
     return kernel.db.term.updateMany({
       where: { id, tenantId },
       data,
@@ -284,7 +231,21 @@ export class AcademicsRepository {
     });
   }
 
-  async updateCampus(tenantId: string, id: string, data: { name: string }) {
+  async setActiveTerm(tenantId: string, academicYearId: string, termId: string) {
+    // Atomically reset other terms in the academic year to isCurrent = false, and set target term to isCurrent = true
+    return await kernel.rawDb.$transaction([
+      kernel.rawDb.term.updateMany({
+        where: { tenantId, academicYearId },
+        data: { isCurrent: false, status: TermStatus.COMPLETED },
+      }),
+      kernel.rawDb.term.updateMany({
+        where: { tenantId, id: termId },
+        data: { isCurrent: true, status: TermStatus.ACTIVE },
+      }),
+    ]);
+  }
+
+  async updateCampus(tenantId: string, id: string, data: { name?: string; address?: string }) {
     return kernel.db.campus.updateMany({
       where: { id, tenantId },
       data,
@@ -297,41 +258,7 @@ export class AcademicsRepository {
     });
   }
 
-  async updateDepartment(tenantId: string, id: string, data: { name: string }) {
-    return kernel.db.department.updateMany({
-      where: { id, tenantId },
-      data,
-    });
-  }
-
-  async deleteDepartment(tenantId: string, id: string) {
-    return kernel.db.department.deleteMany({
-      where: { id, tenantId },
-    });
-  }
-
-  async updateSubjectGroup(
-    tenantId: string,
-    id: string,
-    data: { name: string },
-  ) {
-    return kernel.db.subjectGroup.updateMany({
-      where: { id, tenantId },
-      data,
-    });
-  }
-
-  async deleteSubjectGroup(tenantId: string, id: string) {
-    return kernel.db.subjectGroup.deleteMany({
-      where: { id, tenantId },
-    });
-  }
-
-  async updateSubject(
-    tenantId: string,
-    id: string,
-    data: { name: string; subjectGroupId?: string | null },
-  ) {
+  async updateSubject(tenantId: string, id: string, data: { name?: string; code?: string; isElective?: boolean }) {
     return kernel.db.subject.updateMany({
       where: { id, tenantId },
       data,
@@ -342,17 +269,5 @@ export class AcademicsRepository {
     return kernel.db.subject.deleteMany({
       where: { id, tenantId },
     });
-  }
-
-  async findTerm(id: string) {
-    return kernel.db.term.findUnique({ where: { id } });
-  }
-
-  async findSubject(id: string) {
-    return kernel.db.subject.findUnique({ where: { id } });
-  }
-
-  async findStaffProfile(id: string) {
-    return kernel.db.staffProfile.findUnique({ where: { id } });
   }
 }

@@ -242,6 +242,39 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
     - **Status:** Baseline deployed and verified on the isolated recovery database; Git checkpoint pending; not production-ready.
     - **Push Status:** Pending.
     - **Next Planned Recovery Task (PENDING AUTHORIZATION):** Phase 5.4 Production Assessment Procedure Design. A safe, technically valid comparison procedure must first be defined to execute 'prisma migrate diff' safely between the new baseline and a disposable production shadow snapshot, without connecting to, writing to, or altering the live production database. Active database recovery must complete before Phase 6G resumes.
+### Phase C2: Academic Structure & Campus Configuration (LOCKED — Date: 2026-10-11)
+
+**1. Scope Completed & Implementation Highlights**
+- **Complete Vertical Slice Delivered:** Implemented backend domain repositories, services, controllers, and integration contracts for Academic Structure and Campus Configuration:
+  - **Campuses:** Modeled and managed campus creation and scoped campus listing (`plt_campuses`). Enforced school/tenant parentage validation on creation.
+  - **Academic Years:** Managed session creation (`acd_academic_years`) with strict server-side start/end date validation (`startDate < endDate`) and overlapping date range rejection via `findOverlappingAcademicYears`.
+  - **Terms & Active Term Selection:** Modeled term lifecycle (`acd_terms`) with boundary validation (term dates must reside strictly inside parent academic year) and atomic active-term state machine (`setActiveTerm`). Activating a term marks it `isCurrent: true, status: ACTIVE` and atomically transitions preceding terms to `isCurrent: false, status: COMPLETED`.
+  - **Classes & Arms:** Modeled academic classes (`acd_classes`) and arms (`acd_arms`). Modeled campus-scoped class mapping and enforced referential integrity (deleting a class with linked arms is blocked with `ConflictException`).
+  - **Subjects:** Modeled subject creation and listing (`acd_subjects`) scoped to tenant and school.
+- **Domain Ownership & Authorization:**
+  - All academic endpoints protected by `JwtAuthGuard` and `WorkspaceContextInterceptor`.
+  - Fail-closed Zero-Trust tenant boundaries strictly enforced: cross-tenant access to academic data is blocked natively in the Prisma layer.
+  - All mutations validate that target schools, years, and campuses belong to the authenticated caller’s tenant.
+
+**2. Verification Evidence (10/10 TEST SUITES PASSED)**
+- **Automated Suite Executed:** `scratch/run_c2_tests.js` -> `scratch/test_phase_c2_academics.js` against isolated `schoolos_greenfield_dev`:
+  1. Test Scope Setup: Two isolated test tenants (`Tenant 1` and `Tenant 2`) created with separate schools.
+  2. Campus Creation & Scope: Main and Annex campuses created in Tenant 1.
+  3. Cross-Tenant Campus Security: Tenant 2 attempting to create a campus linked to Tenant 1’s school was rejected.
+  4. Academic Year Creation & Overlap: Created 2026/2027 session; rejected overlapping date range with `ConflictException`.
+  5. Term Boundary Validation: First Term and Second Term created; term outside year boundaries rejected.
+  6. Active Term Atomic Mutex: Activated First Term, then transitioned to Second Term. Verified single active term invariant.
+  7. Classes & Arms: Grade 10 created with Diamond and Gold arms.
+  8. Referential Integrity: Class deletion blocked when arms exist (`ConflictException`).
+  9. Subjects Scoping: Mathematics and English Language created and scoped to school.
+  10. Cross-Tenant Read Isolation: Tenant 2 querying academic years, terms, classes, arms, and subjects received 0 rows.
+- **Frontend Build & Type-Check:** `apps/web-app` passed type-checking cleanly (`Web-app type check PASSED!`).
+- **Status:** **PHASE C2 LOCKED**.
+
+**3. Next Module Recommendation: Phase C3 — Student & Guardian Management, Enrollments & Staff**
+- Implement backend domain services for Students, Guardians, Student-Guardian relationships, Enrollments, and Staff profiles.
+- Connect `/api/v1/students`, `/api/v1/staff`, and student enrollment endpoints to the greenfield backend.
+
 ### Phase C1: Identity, Authentication & Business Login (LOCKED — Date: 2026-10-11)
 
 **1. Scope Completed & Implementation Highlights**

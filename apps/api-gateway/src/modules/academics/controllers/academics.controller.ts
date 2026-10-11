@@ -309,6 +309,15 @@ export class AcademicsController {
     return this.academicsService.deleteArm(tenantId, id);
   }
 
+    @Put("terms/:id/activate")
+  async activateTerm(
+    @Req() req: Request & { workspace: any },
+    @Param("id") id: string,
+  ) {
+    const { tenantId } = req.workspace;
+    return this.academicsService.activateTerm(tenantId, id);
+  }
+
   @Put("terms/:id")
   async updateTerm(
     @Req() req: Request & { workspace: any },

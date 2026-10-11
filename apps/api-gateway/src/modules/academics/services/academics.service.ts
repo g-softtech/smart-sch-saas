@@ -5,6 +5,7 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { AcademicsRepository } from "../repositories/academics.repository";
+import { TermStatus } from "@saas/core-platform";
 
 @Injectable()
 export class AcademicsService {
@@ -12,13 +13,11 @@ export class AcademicsService {
 
   async createCampus(
     tenantId: string,
-    data: { schoolId: string; name: string },
+    data: { schoolId: string; name: string; code?: string },
   ) {
     const school = await this.repo.findSchool(data.schoolId);
     if (!school || school.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "School not found or belongs to another tenant",
-      );
+      throw new BadRequestException("School not found or belongs to another tenant");
     }
     return this.repo.createCampus({ ...data, tenantId });
   }
@@ -29,9 +28,7 @@ export class AcademicsService {
   ) {
     const school = await this.repo.findSchool(data.schoolId);
     if (!school || school.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "School not found or belongs to another tenant",
-      );
+      throw new BadRequestException("School not found or belongs to another tenant");
     }
 
     const start = new Date(data.startDate);
@@ -54,9 +51,7 @@ export class AcademicsService {
   ) {
     const academicYear = await this.repo.findAcademicYear(data.academicYearId);
     if (!academicYear || academicYear.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "Academic Year not found or belongs to another tenant",
-      );
+      throw new BadRequestException("Academic Year not found or belongs to another tenant");
     }
 
     const start = new Date(data.startDate);
@@ -77,209 +72,102 @@ export class AcademicsService {
     return this.repo.createTerm({ ...data, tenantId, startDate: start, endDate: end });
   }
 
-  async createDepartment(
-    tenantId: string,
-    data: { schoolId: string; name: string },
-  ) {
-    const school = await this.repo.findSchool(data.schoolId);
-    if (!school || school.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "School not found or belongs to another tenant",
-      );
-    }
-    return this.repo.createDepartment({ ...data, tenantId });
-  }
-
   async createClass(
     tenantId: string,
-    data: { schoolId: string; name: string },
+    data: { schoolId: string; name: string; campusId?: string },
   ) {
     const school = await this.repo.findSchool(data.schoolId);
     if (!school || school.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "School not found or belongs to another tenant",
-      );
+      throw new BadRequestException("School not found or belongs to another tenant");
     }
+
+    if (data.campusId) {
+      const campus = await this.repo.findCampus(data.campusId);
+      if (!campus || campus.tenantId !== tenantId || campus.schoolId !== data.schoolId) {
+        throw new BadRequestException("Campus not found or belongs to another school/tenant");
+      }
+    }
+
     return this.repo.createClass({ ...data, tenantId });
   }
 
   async createArm(
     tenantId: string,
-    data: { classId: string; campusId: string; name: string },
+    data: { classId: string; name: string; campusId?: string },
   ) {
-    const classEntity = await this.repo.findClass(data.classId);
-    if (!classEntity || classEntity.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "Class not found or belongs to another tenant",
-      );
+    const cls = await this.repo.findClass(data.classId);
+    if (!cls || cls.tenantId !== tenantId) {
+      throw new BadRequestException("Class not found or belongs to another tenant");
     }
 
-    const campusEntity = await this.repo.findCampus(data.campusId);
-    if (!campusEntity || campusEntity.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "Campus not found or belongs to another tenant",
-      );
-    }
-
-    if (classEntity.schoolId !== campusEntity.schoolId) {
-      throw new BadRequestException(
-        "Class and Campus must belong to the same school",
-      );
-    }
-
-    return this.repo.createArm({ ...data, tenantId });
-  }
-
-  async createSubjectGroup(
-    tenantId: string,
-    data: { schoolId: string; name: string },
-  ) {
-    const school = await this.repo.findSchool(data.schoolId);
-    if (!school || school.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "School not found or belongs to another tenant",
-      );
-    }
-    return this.repo.createSubjectGroup({ ...data, tenantId });
+    return this.repo.createArm({
+      tenantId,
+      classId: data.classId,
+      name: data.name,
+    });
   }
 
   async createSubject(
     tenantId: string,
-    data: { schoolId: string; name: string; subjectGroupId?: string },
+    data: { schoolId: string; name: string; code?: string },
   ) {
     const school = await this.repo.findSchool(data.schoolId);
     if (!school || school.tenantId !== tenantId) {
-      throw new BadRequestException(
-        "School not found or belongs to another tenant",
-      );
-    }
-
-    if (data.subjectGroupId) {
-      const subjectGroup = await this.repo.findSubjectGroup(
-        data.subjectGroupId,
-      );
-      if (!subjectGroup || subjectGroup.tenantId !== tenantId) {
-        throw new BadRequestException(
-          "Subject Group not found or belongs to another tenant",
-        );
-      }
-
-      if (subjectGroup.schoolId !== data.schoolId) {
-        throw new BadRequestException(
-          "Subject Group must belong to the same school as the Subject",
-        );
-      }
+      throw new BadRequestException("School not found or belongs to another tenant");
     }
 
     return this.repo.createSubject({ ...data, tenantId });
   }
 
-  async listAcademicYears(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async listAcademicYears(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return this.repo.listAcademicYears(tenantId, schoolId, skip, take);
   }
 
-  async listTerms(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async listTerms(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return this.repo.listTerms(tenantId, schoolId, skip, take);
   }
 
-  async listClasses(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async listClasses(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return this.repo.listClasses(tenantId, schoolId, skip, take);
   }
 
-  async listArms(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-    campusId?: string,
-  ) {
+  async listArms(tenantId: string, schoolId?: string, skip = 0, take = 50, campusId?: string) {
     return this.repo.listArms(tenantId, schoolId, skip, take, campusId);
   }
 
-  async listSubjects(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async listSubjects(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return this.repo.listSubjects(tenantId, schoolId, skip, take);
   }
 
-  async listCampuses(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
+  async listCampuses(tenantId: string, schoolId?: string, skip = 0, take = 50) {
     return this.repo.listCampuses(tenantId, schoolId, skip, take);
   }
 
-  async listDepartments(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
-    return this.repo.listDepartments(tenantId, schoolId, skip, take);
-  }
-
-  async listSubjectGroups(
-    tenantId: string,
-    schoolId: string,
-    skip: number,
-    take: number,
-  ) {
-    return this.repo.listSubjectGroups(tenantId, schoolId, skip, take);
-  }
-
-  async updateAcademicYear(
-    tenantId: string,
-    id: string,
-    data: { name: string },
-  ) {
+  async updateAcademicYear(tenantId: string, id: string, data: { name?: string; isCurrent?: boolean }) {
     const existing = await this.repo.findAcademicYear(id);
     if (!existing) throw new NotFoundException("Academic Year not found");
-    if (existing.tenantId !== tenantId)
-      throw new BadRequestException("Academic Year belongs to another tenant");
+    if (existing.tenantId !== tenantId) throw new BadRequestException("Academic Year belongs to another tenant");
     return this.repo.updateAcademicYear(id, data);
   }
 
   async deleteAcademicYear(tenantId: string, id: string) {
     const existing = await this.repo.findAcademicYear(id);
     if (!existing) throw new NotFoundException("Academic Year not found");
-    if (existing.tenantId !== tenantId)
-      throw new BadRequestException("Academic Year belongs to another tenant");
+    if (existing.tenantId !== tenantId) throw new BadRequestException("Academic Year belongs to another tenant");
     return this.repo.deleteAcademicYear(id);
   }
 
-  async updateClass(tenantId: string, id: string, data: { name: string }) {
+  async updateClass(tenantId: string, id: string, data: { name?: string; campusId?: string }) {
     const existing = await this.repo.findClass(id);
     if (!existing) throw new NotFoundException("Class not found");
-    if (existing.tenantId !== tenantId)
-      throw new BadRequestException("Class belongs to another tenant");
+    if (existing.tenantId !== tenantId) throw new BadRequestException("Class belongs to another tenant");
     return this.repo.updateClass(id, data);
   }
 
   async deleteClass(tenantId: string, id: string) {
     const existing = await this.repo.findClass(id);
     if (!existing) throw new NotFoundException("Class not found");
-    if (existing.tenantId !== tenantId)
-      throw new BadRequestException("Class belongs to another tenant");
+    if (existing.tenantId !== tenantId) throw new BadRequestException("Class belongs to another tenant");
 
     const armCount = await this.repo.countArmsByClass(id);
     if (armCount > 0) {
@@ -291,23 +179,21 @@ export class AcademicsService {
     return this.repo.deleteClass(id);
   }
 
-  async updateArm(tenantId: string, id: string, data: { name: string }) {
+  async updateArm(tenantId: string, id: string, data: { name?: string }) {
     const existing = await this.repo.findArm(id);
     if (!existing) throw new NotFoundException("Arm not found");
-    if (existing.tenantId !== tenantId)
-      throw new BadRequestException("Arm belongs to another tenant");
+    if (existing.tenantId !== tenantId) throw new BadRequestException("Arm belongs to another tenant");
     return this.repo.updateArm(id, data);
   }
 
   async deleteArm(tenantId: string, id: string) {
     const existing = await this.repo.findArm(id);
     if (!existing) throw new NotFoundException("Arm not found");
-    if (existing.tenantId !== tenantId)
-      throw new BadRequestException("Arm belongs to another tenant");
+    if (existing.tenantId !== tenantId) throw new BadRequestException("Arm belongs to another tenant");
     return this.repo.deleteArm(id);
   }
 
-  async updateTerm(tenantId: string, id: string, data: { name: string }) {
+  async updateTerm(tenantId: string, id: string, data: { name?: string; status?: TermStatus; isCurrent?: boolean }) {
     const result = await this.repo.updateTerm(tenantId, id, data);
     if (result.count === 0) throw new NotFoundException("Term not found");
     return { success: true };
@@ -319,7 +205,16 @@ export class AcademicsService {
     return { success: true };
   }
 
-  async updateCampus(tenantId: string, id: string, data: { name: string }) {
+  async activateTerm(tenantId: string, termId: string) {
+    const term = await this.repo.findTerm(termId);
+    if (!term || term.tenantId !== tenantId) {
+      throw new NotFoundException("Term not found");
+    }
+    await this.repo.setActiveTerm(tenantId, term.academicYearId, termId);
+    return { success: true, activeTermId: termId };
+  }
+
+  async updateCampus(tenantId: string, id: string, data: { name?: string; address?: string }) {
     const result = await this.repo.updateCampus(tenantId, id, data);
     if (result.count === 0) throw new NotFoundException("Campus not found");
     return { success: true };
@@ -337,57 +232,11 @@ export class AcademicsService {
     return { success: true };
   }
 
-  async updateDepartment(tenantId: string, id: string, data: { name: string }) {
-    const result = await this.repo.updateDepartment(tenantId, id, data);
-    if (result.count === 0) throw new NotFoundException("Department not found");
-    return { success: true };
-  }
-
-  async deleteDepartment(tenantId: string, id: string) {
-    const result = await this.repo.deleteDepartment(tenantId, id);
-    if (result.count === 0) throw new NotFoundException("Department not found");
-    return { success: true };
-  }
-
-  async updateSubjectGroup(
-    tenantId: string,
-    id: string,
-    data: { name: string },
-  ) {
-    const result = await this.repo.updateSubjectGroup(tenantId, id, data);
-    if (result.count === 0)
-      throw new NotFoundException("Subject Group not found");
-    return { success: true };
-  }
-
-  async deleteSubjectGroup(tenantId: string, id: string) {
-    const result = await this.repo.deleteSubjectGroup(tenantId, id);
-    if (result.count === 0)
-      throw new NotFoundException("Subject Group not found");
-    return { success: true };
-  }
-
   async updateSubject(
     tenantId: string,
-    schoolId: string,
     id: string,
-    data: { name: string; subjectGroupId?: string | null },
+    data: { name?: string; code?: string; isElective?: boolean },
   ) {
-    if (data.subjectGroupId) {
-      const subjectGroup = await this.repo.findSubjectGroup(
-        data.subjectGroupId,
-      );
-      if (!subjectGroup || subjectGroup.tenantId !== tenantId) {
-        throw new BadRequestException(
-          "Subject Group not found or belongs to another tenant",
-        );
-      }
-      if (subjectGroup.schoolId !== schoolId) {
-        throw new BadRequestException(
-          "Subject Group must belong to the same school as the Subject",
-        );
-      }
-    }
     const result = await this.repo.updateSubject(tenantId, id, data);
     if (result.count === 0) throw new NotFoundException("Subject not found");
     return { success: true };
@@ -397,29 +246,5 @@ export class AcademicsService {
     const result = await this.repo.deleteSubject(tenantId, id);
     if (result.count === 0) throw new NotFoundException("Subject not found");
     return { success: true };
-  }
-
-  async resolveAcademicPeriod(
-    tenantId: string,
-    schoolId: string,
-    studentId: string,
-    operationalDate: Date
-  ) {
-    const academicYear = await this.repo.findActiveAcademicYear(tenantId, schoolId, operationalDate);
-    if (!academicYear) {
-      return { skip: true, reason: 'No active academic year found for date' };
-    }
-
-    const term = await this.repo.findActiveTerm(tenantId, academicYear.id, operationalDate);
-    if (!term) {
-      return { skip: true, reason: 'No active term found for date' };
-    }
-
-    const enrollment = await this.repo.findActiveEnrollment(tenantId, studentId, academicYear.id);
-    if (!enrollment) {
-      return { skip: true, reason: 'No active enrollment found for student in academic year' };
-    }
-
-    return { skip: false, academicYear, term, enrollment };
   }
 }
