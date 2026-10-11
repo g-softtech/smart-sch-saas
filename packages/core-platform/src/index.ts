@@ -4,7 +4,7 @@ import { AsyncLocalStorage } from 'async_hooks';
 
 export const tenantContext = new AsyncLocalStorage<{ tenantId: string }>();
 
-// Models that are strictly scoped to a tenant
+// Models strictly bounded to a tenant
 const TENANT_SCOPED_MODELS = new Set([
   'School',
   'Campus',
@@ -37,6 +37,15 @@ const TENANT_SCOPED_MODELS = new Set([
   'PlatformAuditLog'
 ]);
 
+export class TenantContextMissingError extends Error {
+  constructor(model: string, operation: string) {
+    super(
+      `Zero-Trust Tenant Boundary Violation: Attempted ${operation} on tenant-scoped model '${model}' without an active tenantId in tenantContext.`
+    );
+    this.name = 'TenantContextMissingError';
+  }
+}
+
 function buildScopedExtension(base: PrismaClient) {
   return base.$extends({
     query: {
@@ -47,24 +56,41 @@ function buildScopedExtension(base: PrismaClient) {
           }
 
           const ctx = tenantContext.getStore();
-          // If no tenant context is bound, allow global operations for un-scoped/admin execution
+
+          // Zero-Trust Rule: Tenant-scoped queries MUST have an active tenantId
           if (!ctx || !ctx.tenantId) {
-            return query(args);
+            throw new TenantContextMissingError(model, operation);
           }
 
           const tenantId = ctx.tenantId;
 
-          // Inject tenantId filter for queries
+          // Inject and enforce tenantId on all queries
           if (args && typeof args === 'object') {
             const anyArgs = args as any;
             if (anyArgs.where) {
               anyArgs.where.tenantId = tenantId;
-            } else if (['findMany', 'findFirst', 'count', 'deleteMany', 'updateMany'].includes(operation)) {
+            } else if (['findMany', 'findFirst', 'findFirstOrThrow', 'count', 'deleteMany', 'updateMany'].includes(operation)) {
               anyArgs.where = { tenantId };
             }
 
             if (['create'].includes(operation) && anyArgs.data) {
-              anyArgs.data.tenantId = tenantId;
+              if (Array.isArray(anyArgs.data)) {
+                anyArgs.data.forEach((item: any) => { item.tenantId = tenantId; });
+              } else {
+                anyArgs.data.tenantId = tenantId;
+              }
+            }
+
+            if (['createMany'].includes(operation) && anyArgs.data) {
+              if (Array.isArray(anyArgs.data)) {
+                anyArgs.data.forEach((item: any) => { item.tenantId = tenantId; });
+              }
+            }
+
+            if (operation === 'upsert') {
+              if (anyArgs.create) anyArgs.create.tenantId = tenantId;
+              if (anyArgs.update) anyArgs.update.tenantId = tenantId;
+              if (anyArgs.where) anyArgs.where.tenantId = tenantId;
             }
           }
 
@@ -92,6 +118,7 @@ class PlatformKernel {
     return this.basePrisma.$executeRaw.bind(this.basePrisma);
   }
 
+  // Explicit, intentional escape hatch for platform-wide queries ONLY (e.g. system audits, super admin onboarding)
   get rawDb(): PrismaClient {
     return this.basePrisma;
   }

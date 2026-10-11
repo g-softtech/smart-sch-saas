@@ -8,7 +8,6 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { Observable } from "rxjs";
-
 import { TenantMembershipRepository } from "../repositories/tenant-membership.repository";
 
 @Injectable()
@@ -22,150 +21,127 @@ export class WorkspaceContextInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest();
     const user = request.user; // Set by JwtAuthGuard
 
-    // Obtain requested tenant from selector
-    let tenantId = request.headers["x-tenant-id"] as string;
-
     if (!user || !user.sub) {
       throw new UnauthorizedException("Authentication required");
     }
 
-    const { tenantContext, kernel } = require("@saas/core-platform");
+    const { tenantContext, kernel, MembershipStatus, TenantStatus, GlobalRole } = require("@saas/core-platform");
+
+    // Check if the user is a global platform SUPER_ADMIN
+    const userRecord = await kernel.rawDb.user.findUnique({
+      where: { id: user.sub },
+    });
+
+    if (!userRecord || !userRecord.isActive || userRecord.isSuspended) {
+      throw new UnauthorizedException("Account is deactivated or suspended");
+    }
+
+    const isGlobalSuperAdmin = userRecord.globalRole === GlobalRole.SUPER_ADMIN;
+
+    // Obtain requested tenant from header
+    let tenantId = request.headers["x-tenant-id"] as string;
 
     if (!tenantId) {
-      // Auto-discover tenant for portal users from UserTenantMembership
-      const membership = await kernel.db.userTenantMembership.findFirst({
-        where: { userId: user.sub },
+      // Auto-discover tenant for user from active TenantMembership
+      const membership = await kernel.rawDb.tenantMembership.findFirst({
+        where: { userId: user.sub, status: MembershipStatus.ACTIVE },
+        include: { tenant: true },
       });
-      if (membership) {
+      if (membership && membership.tenant.status === TenantStatus.ACTIVE) {
         tenantId = membership.tenantId;
         request.headers["x-tenant-id"] = tenantId;
       }
     }
 
-    if (!tenantId) {
-      // Reject missing tenant selector on tenant-scoped requests if unresolvable
+    // If still no tenantId and user is NOT a global super admin, reject
+    if (!tenantId && !isGlobalSuperAdmin) {
       throw new BadRequestException("Missing x-tenant-id header");
     }
 
-    // Verify Tenant Membership to prevent cross-tenant pollution
-    try {
-      const membership = await tenantContext.run({ tenantId }, () =>
-        this.membershipRepo.findByUserId(user.sub, tenantId),
-      );
-      if (!membership) {
-        throw new ForbiddenException(
-          "User does not have access to this tenant workspace",
-        );
+    // If tenantId is specified, strictly enforce membership and tenant active status
+    let validatedSchoolId: string | undefined = undefined;
+    let validatedCampusId: string | undefined = undefined;
+    let membershipId: string | undefined = undefined;
+
+    if (tenantId) {
+      // Verify tenant exists and is ACTIVE
+      const tenant = await kernel.rawDb.tenant.findUnique({
+        where: { id: tenantId },
+      });
+
+      if (!tenant) {
+        throw new ForbiddenException("Tenant workspace not found");
       }
 
-      let validatedSchoolId: string | undefined = undefined;
-      let validatedCampusId: string | undefined = undefined;
+      if (tenant.status === TenantStatus.SUSPENDED) {
+        throw new ForbiddenException("Tenant organization is suspended");
+      }
+
+      // Unless global super admin, user MUST hold an ACTIVE membership in this tenant
+      if (!isGlobalSuperAdmin) {
+        const membership = await kernel.rawDb.tenantMembership.findFirst({
+          where: {
+            userId: user.sub,
+            tenantId,
+            status: MembershipStatus.ACTIVE,
+          },
+        });
+
+        if (!membership) {
+          throw new ForbiddenException("User does not have access to this tenant workspace");
+        }
+        membershipId = membership.id;
+      }
+
+      // Check optional schoolId header
       let requestedSchoolId = request.headers["x-school-id"] as string;
       const requestedCampusId = request.headers["x-campus-id"] as string;
 
       if (!requestedSchoolId) {
-        // Auto-discover schoolId for portal users from Student or Staff profile
-        const student = await kernel.db.student.findFirst({
-          where: { userId: user.sub, tenantId: membership.tenantId },
+        // Auto-discover school from school records in this tenant
+        const school = await kernel.rawDb.school.findFirst({
+          where: { tenantId },
         });
-        if (student?.schoolId) {
-          requestedSchoolId = student.schoolId;
+        if (school) {
+          requestedSchoolId = school.id;
           request.headers["x-school-id"] = requestedSchoolId;
-        } else {
-          const staff = await kernel.db.staffProfile.findFirst({
-            where: { userId: user.sub, tenantId: membership.tenantId },
-          });
-          if (staff?.schoolId) {
-            requestedSchoolId = staff.schoolId;
-            request.headers["x-school-id"] = requestedSchoolId;
-          }
         }
       }
 
       if (requestedSchoolId) {
-        await tenantContext.run({ tenantId }, async () => {
-          // 1. Validate physical school existence within the tenant
-          const school = await kernel.db.school.findFirst({
-            where: { id: requestedSchoolId, tenantId: membership.tenantId },
+        const school = await kernel.rawDb.school.findFirst({
+          where: { id: requestedSchoolId, tenantId },
+        });
+
+        if (!school) {
+          throw new ForbiddenException("Invalid or unauthorized school workspace");
+        }
+        validatedSchoolId = school.id;
+
+        if (requestedCampusId) {
+          const campus = await kernel.rawDb.campus.findFirst({
+            where: { id: requestedCampusId, schoolId: validatedSchoolId, tenantId },
           });
-
-          if (!school) {
-            throw new ForbiddenException(
-              "Invalid or unauthorized school workspace",
-            );
+          if (!campus) {
+            throw new ForbiddenException("Invalid or unauthorized campus workspace");
           }
-
-          // 2. Validate physical campus existence if requested
-          if (requestedCampusId) {
-            const campus = await kernel.db.campus.findFirst({
-              where: {
-                id: requestedCampusId,
-                schoolId: requestedSchoolId,
-                tenantId: membership.tenantId,
-              },
-            });
-            if (!campus) {
-              throw new ForbiddenException(
-                "Invalid or unauthorized campus workspace",
-              );
-            }
-          }
-
-          const isSuperAdmin = membership.role?.name === "SUPER_ADMIN";
-
-          // 3. Enforce UserSchoolAccess for non-SUPER_ADMIN
-          if (!isSuperAdmin) {
-            const accessRecord = await kernel.db.userSchoolAccess.findFirst({
-              where: { userId: user.sub, schoolId: requestedSchoolId },
-            });
-
-            if (!accessRecord) {
-              throw new ForbiddenException(
-                "User is not assigned to this school",
-              );
-            }
-
-            // If the user has a restricted campus, enforce it
-            if (accessRecord.campusId) {
-              if (
-                requestedCampusId &&
-                requestedCampusId !== accessRecord.campusId
-              ) {
-                throw new ForbiddenException(
-                  "User is not assigned to the requested campus",
-                );
-              }
-              // Override/inject the restricted campus into the workspace context
-              validatedCampusId = accessRecord.campusId;
-            } else {
-              // User has full school access
-              validatedCampusId = requestedCampusId;
-            }
-          } else {
-            // SUPER_ADMIN has full access
-            validatedCampusId = requestedCampusId;
-          }
-
-          validatedSchoolId = school.id;
-        });
+          validatedCampusId = campus.id;
+        }
       }
-
-      request.workspace = {
-        membershipId: membership.id,
-        roleId: membership.roleId,
-        tenantId: membership.tenantId,
-        schoolId: validatedSchoolId,
-        campusId: validatedCampusId,
-      };
-
-      return new Observable((subscriber) => {
-        tenantContext.run({ tenantId }, () => {
-          next.handle().subscribe(subscriber);
-        });
-      });
-    } catch (error) {
-      console.error("INTERCEPTOR ERROR:", error);
-      throw error;
     }
+
+    request.workspace = {
+      membershipId,
+      tenantId,
+      schoolId: validatedSchoolId,
+      campusId: validatedCampusId,
+      isGlobalSuperAdmin,
+    };
+
+    return new Observable((subscriber) => {
+      tenantContext.run({ tenantId: tenantId || "" }, () => {
+        next.handle().subscribe(subscriber);
+      });
+    });
   }
 }

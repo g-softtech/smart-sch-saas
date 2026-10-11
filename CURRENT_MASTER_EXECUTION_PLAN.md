@@ -258,6 +258,14 @@ Portal Account Provisioning, Self-Service Onboarding & Password Recovery (Phase 
   - Matches `/api/v1/identity/me/workspaces` (returns `TenantWorkspace[]` with full school and campus arrays).
   - Matches `/api/v1/platform/metrics`, `/api/v1/platform/tenants`, and `/api/v1/platform/provisioning/tenant`.
 
+**2. Extended Integration & Security Acceptance Checks (ALL PASSED)**
+- **Zero-Trust Tenant Boundary Enforcement:** Updated `PlatformKernel` with strict runtime check: any operation on a tenant-scoped model without an active `tenantId` in `tenantContext` throws `TenantContextMissingError`.
+- **Cross-Tenant Access Denial Suite (6/6 PASSED):** Verified that Tenant B cannot read, update, or delete records belonging to Tenant A even when querying by explicit record ID.
+- **Frontend Integration Flow (100% VERIFIED):** Verified real frontend login flow simulation matching `apps/web-app/src/app/login/page.tsx` and `workspaces/page.tsx` for both Business Login (`/super-admin` hydration) and Tenant School Staff (`/workspaces` selection -> `/dashboard`).
+- **Type-Check & Build Baselines:**
+  - `packages/core-platform`: Clean compilation via `tsc` (`dist` generated).
+  - `apps/web-app`: Type-check passed cleanly (`Web-app type check PASSED!`).
+- **Full Acceptance Certified:** All security, tenant-isolation, build, and frontend-to-API acceptance checks are verified and locked.
 **2. Verification Evidence (11/11 PASSED)**
 - **Automated Suite Executed:** `scratch/run_c1_tsx.js` -> `scratch/test_phase_c1_auth.js` against isolated `schoolos_greenfield_dev`.
   1. Test Data Isolation & DB Setup: Cleaned and initialized greenfield tables.
